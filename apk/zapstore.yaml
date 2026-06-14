@@ -1,0 +1,34 @@
+# Zapstore-Listing — Alien Fitness (persönlicher Workout-Tracker, Android-Wrapper)
+# Veröffentlichen:  set -a; source .env; set +a;  zsp publish zapstore.yaml
+name: Alien Fitness
+pubkey: npub1cnlymdm5jz8eayycwynhze4s2zh9n0y04atce8ahxl5qfkptplls0s40hp
+
+summary: Minimal, offline-first personal workout tracker with plans, live logging and progress charts.
+
+description: |
+  A minimal personal workout tracker — native Android wrapper around the Alien Investor
+  fitness web app, so you stay logged in instead of re-authenticating every time.
+
+  Features:
+  - Training plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
+  - Live session logging with automatic rest timer
+  - Progress charts per exercise (max weight / reps over time)
+  - Exercise library with images, muscle groups and equipment
+  - Dark neon UI, fully mobile-first
+
+  Note: connects to a private backend — a one-time login is required, so this app is
+  primarily useful to its owner.
+
+tags:
+  - fitness
+  - health
+  - tools
+
+website: https://alien-investor.org
+icon: ./assets/icon-only.png
+images:
+  - ./screenshots/1-dashboard.png
+  - ./screenshots/2-library.png
+  - ./screenshots/3-progress.png
+
+release_source: /home/alien/projekte/fitness-app/apk/android/app/build/outputs/apk/release/app-release.apk

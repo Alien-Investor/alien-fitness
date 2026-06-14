@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALIEN FITNESS</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/chart.umd.min.js"></script>
+  <style>
+    /* Login-Overlay (nur native APK sichtbar) */
+    #login-overlay{position:fixed;inset:0;z-index:9999;background:#000;display:none;align-items:center;justify-content:center;padding:24px;}
+    #login-overlay.active{display:flex;}
+    #login-modal{width:100%;max-width:340px;text-align:center;}
+    #login-modal .logo{font-family:Orbitron,sans-serif;font-size:1.4rem;letter-spacing:2px;color:#fff;margin-bottom:4px;}
+    #login-modal .logo span{color:var(--neon,#00ffcc);}
+    #login-modal input{width:100%;box-sizing:border-box;margin:8px 0;padding:13px 14px;background:#050f0d;border:1px solid rgba(0,255,204,.3);border-radius:8px;color:#fff;font-size:1rem;font-family:'Share Tech Mono',monospace;}
+    #login-modal input:focus{outline:none;border-color:var(--neon,#00ffcc);}
+    #login-btn{width:100%;margin-top:12px;padding:13px;background:var(--neon,#00ffcc);color:#000;border:none;border-radius:8px;font-family:Orbitron,sans-serif;font-weight:700;letter-spacing:1px;font-size:0.85rem;cursor:pointer;}
+    #login-msg{min-height:18px;margin-top:12px;font-size:0.75rem;color:#ff6b6b;font-family:'Share Tech Mono',monospace;}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ALIEN <span>FITNESS</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="font-size:0.6rem;color:var(--muted);letter-spacing:1px;">PRIVAT</div>
+    <button id="btn-help">?</button>
+  </div>
+</header>
+
+<nav>
+  <button class="active" data-view="dashboard">Dashboard</button>
+  <button data-view="workout">Training</button>
+  <button data-view="progress">Fortschritt</button>
+  <button data-view="library">Übungen</button>
+  <button data-view="history">Historie</button>
+</nav>
+
+<main>
+
+  <!-- ── DASHBOARD ──────────────────────────────────────────────────────────── -->
+  <div id="view-dashboard" class="view active">
+    <div class="stats-row" id="stats-row">
+      <div class="stat-box"><span class="stat-num" id="stat-total">–</span><span class="stat-label">Einheiten</span></div>
+      <div class="stat-box"><span class="stat-num" id="stat-week">–</span><span class="stat-label">Diese Woche</span></div>
+      <div class="stat-box"><span class="stat-num" id="stat-streak">–</span><span class="stat-label">Zuletzt</span></div>
+    </div>
+
+    <div class="card" id="last-session-card" style="display:none">
+      <div class="card-title">Letztes Training</div>
+      <div id="last-session-info" style="font-size:0.75rem;"></div>
+    </div>
+
+    <h2>Trainingsplan wählen</h2>
+    <div id="dashboard-plans" class="plans-grid"></div>
+  </div>
+
+  <!-- ── WORKOUT ────────────────────────────────────────────────────────────── -->
+  <div id="view-workout" class="view">
+    <div id="workout-select-screen">
+      <h2>Training starten</h2>
+      <div id="workout-plan-list" class="plans-grid"></div>
+    </div>
+
+    <div id="workout-active-screen" style="display:none">
+      <div id="workout-header">
+        <button class="btn btn-sm ghost" id="btn-abort">← Abbrechen</button>
+        <span id="workout-plan-name"></span>
+      </div>
+      <div id="workout-progress-bar" style="height:3px;background:var(--card2);border-radius:2px;margin-bottom:16px;">
+        <div id="workout-progress-fill" style="height:100%;background:var(--neon);border-radius:2px;width:0%;transition:width 0.3s;"></div>
+      </div>
+      <div id="exercise-list"></div>
+      <div id="workout-done-banner" class="done-banner" style="display:none">
+        ✓ TRAINING ABGESCHLOSSEN<br>
+        <span style="font-size:0.6rem;color:var(--muted);margin-top:8px;display:block;">Einheit gespeichert</span>
+        <button class="btn mt" id="btn-done-ok">Zurück zum Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROGRESS ───────────────────────────────────────────────────────────── -->
+  <div id="view-progress" class="view">
+    <h2>Fortschritt</h2>
+    <select class="chart-select" id="progress-exercise-select">
+      <option value="">– Übung wählen –</option>
+    </select>
+    <div class="chart-wrap" id="chart-wrap">
+      <div class="chart-empty">Übung wählen um Fortschritt zu sehen</div>
+      <canvas id="progress-chart" style="display:none;max-height:260px;"></canvas>
+    </div>
+    <div id="chart-type-row" style="display:flex;gap:8px;margin-bottom:12px;display:none">
+      <button class="btn btn-sm active-btn" id="chart-btn-weight">Gewicht (kg)</button>
+      <button class="btn btn-sm ghost" id="chart-btn-reps">Wiederholungen</button>
+    </div>
+  </div>
+
+  <!-- ── LIBRARY ────────────────────────────────────────────────────────────── -->
+  <div id="view-library" class="view">
+    <h2>Übungsbibliothek</h2>
+    <div class="filter-row" id="filter-row">
+      <button class="filter-btn active" data-filter="">Alle</button>
+      <button class="filter-btn" data-filter="muscle:Brust">Brust</button>
+      <button class="filter-btn" data-filter="muscle:Rücken">Rücken</button>
+      <button class="filter-btn" data-filter="muscle:Beine">Beine</button>
+      <button class="filter-btn" data-filter="muscle:Schultern">Schultern</button>
+      <button class="filter-btn" data-filter="muscle:Bizeps">Bizeps</button>
+      <button class="filter-btn" data-filter="muscle:Trizeps">Trizeps</button>
+      <button class="filter-btn" data-filter="muscle:Core">Core</button>
+      <button class="filter-btn" data-filter="type:hit">HIT</button>
+    </div>
+    <div id="library-list" class="library-grid"></div>
+  </div>
+
+  <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
+  <div id="view-history" class="view">
+    <h2>Trainingshistorie</h2>
+    <div id="history-list" class="history-grid"></div>
+  </div>
+
+</main>
+
+<!-- Set input modal -->
+<div id="set-modal-overlay">
+  <div id="set-modal">
+    <h3 id="set-modal-title">Satz eintragen</h3>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Wiederholungen</label>
+        <input type="number" id="input-reps" min="1" max="100" inputmode="numeric">
+      </div>
+      <div class="input-group" id="weight-group">
+        <label>Gewicht (kg)</label>
+        <input type="number" id="input-weight" min="0" max="200" step="0.5" inputmode="decimal">
+      </div>
+    </div>
+    <button class="btn" id="btn-save-set">✓ Satz speichern</button>
+    <button class="btn ghost btn-sm" id="btn-cancel-set" style="width:100%;margin-top:4px;">Abbrechen</button>
+  </div>
+</div>
+
+<!-- Rest Timer overlay -->
+<div id="timer-overlay">
+  <div id="timer-label">PAUSE</div>
+  <div id="timer-count">90</div>
+  <div id="timer-exercise"></div>
+  <button class="btn btn-sm" id="timer-skip">Überspringen →</button>
+</div>
+
+<!-- Help Modal -->
+<div id="help-overlay">
+  <div id="help-modal">
+    <div id="help-header">
+      <span>ANLEITUNG</span>
+      <button id="btn-help-close">✕</button>
+    </div>
+    <div id="help-content">
+      <div class="help-section">
+        <div class="help-section-title">Dashboard</div>
+        <p>Zeigt deine Trainingsstatistiken (Gesamt-Einheiten, diese Woche, letztes Training) und das zuletzt absolvierte Workout. Klicke direkt auf einen Plan um sofort zu starten.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Training starten</div>
+        <p>Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Abgeschlossene Sätze leuchten grün. Nach dem letzten Satz einer Übung scrollt die App automatisch zur nächsten.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Pause-Timer</div>
+        <p>Startet automatisch nach jedem abgeschlossenen Satz. Am Ende ertönt ein Beep-Signal. Mit "Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Fortschritt</div>
+        <p>Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über alle bisherigen Trainings — umschalten über die Buttons unter dem Chart.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Übungsbibliothek</div>
+        <p>Alle 32 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe oder HIT. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Historie</div>
+        <p>Alle abgeschlossenen Trainings mit Datum, Plan und Dauer in der Übersicht.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Trainingspläne</div>
+        <div class="help-plans">
+          <div class="help-plan-row"><span class="badge">Kraft</span><span>Push — Brust, Schultern, Trizeps</span></div>
+          <div class="help-plan-row"><span class="badge">Kraft</span><span>Pull — Rücken, Bizeps</span></div>
+          <div class="help-plan-row"><span class="badge">Kraft</span><span>Beine &amp; Core</span></div>
+          <div class="help-plan-row"><span class="badge hit">HIT</span><span>Tabata (20 Sek / 10 Sek × 8)</span></div>
+          <div class="help-plan-row"><span class="badge hit">HIT</span><span>Power &amp; Explosivkraft</span></div>
+        </div>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Equipment</div>
+        <p>Klimmzugstange · Kurzhanteln · Hantelbank · Körpergewicht</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption"></div>
+</div>
+
+<!-- Login (nur in der nativen APK sichtbar; einmalig, bleibt gespeichert) -->
+<div id="login-overlay">
+  <div id="login-modal">
+    <div class="logo">ALIEN <span>FITNESS</span></div>
+    <p style="font-size:0.72rem;color:#7a8a86;margin:6px 0 14px;font-family:'Share Tech Mono',monospace;">Einmalig anmelden — bleibt auf diesem Gerät gespeichert.</p>
+    <input id="login-user" type="text" placeholder="Benutzer" autocomplete="username" autocapitalize="none" autocorrect="off">
+    <input id="login-pass" type="password" placeholder="Passwort" autocomplete="current-password">
+    <button id="login-btn">Anmelden</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

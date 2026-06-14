@@ -1,0 +1,9 @@
+{
+  "appId": "org.alieninvestor.fitness",
+  "appName": "Alien Fitness",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}

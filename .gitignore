@@ -1,0 +1,28 @@
+# ── Secrets / private Daten — NIEMALS committen ───────────────────────────────
+config.json
+data/
+.env
+.env.*
+*.keystore
+*.jks
+*-keystore.properties
+
+# ── Server-/Infra-Dateien privat halten (nur der Android-Client ist öffentlich) ─
+server.js
+seed.js
+generate-images.py
+nginx-fitness.conf
+DEPLOY.md
+CLAUDE.md
+
+# ── Dependencies / Build-Artefakte (regenerierbar) ────────────────────────────
+node_modules/
+apk/node_modules/
+apk/www/
+apk/android/
+apk/make-icons.mjs
+*.log
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
