@@ -26,3 +26,9 @@ apk/make-icons.mjs
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# Lokale Build-/Signing-Tools (nicht oeffentlich)
+apk/patch-signing.mjs
+apk/build-apk.sh
+apk/finish-build.sh
+apk/cb-setup.sh

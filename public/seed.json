@@ -1,0 +1,553 @@
+{
+  "format": "alien-fitness-seed",
+  "version": 1,
+  "exercises": [
+    {
+      "id": 1,
+      "name": "Liegestütz Decline (Füße auf Bank)",
+      "muscle_group": "Brust",
+      "equipment": "Bank",
+      "type": "strength",
+      "description": "Füße auf die Bank legen, Körper schräg nach unten — betont den oberen Brustbereich. Hände schulterbreit, Ellenbogen leicht anwinkeln."
+    },
+    {
+      "id": 2,
+      "name": "Kurzhantel Bankdrücken flach",
+      "muscle_group": "Brust",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Auf der Bank liegen, Hanteln auf Brusthöhe, explosiv drücken, langsam absenken. Schulterblätter zusammenziehen."
+    },
+    {
+      "id": 3,
+      "name": "Liegestütz Incline (Hände auf Bank)",
+      "muscle_group": "Brust",
+      "equipment": "Bank",
+      "type": "strength",
+      "description": "Hände auf die Bank, Körper schräg — betont den unteren Brustbereich. Rumpf angespannt halten."
+    },
+    {
+      "id": 4,
+      "name": "Kurzhantel Schulterdrücken",
+      "muscle_group": "Schultern",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Sitzen oder stehen, Hanteln auf Schulterhöhe, gerade nach oben drücken. Nicht ins Hohlkreuz fallen."
+    },
+    {
+      "id": 5,
+      "name": "Seitheben",
+      "muscle_group": "Schultern",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Leicht vorgeneigt, Arme seitlich bis Schulterhöhe heben. Kontrollierte Bewegung, kein Schwung."
+    },
+    {
+      "id": 6,
+      "name": "Frontheben",
+      "muscle_group": "Schultern",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Arme abwechselnd oder zusammen nach vorne bis Schulterhöhe heben. Rücken gerade."
+    },
+    {
+      "id": 7,
+      "name": "Trizeps Dips (Bank)",
+      "muscle_group": "Trizeps",
+      "equipment": "Bank",
+      "type": "strength",
+      "description": "Hände auf der Bank hinter dir, Beine gestreckt oder gebeugt. Körper senken bis Oberarme parallel zum Boden, hochdrücken."
+    },
+    {
+      "id": 8,
+      "name": "Kurzhantel Trizeps Extension",
+      "muscle_group": "Trizeps",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Hantel hinter dem Kopf halten (eine oder beide Hände), Ellenbogen fixiert, strecken und beugen."
+    },
+    {
+      "id": 9,
+      "name": "Enges Liegestütz (Diamond)",
+      "muscle_group": "Trizeps",
+      "equipment": "Körpergewicht",
+      "type": "strength",
+      "description": "Hände dicht beieinander (Diamant-Form), Ellenbogen nah am Körper. Betont den Trizeps stark."
+    },
+    {
+      "id": 10,
+      "name": "Klimmzug weiter Griff (Overhand)",
+      "muscle_group": "Rücken",
+      "equipment": "Stange",
+      "type": "strength",
+      "description": "Hände weiter als Schulterbreite, Handflächen weg. Brust zur Stange ziehen, langsam absenken. Schulterblätter einziehen."
+    },
+    {
+      "id": 11,
+      "name": "Chin-up (Untergriff eng)",
+      "muscle_group": "Rücken",
+      "equipment": "Stange",
+      "type": "strength",
+      "description": "Enger Untergriff, Handflächen zu dir. Kinn über die Stange, betont zusätzlich den Bizeps."
+    },
+    {
+      "id": 12,
+      "name": "Klimmzug neutral (Parallelgriff)",
+      "muscle_group": "Rücken",
+      "equipment": "Stange",
+      "type": "strength",
+      "description": "Handflächen zueinander (falls Griffe vorhanden), schonend für Schultern und sehr effektiv für den Rücken."
+    },
+    {
+      "id": 13,
+      "name": "Einarmiges Kurzhantel Row",
+      "muscle_group": "Rücken",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Knie und Hand auf der Bank abstützen, Hantel vom Boden zur Hüfte ziehen. Ellenbogen nah am Körper."
+    },
+    {
+      "id": 14,
+      "name": "Kurzhantel Pullover",
+      "muscle_group": "Rücken",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Quer auf der Bank liegen, Hantel über den Kopf absenken und zurückziehen. Dehnt Brustkorb und Rücken."
+    },
+    {
+      "id": 15,
+      "name": "Kurzhantel Bizeps Curl",
+      "muscle_group": "Bizeps",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Arme gestreckt, Hanteln beugen bis zur Schulter. Ellenbogen fixiert am Körper, kein Schwung."
+    },
+    {
+      "id": 16,
+      "name": "Hammer Curl",
+      "muscle_group": "Bizeps",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Handflächen zueinander (neutraler Griff), Curls ausführen. Trainiert Bizeps + Brachialis."
+    },
+    {
+      "id": 17,
+      "name": "Konzentrations Curl",
+      "muscle_group": "Bizeps",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Sitzen, Ellenbogen innen ans Knie stützen, langsam curlen. Maximale Isolation des Bizeps."
+    },
+    {
+      "id": 18,
+      "name": "Hängendes Knieheben",
+      "muscle_group": "Core",
+      "equipment": "Stange",
+      "type": "strength",
+      "description": "An der Stange hängen, Knie zur Brust ziehen. Langsam absenken. Variation: gestreckte Beine für mehr Intensität."
+    },
+    {
+      "id": 19,
+      "name": "Bulgarian Split Squat (DB)",
+      "muscle_group": "Beine",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Hinteres Bein auf der Bank, vorderes Bein weit vor. Tief absenken, Knie zeigt nach vorne. Eine der effektivsten Beinübungen."
+    },
+    {
+      "id": 20,
+      "name": "Romanian Deadlift (DB)",
+      "muscle_group": "Beine",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Leicht gebeugte Knie, Hanteln nah am Körper die Beine runter. Spannung in der hinteren Oberschenkelkette halten."
+    },
+    {
+      "id": 21,
+      "name": "Hip Thrust (Bank)",
+      "muscle_group": "Beine",
+      "equipment": "Bank",
+      "type": "strength",
+      "description": "Schultern auf der Bank, Hüfte senken und explosiv nach oben drücken. Hantel auf Hüfte für mehr Widerstand."
+    },
+    {
+      "id": 22,
+      "name": "Reverse Lunge (DB)",
+      "muscle_group": "Beine",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Einen Schritt nach hinten, Knie senkt sich Richtung Boden, zurück zur Startposition. Abwechselnd je Seite."
+    },
+    {
+      "id": 23,
+      "name": "Wadenheben einbeinig",
+      "muscle_group": "Beine",
+      "equipment": "Stange",
+      "type": "strength",
+      "description": "Eine Hand an der Stange für Balance, einbeinig auf Zehenspitzen. Langsam und kontrolliert."
+    },
+    {
+      "id": 24,
+      "name": "Plank",
+      "muscle_group": "Core",
+      "equipment": "Körpergewicht",
+      "type": "strength",
+      "description": "Unterarme oder Hände, Körper gerade wie ein Brett. Bauch anspannen, Hüfte nicht hängen lassen. Haltezeit steigern."
+    },
+    {
+      "id": 25,
+      "name": "Burpees",
+      "muscle_group": "Ganzkörper",
+      "equipment": "Körpergewicht",
+      "type": "hit",
+      "description": "Aus dem Stand in den Liegestütz, Push-up, zurück, springen mit Armen hoch. Explosiv und ohne Pause."
+    },
+    {
+      "id": 26,
+      "name": "Jump Squats",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "hit",
+      "description": "Kniebeuge, dann explosiv hochspringen. Weich landen, direkt in die nächste Wiederholung."
+    },
+    {
+      "id": 27,
+      "name": "Mountain Climbers",
+      "muscle_group": "Core",
+      "equipment": "Körpergewicht",
+      "type": "hit",
+      "description": "Plank-Position, Knie abwechselnd schnell zur Brust ziehen. So schnell wie möglich, Hüfte unten lassen."
+    },
+    {
+      "id": 28,
+      "name": "High Knees",
+      "muscle_group": "Ganzkörper",
+      "equipment": "Körpergewicht",
+      "type": "hit",
+      "description": "Auf der Stelle laufen, Knie explosiv bis zur Hüfte ziehen. Arme mitbewegen. Maximales Tempo."
+    },
+    {
+      "id": 29,
+      "name": "Explosive Pull-ups",
+      "muscle_group": "Rücken",
+      "equipment": "Stange",
+      "type": "hit",
+      "description": "Explosiv hochziehen, so hoch wie möglich. Kurze Pause oben, kontrolliert absenken. Alternativ: Kipping Pull-ups."
+    },
+    {
+      "id": 30,
+      "name": "Clap Push-ups",
+      "muscle_group": "Brust",
+      "equipment": "Körpergewicht",
+      "type": "hit",
+      "description": "Normaler Liegestütz, explosiv hochdrücken, Hände klatschen, weich landen. Nur wenn Basis-Liegestütz sicher geht."
+    },
+    {
+      "id": 31,
+      "name": "Box Jumps (auf Bank)",
+      "muscle_group": "Beine",
+      "equipment": "Bank",
+      "type": "hit",
+      "description": "Aus dem Stand auf die Bank springen, weich landen, absteigen (nicht rückwärts springen). Schrittweise höher."
+    },
+    {
+      "id": 32,
+      "name": "Sprinter Ausfallschritte",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "hit",
+      "description": "Aus dem Ausfallschritt explosiv das hintere Knie nach vorne oben reißen. Abwechselnd links/rechts, maximales Tempo."
+    }
+  ],
+  "plans": [
+    {
+      "id": 1,
+      "name": "Push — Brust & Schultern & Trizeps",
+      "type": "strength",
+      "day_label": "Tag 1 – Push",
+      "sort_order": 1
+    },
+    {
+      "id": 2,
+      "name": "Pull — Rücken & Bizeps",
+      "type": "strength",
+      "day_label": "Tag 2 – Pull",
+      "sort_order": 2
+    },
+    {
+      "id": 3,
+      "name": "Beine & Core",
+      "type": "strength",
+      "day_label": "Tag 3 – Beine",
+      "sort_order": 3
+    },
+    {
+      "id": 4,
+      "name": "HIT — Tabata (20 Sek an / 10 Sek Pause × 8)",
+      "type": "hit",
+      "day_label": "HIT Tag A – Tabata",
+      "sort_order": 4
+    },
+    {
+      "id": 5,
+      "name": "HIT — Power & Explosivkraft",
+      "type": "hit",
+      "day_label": "HIT Tag B – Power",
+      "sort_order": 5
+    }
+  ],
+  "plan_exercises": [
+    {
+      "id": 1,
+      "plan_id": 1,
+      "exercise_id": 1,
+      "sets": 4,
+      "reps": "10-15",
+      "rest_seconds": 90,
+      "sort_order": 0
+    },
+    {
+      "id": 2,
+      "plan_id": 1,
+      "exercise_id": 2,
+      "sets": 4,
+      "reps": "8-12",
+      "rest_seconds": 90,
+      "sort_order": 1
+    },
+    {
+      "id": 3,
+      "plan_id": 1,
+      "exercise_id": 3,
+      "sets": 3,
+      "reps": "10-15",
+      "rest_seconds": 90,
+      "sort_order": 2
+    },
+    {
+      "id": 4,
+      "plan_id": 1,
+      "exercise_id": 4,
+      "sets": 3,
+      "reps": "10-12",
+      "rest_seconds": 90,
+      "sort_order": 3
+    },
+    {
+      "id": 5,
+      "plan_id": 1,
+      "exercise_id": 5,
+      "sets": 3,
+      "reps": "12-15",
+      "rest_seconds": 60,
+      "sort_order": 4
+    },
+    {
+      "id": 6,
+      "plan_id": 1,
+      "exercise_id": 7,
+      "sets": 3,
+      "reps": "10-15",
+      "rest_seconds": 90,
+      "sort_order": 5
+    },
+    {
+      "id": 7,
+      "plan_id": 1,
+      "exercise_id": 8,
+      "sets": 3,
+      "reps": "12",
+      "rest_seconds": 60,
+      "sort_order": 6
+    },
+    {
+      "id": 8,
+      "plan_id": 2,
+      "exercise_id": 10,
+      "sets": 4,
+      "reps": "max",
+      "rest_seconds": 120,
+      "sort_order": 0
+    },
+    {
+      "id": 9,
+      "plan_id": 2,
+      "exercise_id": 11,
+      "sets": 3,
+      "reps": "max",
+      "rest_seconds": 120,
+      "sort_order": 1
+    },
+    {
+      "id": 10,
+      "plan_id": 2,
+      "exercise_id": 13,
+      "sets": 4,
+      "reps": "10-12",
+      "rest_seconds": 90,
+      "sort_order": 2
+    },
+    {
+      "id": 11,
+      "plan_id": 2,
+      "exercise_id": 15,
+      "sets": 3,
+      "reps": "10-12",
+      "rest_seconds": 60,
+      "sort_order": 3
+    },
+    {
+      "id": 12,
+      "plan_id": 2,
+      "exercise_id": 16,
+      "sets": 3,
+      "reps": "12",
+      "rest_seconds": 60,
+      "sort_order": 4
+    },
+    {
+      "id": 13,
+      "plan_id": 2,
+      "exercise_id": 18,
+      "sets": 3,
+      "reps": "12-15",
+      "rest_seconds": 60,
+      "sort_order": 5
+    },
+    {
+      "id": 14,
+      "plan_id": 3,
+      "exercise_id": 19,
+      "sets": 4,
+      "reps": "8-10",
+      "rest_seconds": 120,
+      "sort_order": 0
+    },
+    {
+      "id": 15,
+      "plan_id": 3,
+      "exercise_id": 20,
+      "sets": 4,
+      "reps": "10-12",
+      "rest_seconds": 90,
+      "sort_order": 1
+    },
+    {
+      "id": 16,
+      "plan_id": 3,
+      "exercise_id": 21,
+      "sets": 4,
+      "reps": "12-15",
+      "rest_seconds": 90,
+      "sort_order": 2
+    },
+    {
+      "id": 17,
+      "plan_id": 3,
+      "exercise_id": 22,
+      "sets": 3,
+      "reps": "10",
+      "rest_seconds": 90,
+      "sort_order": 3
+    },
+    {
+      "id": 18,
+      "plan_id": 3,
+      "exercise_id": 23,
+      "sets": 3,
+      "reps": "20",
+      "rest_seconds": 60,
+      "sort_order": 4
+    },
+    {
+      "id": 19,
+      "plan_id": 3,
+      "exercise_id": 24,
+      "sets": 3,
+      "reps": "max",
+      "rest_seconds": 60,
+      "sort_order": 5
+    },
+    {
+      "id": 20,
+      "plan_id": 4,
+      "exercise_id": 25,
+      "sets": 8,
+      "reps": "20 Sek",
+      "rest_seconds": 10,
+      "sort_order": 0
+    },
+    {
+      "id": 21,
+      "plan_id": 4,
+      "exercise_id": 26,
+      "sets": 8,
+      "reps": "20 Sek",
+      "rest_seconds": 10,
+      "sort_order": 1
+    },
+    {
+      "id": 22,
+      "plan_id": 4,
+      "exercise_id": 27,
+      "sets": 8,
+      "reps": "20 Sek",
+      "rest_seconds": 10,
+      "sort_order": 2
+    },
+    {
+      "id": 23,
+      "plan_id": 4,
+      "exercise_id": 28,
+      "sets": 8,
+      "reps": "20 Sek",
+      "rest_seconds": 10,
+      "sort_order": 3
+    },
+    {
+      "id": 24,
+      "plan_id": 5,
+      "exercise_id": 29,
+      "sets": 4,
+      "reps": "5-8",
+      "rest_seconds": 60,
+      "sort_order": 0
+    },
+    {
+      "id": 25,
+      "plan_id": 5,
+      "exercise_id": 30,
+      "sets": 4,
+      "reps": "8-10",
+      "rest_seconds": 60,
+      "sort_order": 1
+    },
+    {
+      "id": 26,
+      "plan_id": 5,
+      "exercise_id": 31,
+      "sets": 3,
+      "reps": "10",
+      "rest_seconds": 90,
+      "sort_order": 2
+    },
+    {
+      "id": 27,
+      "plan_id": 5,
+      "exercise_id": 32,
+      "sets": 3,
+      "reps": "20 Sek",
+      "rest_seconds": 60,
+      "sort_order": 3
+    },
+    {
+      "id": 28,
+      "plan_id": 5,
+      "exercise_id": 25,
+      "sets": 3,
+      "reps": "10",
+      "rest_seconds": 60,
+      "sort_order": 4
+    }
+  ]
+}

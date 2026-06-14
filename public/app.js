@@ -1,26 +1,27 @@
 'use strict';
 
-// ── Native (Capacitor-APK) vs. Web ──────────────────────────────────────────────
-// Web: gleiche Origin, Browser-Basic-Auth, relative Pfade.
-// APK: gebündeltes Frontend (capacitor://), API absolut + Authorization-Header aus
-//      einmaligem Login (localStorage). CORS umgeht CapacitorHttp (native Requests).
-const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-const API_BASE = NATIVE ? 'https://api.alien-investor.org/fitness/api/' : '/fitness/api/';
-
-function fitAuthHeader() {
-  const a = localStorage.getItem('fit-auth'); // base64(user:pass), nur im APK-Sandbox-Speicher
-  return a ? { 'Authorization': 'Basic ' + a } : {};
-}
-
-// ── API helper ────────────────────────────────────────────────────────────────
+// ── Offline-Datenschicht ────────────────────────────────────────────────────────
+// Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
+// Trainingsverlauf in IndexedDB (local-db.js). Kein Server, kein Konto, keine
+// Daten verlassen das Gerät. Die api()-Signatur bleibt identisch zum früheren
+// Express-Backend, damit die restliche App unverändert weiterläuft.
 async function api(path, opts = {}) {
-  const res = await fetch(API_BASE + path, {
-    headers: { 'Content-Type': 'application/json', ...fitAuthHeader() },
-    ...opts,
-  });
-  if (res.status === 401 && NATIVE) { showLogin(true); throw new Error('Nicht angemeldet'); }
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  await LocalData.ready;
+  const method = (opts.method || 'GET').toUpperCase();
+  const [route, queryStr] = path.split('?');
+  const query = Object.fromEntries(new URLSearchParams(queryStr || ''));
+  const seg = route.split('/');            // z.B. ['plans','3'] oder ['sessions']
+
+  switch (seg[0]) {
+    case 'stats':     return LocalData.getStats();
+    case 'plans':     return seg[1] ? LocalData.getPlan(seg[1]) : LocalData.getPlans();
+    case 'exercises': return seg[1] ? LocalData.getExercise(seg[1]) : LocalData.getExercises(query);
+    case 'progress':  return LocalData.getProgress(seg[1]);
+    case 'sessions':
+      if (method === 'POST') return LocalData.addSession(JSON.parse(opts.body || '{}'));
+      return seg[1] ? LocalData.getSession(seg[1]) : LocalData.getSessions(Number(query.limit) || 20);
+    default: throw new Error('Unbekannte Route: ' + path);
+  }
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -560,43 +561,50 @@ async function loadHistory() {
   });
 }
 
-// ── Login (nur native APK; Web nutzt den Browser-Basic-Auth-Prompt) ─────────────
-function showLogin(clear) {
-  const ov = document.getElementById('login-overlay');
-  if (!ov) return;
-  if (clear) localStorage.removeItem('fit-auth');
-  ov.classList.add('active');
-}
-function hideLogin() {
-  const ov = document.getElementById('login-overlay');
-  if (ov) ov.classList.remove('active');
-}
-async function doLogin() {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value;
-  const msg = document.getElementById('login-msg');
-  if (!u || !p) { msg.textContent = 'Benutzer und Passwort eingeben.'; return; }
-  const cred = btoa(u + ':' + p);
-  msg.textContent = 'Prüfe…';
-  try {
-    const res = await fetch(API_BASE + 'stats', { headers: { 'Authorization': 'Basic ' + cred } });
-    if (res.status === 401) { msg.textContent = 'Benutzer oder Passwort falsch.'; return; }
-    if (!res.ok) { msg.textContent = 'Server-Fehler (' + res.status + ').'; return; }
-    localStorage.setItem('fit-auth', cred);
-    msg.textContent = '';
-    hideLogin();
-    loadDashboard();
-  } catch (e) { msg.textContent = 'Keine Verbindung zum Server.'; }
-}
-const _loginBtn = document.getElementById('login-btn');
-if (_loginBtn) {
-  _loginBtn.addEventListener('click', doLogin);
-  document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+// ── Backup (Export / Import) ────────────────────────────────────────────────────
+// Da die Daten nur auf dem Gerät liegen: JSON-Backup zum Sichern / Umziehen.
+function downloadJSON(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-if (NATIVE && !localStorage.getItem('fit-auth')) {
-  showLogin(false);
-} else {
-  loadDashboard();
+async function applyImport(text) {
+  const msg = document.getElementById('backup-msg');
+  try {
+    const r = await LocalData.importAll(JSON.parse(text));
+    if (msg) msg.textContent = `Importiert: ${r.sessions} Einheiten, ${r.sets} Sätze.`;
+    loadHistory(); loadDashboard();
+  } catch (err) {
+    if (msg) msg.textContent = 'Fehler: ' + err.message;
+  }
 }
+
+const _exportBtn = document.getElementById('backup-export');
+if (_exportBtn) _exportBtn.addEventListener('click', async () => {
+  const data = await LocalData.exportAll();
+  downloadJSON(data, `alien-fitness-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  const ta = document.getElementById('backup-json');
+  if (ta) { ta.value = JSON.stringify(data, null, 2); ta.style.display = 'block'; }
+  const msg = document.getElementById('backup-msg');
+  if (msg) msg.textContent = `Exportiert: ${data.sessions.length} Einheiten, ${data.sets.length} Sätze.`;
+});
+
+const _importInput = document.getElementById('backup-import-file');
+if (_importInput) _importInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (file) await applyImport(await file.text());
+  e.target.value = '';
+});
+
+const _importPasteBtn = document.getElementById('backup-import-paste');
+if (_importPasteBtn) _importPasteBtn.addEventListener('click', async () => {
+  const ta = document.getElementById('backup-json');
+  if (ta && ta.value.trim()) await applyImport(ta.value);
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadDashboard();

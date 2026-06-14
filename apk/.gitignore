@@ -4,3 +4,5 @@ android/
 *.log
 make-icons.mjs
 .env
+gen-seed-json.js
+e2e-test.mjs
