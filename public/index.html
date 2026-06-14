@@ -24,16 +24,17 @@
   <div class="logo">ALIEN <span>FITNESS</span></div>
   <div style="display:flex;align-items:center;gap:10px;">
     <div style="font-size:0.6rem;color:var(--muted);letter-spacing:1px;">OFFLINE</div>
+    <button id="lang-toggle" title="Sprache / Language">EN</button>
     <button id="btn-help">?</button>
   </div>
 </header>
 
 <nav>
-  <button class="active" data-view="dashboard">Dashboard</button>
-  <button data-view="workout">Training</button>
-  <button data-view="progress">Fortschritt</button>
-  <button data-view="library">Übungen</button>
-  <button data-view="history">Historie</button>
+  <button class="active" data-view="dashboard" data-i18n="nav.dashboard">Dashboard</button>
+  <button data-view="workout" data-i18n="nav.training">Training</button>
+  <button data-view="progress" data-i18n="nav.progress">Fortschritt</button>
+  <button data-view="library" data-i18n="nav.library">Übungen</button>
+  <button data-view="history" data-i18n="nav.history">Historie</button>
 </nav>
 
 <main>
@@ -41,30 +42,30 @@
   <!-- ── DASHBOARD ──────────────────────────────────────────────────────────── -->
   <div id="view-dashboard" class="view active">
     <div class="stats-row" id="stats-row">
-      <div class="stat-box"><span class="stat-num" id="stat-total">–</span><span class="stat-label">Einheiten</span></div>
-      <div class="stat-box"><span class="stat-num" id="stat-week">–</span><span class="stat-label">Diese Woche</span></div>
-      <div class="stat-box"><span class="stat-num" id="stat-streak">–</span><span class="stat-label">Zuletzt</span></div>
+      <div class="stat-box"><span class="stat-num" id="stat-total">–</span><span class="stat-label" data-i18n="stat.total">Einheiten</span></div>
+      <div class="stat-box"><span class="stat-num" id="stat-week">–</span><span class="stat-label" data-i18n="stat.week">Diese Woche</span></div>
+      <div class="stat-box"><span class="stat-num" id="stat-streak">–</span><span class="stat-label" data-i18n="stat.last">Zuletzt</span></div>
     </div>
 
     <div class="card" id="last-session-card" style="display:none">
-      <div class="card-title">Letztes Training</div>
+      <div class="card-title" data-i18n="card.lastTraining">Letztes Training</div>
       <div id="last-session-info" style="font-size:0.75rem;"></div>
     </div>
 
-    <h2>Trainingsplan wählen</h2>
+    <h2 data-i18n="dash.choosePlan">Trainingsplan wählen</h2>
     <div id="dashboard-plans" class="plans-grid"></div>
   </div>
 
   <!-- ── WORKOUT ────────────────────────────────────────────────────────────── -->
   <div id="view-workout" class="view">
     <div id="workout-select-screen">
-      <h2>Training starten</h2>
+      <h2 data-i18n="workout.start">Training starten</h2>
       <div id="workout-plan-list" class="plans-grid"></div>
     </div>
 
     <div id="workout-active-screen" style="display:none">
       <div id="workout-header">
-        <button class="btn btn-sm ghost" id="btn-abort">← Abbrechen</button>
+        <button class="btn btn-sm ghost" id="btn-abort" data-i18n="workout.abort">← Abbrechen</button>
         <span id="workout-plan-name"></span>
       </div>
       <div id="workout-progress-bar" style="height:3px;background:var(--card2);border-radius:2px;margin-bottom:16px;">
@@ -72,61 +73,61 @@
       </div>
       <div id="exercise-list"></div>
       <div id="workout-done-banner" class="done-banner" style="display:none">
-        ✓ TRAINING ABGESCHLOSSEN<br>
-        <span style="font-size:0.6rem;color:var(--muted);margin-top:8px;display:block;">Einheit gespeichert</span>
-        <button class="btn mt" id="btn-done-ok">Zurück zum Dashboard</button>
+        <span data-i18n="workout.doneTitle">✓ TRAINING ABGESCHLOSSEN</span><br>
+        <span style="font-size:0.6rem;color:var(--muted);margin-top:8px;display:block;" data-i18n="workout.doneSaved">Einheit gespeichert</span>
+        <button class="btn mt" id="btn-done-ok" data-i18n="workout.backToDash">Zurück zum Dashboard</button>
       </div>
     </div>
   </div>
 
   <!-- ── PROGRESS ───────────────────────────────────────────────────────────── -->
   <div id="view-progress" class="view">
-    <h2>Fortschritt</h2>
+    <h2 data-i18n="progress.title">Fortschritt</h2>
     <select class="chart-select" id="progress-exercise-select">
-      <option value="">– Übung wählen –</option>
+      <option value="" data-i18n="progress.selectOption">– Übung wählen –</option>
     </select>
     <div class="chart-wrap" id="chart-wrap">
-      <div class="chart-empty">Übung wählen um Fortschritt zu sehen</div>
+      <div class="chart-empty" data-i18n="progress.emptyHint">Übung wählen um Fortschritt zu sehen</div>
       <canvas id="progress-chart" style="display:none;max-height:260px;"></canvas>
     </div>
     <div id="chart-type-row" style="display:flex;gap:8px;margin-bottom:12px;display:none">
-      <button class="btn btn-sm active-btn" id="chart-btn-weight">Gewicht (kg)</button>
-      <button class="btn btn-sm ghost" id="chart-btn-reps">Wiederholungen</button>
+      <button class="btn btn-sm active-btn" id="chart-btn-weight" data-i18n="progress.weight">Gewicht (kg)</button>
+      <button class="btn btn-sm ghost" id="chart-btn-reps" data-i18n="progress.reps">Wiederholungen</button>
     </div>
   </div>
 
   <!-- ── LIBRARY ────────────────────────────────────────────────────────────── -->
   <div id="view-library" class="view">
-    <h2>Übungsbibliothek</h2>
+    <h2 data-i18n="library.title">Übungsbibliothek</h2>
     <div class="filter-row" id="filter-row">
-      <button class="filter-btn active" data-filter="">Alle</button>
-      <button class="filter-btn" data-filter="muscle:Brust">Brust</button>
-      <button class="filter-btn" data-filter="muscle:Rücken">Rücken</button>
-      <button class="filter-btn" data-filter="muscle:Beine">Beine</button>
-      <button class="filter-btn" data-filter="muscle:Schultern">Schultern</button>
-      <button class="filter-btn" data-filter="muscle:Bizeps">Bizeps</button>
-      <button class="filter-btn" data-filter="muscle:Trizeps">Trizeps</button>
-      <button class="filter-btn" data-filter="muscle:Core">Core</button>
-      <button class="filter-btn" data-filter="type:hit">HIT</button>
+      <button class="filter-btn active" data-filter="" data-i18n="filter.all">Alle</button>
+      <button class="filter-btn" data-filter="muscle:Brust" data-i18n-muscle="Brust">Brust</button>
+      <button class="filter-btn" data-filter="muscle:Rücken" data-i18n-muscle="Rücken">Rücken</button>
+      <button class="filter-btn" data-filter="muscle:Beine" data-i18n-muscle="Beine">Beine</button>
+      <button class="filter-btn" data-filter="muscle:Schultern" data-i18n-muscle="Schultern">Schultern</button>
+      <button class="filter-btn" data-filter="muscle:Bizeps" data-i18n-muscle="Bizeps">Bizeps</button>
+      <button class="filter-btn" data-filter="muscle:Trizeps" data-i18n-muscle="Trizeps">Trizeps</button>
+      <button class="filter-btn" data-filter="muscle:Core" data-i18n-muscle="Core">Core</button>
+      <button class="filter-btn" data-filter="type:hit" data-i18n="filter.hit">HIT</button>
     </div>
     <div id="library-list" class="library-grid"></div>
   </div>
 
   <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
   <div id="view-history" class="view">
-    <h2>Trainingshistorie</h2>
+    <h2 data-i18n="history.title">Trainingshistorie</h2>
     <div id="history-list" class="history-grid"></div>
 
     <div id="backup-panel">
-      <h3>Backup</h3>
-      <p class="backup-hint">Deine Daten liegen nur auf diesem Gerät. Sichere oder übertrage sie als JSON-Datei.</p>
+      <h3 data-i18n="backup.title">Backup</h3>
+      <p class="backup-hint" data-i18n="backup.hint">Deine Daten liegen nur auf diesem Gerät. Sichere oder übertrage sie als JSON-Datei.</p>
       <div class="backup-row">
-        <button id="backup-export" class="btn ghost">Backup exportieren</button>
-        <label for="backup-import-file" class="btn ghost">Backup importieren</label>
+        <button id="backup-export" class="btn ghost" data-i18n="backup.export">Backup exportieren</button>
+        <label for="backup-import-file" class="btn ghost" data-i18n="backup.import">Backup importieren</label>
         <input id="backup-import-file" type="file" accept="application/json,.json" hidden>
       </div>
-      <textarea id="backup-json" placeholder="…oder JSON hier einfügen und importieren" spellcheck="false"></textarea>
-      <button id="backup-import-paste" class="btn ghost small">Eingefügtes JSON importieren</button>
+      <textarea id="backup-json" data-i18n-ph="backup.pastePlaceholder" placeholder="…oder JSON hier einfügen und importieren" spellcheck="false"></textarea>
+      <button id="backup-import-paste" class="btn ghost small" data-i18n="backup.importPaste">Eingefügtes JSON importieren</button>
       <div id="backup-msg" class="backup-msg"></div>
     </div>
   </div>
@@ -136,75 +137,75 @@
 <!-- Set input modal -->
 <div id="set-modal-overlay">
   <div id="set-modal">
-    <h3 id="set-modal-title">Satz eintragen</h3>
+    <h3 id="set-modal-title" data-i18n="set.title">Satz eintragen</h3>
     <div class="input-row">
       <div class="input-group">
-        <label>Wiederholungen</label>
+        <label data-i18n="set.reps">Wiederholungen</label>
         <input type="number" id="input-reps" min="1" max="100" inputmode="numeric">
       </div>
       <div class="input-group" id="weight-group">
-        <label>Gewicht (kg)</label>
+        <label data-i18n="set.weight">Gewicht (kg)</label>
         <input type="number" id="input-weight" min="0" max="200" step="0.5" inputmode="decimal">
       </div>
     </div>
-    <button class="btn" id="btn-save-set">✓ Satz speichern</button>
-    <button class="btn ghost btn-sm" id="btn-cancel-set" style="width:100%;margin-top:4px;">Abbrechen</button>
+    <button class="btn" id="btn-save-set" data-i18n="set.save">✓ Satz speichern</button>
+    <button class="btn ghost btn-sm" id="btn-cancel-set" style="width:100%;margin-top:4px;" data-i18n="set.cancel">Abbrechen</button>
   </div>
 </div>
 
 <!-- Rest Timer overlay -->
 <div id="timer-overlay">
-  <div id="timer-label">PAUSE</div>
+  <div id="timer-label" data-i18n="timer.label">PAUSE</div>
   <div id="timer-count">90</div>
   <div id="timer-exercise"></div>
-  <button class="btn btn-sm" id="timer-skip">Überspringen →</button>
+  <button class="btn btn-sm" id="timer-skip" data-i18n="timer.skip">Überspringen →</button>
 </div>
 
 <!-- Help Modal -->
 <div id="help-overlay">
   <div id="help-modal">
     <div id="help-header">
-      <span>ANLEITUNG</span>
+      <span data-i18n="help.title">ANLEITUNG</span>
       <button id="btn-help-close">✕</button>
     </div>
     <div id="help-content">
       <div class="help-section">
-        <div class="help-section-title">Dashboard</div>
-        <p>Zeigt deine Trainingsstatistiken (Gesamt-Einheiten, diese Woche, letztes Training) und das zuletzt absolvierte Workout. Klicke direkt auf einen Plan um sofort zu starten.</p>
+        <div class="help-section-title" data-i18n="help.dashboard.t">Dashboard</div>
+        <p data-i18n="help.dashboard.b">Zeigt deine Trainingsstatistiken (Gesamt-Einheiten, diese Woche, letztes Training) und das zuletzt absolvierte Workout. Klicke direkt auf einen Plan um sofort zu starten.</p>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Training starten</div>
-        <p>Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Abgeschlossene Sätze leuchten grün. Nach dem letzten Satz einer Übung scrollt die App automatisch zur nächsten.</p>
+        <div class="help-section-title" data-i18n="help.start.t">Training starten</div>
+        <p data-i18n="help.start.b">Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Abgeschlossene Sätze leuchten grün. Nach dem letzten Satz einer Übung scrollt die App automatisch zur nächsten.</p>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Pause-Timer</div>
-        <p>Startet automatisch nach jedem abgeschlossenen Satz. Am Ende ertönt ein Beep-Signal. Mit "Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
+        <div class="help-section-title" data-i18n="help.timer.t">Pause-Timer</div>
+        <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz. Am Ende ertönt ein Beep-Signal. Mit "Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Fortschritt</div>
-        <p>Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über alle bisherigen Trainings — umschalten über die Buttons unter dem Chart.</p>
+        <div class="help-section-title" data-i18n="help.progress.t">Fortschritt</div>
+        <p data-i18n="help.progress.b">Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über alle bisherigen Trainings — umschalten über die Buttons unter dem Chart.</p>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Übungsbibliothek</div>
-        <p>Alle 32 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe oder HIT. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
+        <div class="help-section-title" data-i18n="help.library.t">Übungsbibliothek</div>
+        <p data-i18n="help.library.b">Alle 32 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe oder HIT. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Historie</div>
-        <p>Alle abgeschlossenen Trainings mit Datum, Plan und Dauer in der Übersicht.</p>
+        <div class="help-section-title" data-i18n="help.history.t">Historie</div>
+        <p data-i18n="help.history.b">Alle abgeschlossenen Trainings mit Datum, Plan und Dauer in der Übersicht.</p>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Trainingspläne</div>
+        <div class="help-section-title" data-i18n="help.plans.t">Trainingspläne</div>
         <div class="help-plans">
-          <div class="help-plan-row"><span class="badge">Kraft</span><span>Push — Brust, Schultern, Trizeps</span></div>
-          <div class="help-plan-row"><span class="badge">Kraft</span><span>Pull — Rücken, Bizeps</span></div>
-          <div class="help-plan-row"><span class="badge">Kraft</span><span>Beine &amp; Core</span></div>
-          <div class="help-plan-row"><span class="badge hit">HIT</span><span>Tabata (20 Sek / 10 Sek × 8)</span></div>
-          <div class="help-plan-row"><span class="badge hit">HIT</span><span>Power &amp; Explosivkraft</span></div>
+          <div class="help-plan-row"><span class="badge" data-i18n="badge.strength">Kraft</span><span data-i18n="help.plan.push">Push — Brust, Schultern, Trizeps</span></div>
+          <div class="help-plan-row"><span class="badge" data-i18n="badge.strength">Kraft</span><span data-i18n="help.plan.pull">Pull — Rücken, Bizeps</span></div>
+          <div class="help-plan-row"><span class="badge" data-i18n="badge.strength">Kraft</span><span data-i18n="help.plan.legs">Beine &amp; Core</span></div>
+          <div class="help-plan-row"><span class="badge hit" data-i18n="badge.hit">HIT</span><span data-i18n="help.plan.tabata">Tabata (20 Sek / 10 Sek × 8)</span></div>
+          <div class="help-plan-row"><span class="badge hit" data-i18n="badge.hit">HIT</span><span data-i18n="help.plan.power">Power &amp; Explosivkraft</span></div>
         </div>
       </div>
       <div class="help-section">
-        <div class="help-section-title">Equipment</div>
-        <p>Klimmzugstange · Kurzhanteln · Hantelbank · Körpergewicht</p>
+        <div class="help-section-title" data-i18n="help.equipment.t">Equipment</div>
+        <p data-i18n="help.equipment.b">Klimmzugstange · Kurzhanteln · Hantelbank · Körpergewicht</p>
       </div>
     </div>
   </div>
@@ -216,6 +217,7 @@
   <div id="lightbox-caption"></div>
 </div>
 
+<script src="i18n.js"></script>
 <script src="local-db.js"></script>
 <script src="app.js"></script>
 </body>

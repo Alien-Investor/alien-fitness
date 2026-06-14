@@ -16,6 +16,7 @@ description: |
   - Progress charts per exercise (max weight / reps over time)
   - Exercise library with images, muscle groups and equipment
   - JSON backup: export and import your history to move between devices
+  - German and English interface, switchable in-app
   - Dark neon UI, fully mobile-first
 
   Works completely offline. Built-in plans use bodyweight, pull-up bar and dumbbells —

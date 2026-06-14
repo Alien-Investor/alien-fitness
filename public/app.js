@@ -103,11 +103,11 @@ async function loadDashboard() {
     if (stats.last_session) {
       const d = new Date(stats.last_session.started_at);
       const ago = Math.floor((Date.now() - d) / 86400000);
-      document.getElementById('stat-streak').textContent = ago === 0 ? 'Heute' : ago + 'd';
+      document.getElementById('stat-streak').textContent = ago === 0 ? I18N.t('dyn.today') : ago + 'd';
       document.getElementById('last-session-card').style.display = 'block';
       document.getElementById('last-session-info').innerHTML =
-        `<span class="neon">${stats.last_session.plan_name || 'Freies Training'}</span><br>
-         <span class="muted" style="font-size:0.65rem">${d.toLocaleDateString('de-DE', { weekday:'long', day:'numeric', month:'long' })}</span>`;
+        `<span class="neon">${stats.last_session.plan_name || I18N.t('dyn.freeTraining')}</span><br>
+         <span class="muted" style="font-size:0.65rem">${d.toLocaleDateString(I18N.locale(), { weekday:'long', day:'numeric', month:'long' })}</span>`;
     }
 
     const plans = await api('plans');
@@ -121,7 +121,7 @@ async function loadDashboard() {
           <div class="plan-name">${p.name}</div>
           <div class="plan-meta">${p.day_label || ''}</div>
         </div>
-        <span class="badge ${p.type === 'hit' ? 'hit' : ''}">${p.type === 'hit' ? 'HIT' : 'Kraft'}</span>`;
+        <span class="badge ${p.type === 'hit' ? 'hit' : ''}">${p.type === 'hit' ? I18N.t('badge.hit') : I18N.t('badge.strength')}</span>`;
       div.addEventListener('click', () => startWorkout(p.id));
       el.appendChild(div);
     });
@@ -191,7 +191,7 @@ function renderExercises(exercises) {
     info.className = 'ex-info';
     info.innerHTML = `
       <div class="ex-name">${ex.name}</div>
-      <div class="ex-meta">${ex.sets} Sätze × ${ex.reps} · Pause: ${ex.rest_seconds}s · ${ex.muscle_group}</div>`;
+      <div class="ex-meta">${ex.sets} ${I18N.t('dyn.sets')} × ${ex.reps} · ${I18N.t('dyn.rest')}: ${ex.rest_seconds}s · ${I18N.muscle(ex.muscle_group)}</div>`;
     header.appendChild(info);
     card.appendChild(header);
 
@@ -227,7 +227,7 @@ function openSetModal(exIdx, setNum, ex) {
   pendingSet = { exIdx, setNum, ex };
 
   document.getElementById('set-modal-title').textContent =
-    `Satz ${setNum} — ${ex.name}`;
+    `${I18N.t('dyn.setN')} ${setNum} — ${ex.name}`;
 
   const isBodyweight = ex.equipment === 'Körpergewicht' || ex.equipment === 'Stange';
   const isHit = ex.type === 'hit';
@@ -271,7 +271,7 @@ function saveSet() {
 
   const btn = document.getElementById(`set-${exIdx}-${setNum}`);
   btn.classList.add('done');
-  btn.querySelector('.set-val').textContent = weight > 0 ? `${reps}×${weight}kg` : `${reps} Wdh`;
+  btn.querySelector('.set-val').textContent = weight > 0 ? `${reps}×${weight}kg` : `${reps} ${I18N.t('dyn.reps')}`;
 
   closeSetModal();
   updateProgress();
@@ -358,7 +358,7 @@ function startTimer(seconds, nextExercise) {
   overlay.classList.add('open');
   count.textContent = remaining;
   count.classList.remove('urgent');
-  exLabel.textContent = nextExercise ? `Nächste Übung: ${nextExercise}` : 'Letzte Pause';
+  exLabel.textContent = nextExercise ? I18N.t('dyn.nextExercise', { name: nextExercise }) : I18N.t('dyn.lastRest');
 
   timerInterval = setInterval(() => {
     remaining--;
@@ -447,7 +447,7 @@ async function renderProgressChart(exId, mode) {
 
   if (!data.length) {
     canvas.style.display = 'none';
-    if (!empty) wrap.insertAdjacentHTML('beforeend', '<div class="chart-empty">Noch keine Daten für diese Übung</div>');
+    if (!empty) wrap.insertAdjacentHTML('beforeend', `<div class="chart-empty">${I18N.t('dyn.noDataExercise')}</div>`);
     else empty.style.display = '';
     return;
   }
@@ -465,7 +465,7 @@ async function renderProgressChart(exId, mode) {
     data: {
       labels,
       datasets: [{
-        label: mode === 'weight' ? 'Max. Gewicht (kg)' : 'Max. Reps',
+        label: mode === 'weight' ? I18N.t('dyn.maxWeight') : I18N.t('dyn.maxReps'),
         data: values,
         borderColor: '#00ffcc',
         backgroundColor: 'rgba(0,255,204,0.08)',
@@ -490,10 +490,14 @@ async function renderProgressChart(exId, mode) {
 
 // ── LIBRARY ───────────────────────────────────────────────────────────────────
 let allExercises = [];
+let libraryBound = false;
 
 async function loadLibrary() {
   if (!allExercises.length) allExercises = await api('exercises');
-  renderLibrary('');
+  const activeBtn = document.querySelector('.filter-btn.active');
+  renderLibrary(activeBtn ? (activeBtn.dataset.filter || '') : '');
+  if (libraryBound) return;
+  libraryBound = true;
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -522,8 +526,8 @@ function renderLibrary(filter) {
     body.innerHTML = `
       <div class="ex-lib-name">${ex.name}</div>
       <div class="ex-lib-tags">
-        <span class="tag">${ex.muscle_group}</span>
-        <span class="tag">${ex.equipment}</span>
+        <span class="tag">${I18N.muscle(ex.muscle_group)}</span>
+        <span class="tag">${I18N.equip(ex.equipment)}</span>
         ${ex.type === 'hit' ? '<span class="tag hit">HIT</span>' : ''}
       </div>
       <div class="ex-lib-desc">${ex.description || ''}</div>`;
@@ -539,23 +543,23 @@ async function loadHistory() {
   el.innerHTML = '';
 
   if (!sessions.length) {
-    el.innerHTML = '<div class="muted" style="text-align:center;padding:32px;font-size:0.7rem">Noch kein Training geloggt</div>';
+    el.innerHTML = `<div class="muted" style="text-align:center;padding:32px;font-size:0.7rem">${I18N.t('dyn.noHistory')}</div>`;
     return;
   }
 
   sessions.forEach(s => {
     const d = new Date(s.started_at);
-    const dateStr = d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const timeStr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = d.toLocaleDateString(I18N.locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString(I18N.locale(), { hour: '2-digit', minute: '2-digit' });
     const dur = s.finished_at
-      ? Math.round((new Date(s.finished_at) - d) / 60000) + ' Min'
+      ? Math.round((new Date(s.finished_at) - d) / 60000) + ' ' + I18N.t('dyn.min')
       : '';
 
     const div = document.createElement('div');
     div.className = 'session-item';
     div.innerHTML = `
       <div class="session-date">${dateStr} · ${timeStr}</div>
-      <div class="session-plan">${s.plan_name || 'Freies Training'}</div>
+      <div class="session-plan">${s.plan_name || I18N.t('dyn.freeTraining')}</div>
       <div class="session-meta">${dur}</div>`;
     el.appendChild(div);
   });
@@ -576,10 +580,10 @@ async function applyImport(text) {
   const msg = document.getElementById('backup-msg');
   try {
     const r = await LocalData.importAll(JSON.parse(text));
-    if (msg) msg.textContent = `Importiert: ${r.sessions} Einheiten, ${r.sets} Sätze.`;
+    if (msg) msg.textContent = I18N.t('backup.imported', { s: r.sessions, n: r.sets });
     loadHistory(); loadDashboard();
   } catch (err) {
-    if (msg) msg.textContent = 'Fehler: ' + err.message;
+    if (msg) msg.textContent = I18N.t('backup.error', { msg: err.message });
   }
 }
 
@@ -590,7 +594,7 @@ if (_exportBtn) _exportBtn.addEventListener('click', async () => {
   const ta = document.getElementById('backup-json');
   if (ta) { ta.value = JSON.stringify(data, null, 2); ta.style.display = 'block'; }
   const msg = document.getElementById('backup-msg');
-  if (msg) msg.textContent = `Exportiert: ${data.sessions.length} Einheiten, ${data.sets.length} Sätze.`;
+  if (msg) msg.textContent = I18N.t('backup.exported', { s: data.sessions.length, n: data.sets.length });
 });
 
 const _importInput = document.getElementById('backup-import-file');
@@ -606,5 +610,40 @@ if (_importPasteBtn) _importPasteBtn.addEventListener('click', async () => {
   if (ta && ta.value.trim()) await applyImport(ta.value);
 });
 
+// ── Sprache (DE/EN) ─────────────────────────────────────────────────────────────
+function updateLangToggle() {
+  const b = document.getElementById('lang-toggle');
+  if (b) b.textContent = I18N.lang === 'de' ? 'EN' : 'DE';
+}
+
+function rerenderCurrentView() {
+  const active = document.querySelector('nav button.active');
+  const v = active ? active.dataset.view : 'dashboard';
+  if (v === 'dashboard') loadDashboard();
+  else if (v === 'workout') { if (!activeSession) loadWorkoutSelect(); }
+  else if (v === 'progress') {
+    loadProgressView().then(() => {
+      if (currentProgressExId) {
+        document.getElementById('progress-exercise-select').value = currentProgressExId;
+        renderProgressChart(currentProgressExId, progressMode);
+      }
+    });
+  }
+  else if (v === 'library') { allExercises = []; loadLibrary(); }
+  else if (v === 'history') loadHistory();
+}
+
+const _langToggle = document.getElementById('lang-toggle');
+if (_langToggle) _langToggle.addEventListener('click', () => {
+  I18N.setLang(I18N.lang === 'de' ? 'en' : 'de');
+  I18N.applyStatic();
+  updateLangToggle();
+  rerenderCurrentView();
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+document.documentElement.lang = I18N.lang;
+I18N.applyStatic();
+I18N.ready.then(() => I18N.applyStatic());   // Muskel-Filter-Labels nach Content-Load
+updateLangToggle();
 loadDashboard();

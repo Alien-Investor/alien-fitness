@@ -1,0 +1,170 @@
+{
+  "exercises": {
+    "1": {
+      "name": "Decline Push-up (Feet on Bench)",
+      "description": "Put your feet on the bench, body angled downward — targets the upper chest. Hands shoulder-width, elbows slightly bent."
+    },
+    "2": {
+      "name": "Flat Dumbbell Bench Press",
+      "description": "Lie on the bench, dumbbells at chest height, press up explosively, lower slowly. Squeeze your shoulder blades together."
+    },
+    "3": {
+      "name": "Incline Push-up (Hands on Bench)",
+      "description": "Hands on the bench, body angled — targets the lower chest. Keep your core braced."
+    },
+    "4": {
+      "name": "Dumbbell Shoulder Press",
+      "description": "Seated or standing, dumbbells at shoulder height, press straight up. Don't arch your lower back."
+    },
+    "5": {
+      "name": "Lateral Raise",
+      "description": "Lean slightly forward, raise your arms out to the sides up to shoulder height. Controlled motion, no swinging."
+    },
+    "6": {
+      "name": "Front Raise",
+      "description": "Raise your arms forward up to shoulder height, alternating or together. Keep your back straight."
+    },
+    "7": {
+      "name": "Triceps Dips (Bench)",
+      "description": "Hands on the bench behind you, legs straight or bent. Lower your body until your upper arms are parallel to the floor, then press up."
+    },
+    "8": {
+      "name": "Dumbbell Triceps Extension",
+      "description": "Hold the dumbbell behind your head (one or both hands), elbows fixed, extend and bend."
+    },
+    "9": {
+      "name": "Close-Grip Push-up (Diamond)",
+      "description": "Hands close together (diamond shape), elbows tucked to your body. Hits the triceps hard."
+    },
+    "10": {
+      "name": "Wide-Grip Pull-up (Overhand)",
+      "description": "Hands wider than shoulder-width, palms facing away. Pull your chest to the bar, lower slowly. Retract your shoulder blades."
+    },
+    "11": {
+      "name": "Chin-up (Close Underhand)",
+      "description": "Close underhand grip, palms facing you. Chin over the bar — also targets the biceps."
+    },
+    "12": {
+      "name": "Neutral-Grip Pull-up (Parallel)",
+      "description": "Palms facing each other (if handles are available), easy on the shoulders and very effective for the back."
+    },
+    "13": {
+      "name": "Single-Arm Dumbbell Row",
+      "description": "Brace your knee and hand on the bench, pull the dumbbell from the floor to your hip. Keep your elbow close to your body."
+    },
+    "14": {
+      "name": "Dumbbell Pullover",
+      "description": "Lie across the bench, lower the dumbbell behind your head and pull it back. Stretches the rib cage and back."
+    },
+    "15": {
+      "name": "Dumbbell Biceps Curl",
+      "description": "Arms extended, curl the dumbbells up to your shoulders. Keep your elbows pinned to your body, no swinging."
+    },
+    "16": {
+      "name": "Hammer Curl",
+      "description": "Palms facing each other (neutral grip), perform curls. Works the biceps and brachialis."
+    },
+    "17": {
+      "name": "Concentration Curl",
+      "description": "Seated, brace your elbow against the inside of your knee, curl slowly. Maximum biceps isolation."
+    },
+    "18": {
+      "name": "Hanging Knee Raise",
+      "description": "Hang from the bar, pull your knees to your chest. Lower slowly. Variation: straight legs for more intensity."
+    },
+    "19": {
+      "name": "Bulgarian Split Squat (DB)",
+      "description": "Rear foot on the bench, front foot well forward. Lower deep, knee pointing forward. One of the most effective leg exercises."
+    },
+    "20": {
+      "name": "Romanian Deadlift (DB)",
+      "description": "Slightly bent knees, dumbbells close to your body down your legs. Keep tension in the hamstrings."
+    },
+    "21": {
+      "name": "Hip Thrust (Bench)",
+      "description": "Shoulders on the bench, lower your hips and drive up explosively. Place a dumbbell on your hips for more resistance."
+    },
+    "22": {
+      "name": "Reverse Lunge (DB)",
+      "description": "Step back, lower your knee toward the floor, return to the start. Alternate sides."
+    },
+    "23": {
+      "name": "Single-Leg Calf Raise",
+      "description": "One hand on the bar for balance, rise onto your toes on one leg. Slow and controlled."
+    },
+    "24": {
+      "name": "Plank",
+      "description": "Forearms or hands, body straight as a board. Brace your core, don't let your hips sag. Increase the hold time."
+    },
+    "25": {
+      "name": "Burpees",
+      "description": "From standing into a push-up position, push-up, back up, jump with your arms overhead. Explosive and without pause."
+    },
+    "26": {
+      "name": "Jump Squats",
+      "description": "Squat down, then jump up explosively. Land softly, straight into the next rep."
+    },
+    "27": {
+      "name": "Mountain Climbers",
+      "description": "Plank position, drive your knees to your chest quickly, alternating. As fast as possible, keep your hips low."
+    },
+    "28": {
+      "name": "High Knees",
+      "description": "Run in place, driving your knees up to your hips explosively. Move your arms along. Maximum pace."
+    },
+    "29": {
+      "name": "Explosive Pull-ups",
+      "description": "Pull up explosively, as high as possible. Brief pause at the top, lower under control. Alternative: kipping pull-ups."
+    },
+    "30": {
+      "name": "Clap Push-ups",
+      "description": "Standard push-up, push up explosively, clap your hands, land softly. Only if your basic push-up is solid."
+    },
+    "31": {
+      "name": "Box Jumps (on Bench)",
+      "description": "Jump onto the bench from standing, land softly, step down (don't jump back). Go higher gradually."
+    },
+    "32": {
+      "name": "Sprinter Lunges",
+      "description": "From a lunge, explosively drive your rear knee forward and up. Alternate left/right, maximum pace."
+    }
+  },
+  "plans": {
+    "1": {
+      "name": "Push — Chest & Shoulders & Triceps",
+      "day_label": "Day 1 – Push"
+    },
+    "2": {
+      "name": "Pull — Back & Biceps",
+      "day_label": "Day 2 – Pull"
+    },
+    "3": {
+      "name": "Legs & Core",
+      "day_label": "Day 3 – Legs"
+    },
+    "4": {
+      "name": "HIT — Tabata (20 sec on / 10 sec rest × 8)",
+      "day_label": "HIT Day A – Tabata"
+    },
+    "5": {
+      "name": "HIT — Power & Explosiveness",
+      "day_label": "HIT Day B – Power"
+    }
+  },
+  "muscle_groups": {
+    "Brust": "Chest",
+    "Schultern": "Shoulders",
+    "Trizeps": "Triceps",
+    "Rücken": "Back",
+    "Bizeps": "Biceps",
+    "Core": "Core",
+    "Beine": "Legs",
+    "Ganzkörper": "Full Body"
+  },
+  "equipment": {
+    "Bank": "Bench",
+    "Kurzhanteln": "Dumbbells",
+    "Körpergewicht": "Bodyweight",
+    "Stange": "Pull-up Bar"
+  }
+}

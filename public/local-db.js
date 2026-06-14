@@ -45,7 +45,33 @@ window.LocalData = (function () {
     planById = new Map(seed.plans.map(p => [p.id, p]));
   }
 
-  const ready = (async () => { await loadSeed(); idb = await openIDB(); })();
+  const ready = (async () => {
+    await loadSeed();
+    if (window.I18N) await window.I18N.ready;   // EN-Inhalte bereit, bevor gerendert wird
+    idb = await openIDB();
+  })();
+
+  // ── Sprach-Overlay (EN-Inhalte aus i18n-content.json; DE = Originaldaten) ────────
+  function exOverlay(e) {
+    if (!e) return e;
+    const tr = window.I18N && window.I18N.exercise(e.id);
+    return tr ? { ...e, name: tr.name, description: tr.description } : e;
+  }
+  function planOverlay(p) {
+    if (!p) return p;
+    const tr = window.I18N && window.I18N.plan(p.id);
+    return tr ? { ...p, name: tr.name, day_label: tr.day_label } : p;
+  }
+  function planNameById(id) {
+    const p = planById.get(id);
+    if (!p) return null;
+    const tr = window.I18N && window.I18N.plan(id);
+    return tr ? tr.name : p.name;
+  }
+  function exName(id, fallback) {
+    const tr = window.I18N && window.I18N.exercise(id);
+    return tr ? tr.name : fallback;
+  }
 
   // ── IndexedDB-Helfer ───────────────────────────────────────────────────────────
   function tx(stores, mode) {
@@ -62,7 +88,7 @@ window.LocalData = (function () {
 
   // ── API-kompatible Methoden ─────────────────────────────────────────────────────
   async function getExercises(q = {}) {
-    let list = seed.exercises.slice();
+    let list = seed.exercises.map(exOverlay);
     if (q.muscle_group) list = list.filter(e => e.muscle_group === q.muscle_group);
     if (q.equipment)    list = list.filter(e => e.equipment === q.equipment);
     if (q.type)         list = list.filter(e => e.type === q.type);
@@ -72,11 +98,11 @@ window.LocalData = (function () {
   }
 
   async function getExercise(id) {
-    return exById.get(Number(id)) || null;
+    return exOverlay(exById.get(Number(id))) || null;
   }
 
   async function getPlans() {
-    return seed.plans.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    return seed.plans.map(planOverlay).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   }
 
   async function getPlan(id) {
@@ -87,13 +113,14 @@ window.LocalData = (function () {
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
       .map(pe => {
         const e = exById.get(pe.exercise_id) || {};
+        const trx = window.I18N && window.I18N.exercise(pe.exercise_id);
         return {
           ...pe,
-          name: e.name, muscle_group: e.muscle_group, equipment: e.equipment,
-          description: e.description, type: e.type,
+          name: trx ? trx.name : e.name, muscle_group: e.muscle_group, equipment: e.equipment,
+          description: trx ? trx.description : e.description, type: e.type,
         };
       });
-    return { ...plan, exercises };
+    return { ...planOverlay(plan), exercises };
   }
 
   async function getSessions(limit = 20) {
@@ -101,7 +128,7 @@ window.LocalData = (function () {
     sessions.sort((a, b) => (a.started_at < b.started_at ? 1 : -1));
     return sessions.slice(0, limit).map(s => {
       const p = s.plan_id != null ? planById.get(s.plan_id) : null;
-      return { ...s, plan_name: p ? p.name : null, plan_type: p ? p.type : null };
+      return { ...s, plan_name: p ? planNameById(s.plan_id) : null, plan_type: p ? p.type : null };
     });
   }
 
@@ -113,7 +140,7 @@ window.LocalData = (function () {
       .sort((a, b) => a.exercise_id - b.exercise_id || a.set_number - b.set_number)
       .map(st => {
         const e = exById.get(st.exercise_id) || {};
-        return { ...st, exercise_name: e.name, muscle_group: e.muscle_group };
+        return { ...st, exercise_name: exName(st.exercise_id, e.name), muscle_group: e.muscle_group };
       });
     return { ...session, sets };
   }
@@ -179,7 +206,7 @@ window.LocalData = (function () {
     if (sessions.length) {
       const s = sessions[0];
       const p = s.plan_id != null ? planById.get(s.plan_id) : null;
-      last_session = { started_at: s.started_at, plan_name: p ? p.name : null };
+      last_session = { started_at: s.started_at, plan_name: p ? planNameById(s.plan_id) : null };
     }
     return { total_sessions, last_session, this_week };
   }
@@ -196,7 +223,7 @@ window.LocalData = (function () {
 
   async function importAll(obj, { merge = false } = {}) {
     if (!obj || obj.format !== 'alien-fitness-backup')
-      throw new Error('Keine gültige Alien-Fitness-Backup-Datei.');
+      throw new Error(window.I18N ? window.I18N.t('err.invalidBackup') : 'Invalid backup file.');
     const sessions = Array.isArray(obj.sessions) ? obj.sessions : [];
     const sets = Array.isArray(obj.sets) ? obj.sets : [];
     const [sessStore, setStore] = tx(['sessions', 'sets'], 'readwrite');
