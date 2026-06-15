@@ -21,11 +21,19 @@ useful to its owner.
 - **Zap Store** (Nostr app store): search for *Alien Fitness*
 - Or sideload the APK from the latest release
 
-**Signature fingerprint** — verify authenticity, stable across all versions:
+**Signature fingerprint** — verify authenticity, stable across all versions.
+Same value, two notations — both are the SHA-256 of the signing certificate:
 
 ```
-SHA-256: 859e88b7435f841d8bc1cff1fea91256a633dea559d95a91024b2253a2ad1326
+AppVerifier (colon-separated, what the app shows you):
+85:9E:88:B7:43:5F:84:1D:8B:C1:CF:F1:FE:A9:12:56:A6:33:DE:A5:59:D9:5A:91:02:4B:22:53:A2:AD:13:26
+
+Plain SHA-256 (apksigner / no separators):
+859e88b7435f841d8bc1cff1fea91256a633dea559d95a91024b2253a2ad1326
 ```
+
+Install [AppVerifier](https://github.com/soupslurpr/AppVerifier), open it on the
+installed app and compare against the colon-separated value above.
 
 ## Build
 
