@@ -626,6 +626,26 @@ h3 {
   box-shadow: 0 0 10px rgba(0,255,204,0.2);
 }
 
+#lang-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--neon);
+  font-family: var(--font-h);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+#lang-toggle:hover {
+  border-color: var(--neon-mid);
+  color: var(--neon);
+  box-shadow: 0 0 10px rgba(0,255,204,0.2);
+}
+
 /* ── Help Modal ──────────────────────────────────────────────────────────────── */
 #help-overlay {
   display: none;

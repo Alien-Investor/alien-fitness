@@ -404,7 +404,7 @@ let currentProgressExId = null;
 async function loadProgressView() {
   const exercises = await api('exercises');
   const sel = document.getElementById('progress-exercise-select');
-  sel.innerHTML = '<option value="">– Übung wählen –</option>';
+  sel.innerHTML = '<option value="">' + window.I18N.t('progress.selectOption') + '</option>';
   exercises.forEach(ex => {
     const opt = document.createElement('option');
     opt.value = ex.id;
