@@ -124,7 +124,8 @@
       <div class="backup-row">
         <button id="backup-export" class="btn ghost" data-i18n="backup.export">Backup exportieren</button>
         <label for="backup-import-file" class="btn ghost" data-i18n="backup.import">Backup importieren</label>
-        <input id="backup-import-file" type="file" accept="application/json,.json" hidden>
+        <!-- KEIN accept-Filter: Android graut sonst .json-Backups aus (WebView-Downloads landen als application/octet-stream im Storage-Framework, MIME-Match schlägt fehl). -->
+        <input id="backup-import-file" type="file" hidden>
       </div>
       <textarea id="backup-json" data-i18n-ph="backup.pastePlaceholder" placeholder="…oder JSON hier einfügen und importieren" spellcheck="false"></textarea>
       <button id="backup-import-paste" class="btn ghost small" data-i18n="backup.importPaste">Eingefügtes JSON importieren</button>
