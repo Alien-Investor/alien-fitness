@@ -857,6 +857,10 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
   I18N.setLang(I18N.lang === 'de' ? 'en' : 'de');
   I18N.applyStatic();
   updateLangToggle();
+  // Übungs-Cache IMMER leeren — sonst zeigen Plan-Editor-Dropdown und Bibliothek
+  // nach dem Sprachwechsel die Namen der alten Sprache (Cache wurde vorher nur
+  // in der Bibliotheks-Ansicht geleert)
+  allExercises = [];
   rerenderCurrentView();
 });
 
