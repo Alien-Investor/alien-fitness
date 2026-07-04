@@ -185,7 +185,10 @@ window.LocalData = (function () {
       row.max_weight = Math.max(row.max_weight, st.weight_kg || 0);
       row.total_sets++;
     }
-    return Array.from(byDate.values()).sort((a, b) => (a.date < b.date ? -1 : 1)).slice(0, 60);
+    // Die NEUESTEN 60 Trainingstage (slice(-60)) — slice(0,60) wären die ältesten,
+    // dann würde der Chart nach 60 Tagen pro Übung einfrieren (Bug bis v2.3,
+    // 1:1 vom alten Server-Backend geerbt)
+    return Array.from(byDate.values()).sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-60);
   }
 
   function startOfWeekISO() {
@@ -231,8 +234,22 @@ window.LocalData = (function () {
       await reqP(sessStore.clear());
       await reqP(setStore.clear());
     }
-    for (const s of sessions) await reqP(merge ? sessStore.add(stripId(s)) : sessStore.put(s));
-    for (const s of sets)     await reqP(merge ? setStore.add(stripId(s))  : setStore.put(s));
+    // Merge vergibt neue Session-IDs (add ohne id) — die session_id der Sätze
+    // muss auf die NEUE ID umgehängt werden, sonst hängen sie an fremden/keinen Sessions
+    const idMap = new Map();
+    for (const s of sessions) {
+      const newId = await reqP(merge ? sessStore.add(stripId(s)) : sessStore.put(s));
+      if (merge) idMap.set(s.id, newId);
+    }
+    for (const s of sets) {
+      if (merge) {
+        const c = stripId(s);
+        if (idMap.has(s.session_id)) c.session_id = idMap.get(s.session_id);
+        await reqP(setStore.add(c));
+      } else {
+        await reqP(setStore.put(s));
+      }
+    }
     return { sessions: sessions.length, sets: sets.length };
   }
 

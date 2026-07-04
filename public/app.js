@@ -102,7 +102,9 @@ async function loadDashboard() {
 
     if (stats.last_session) {
       const d = new Date(stats.last_session.started_at);
-      const ago = Math.floor((Date.now() - d) / 86400000);
+      // Kalendertage statt 24h-Blöcke — gestern Abend soll heute "1d" zeigen, nicht "Heute"
+      const startOfDay = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+      const ago = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
       document.getElementById('stat-streak').textContent = ago === 0 ? I18N.t('dyn.today') : ago + 'd';
       document.getElementById('last-session-card').style.display = 'block';
       document.getElementById('last-session-info').innerHTML =
@@ -230,14 +232,16 @@ function openSetModal(exIdx, setNum, ex) {
     `${I18N.t('dyn.setN')} ${setNum} — ${ex.name}`;
 
   const isBodyweight = ex.equipment === 'Körpergewicht' || ex.equipment === 'Stange';
-  const isHit = ex.type === 'hit';
   document.getElementById('weight-group').style.display = isBodyweight ? 'none' : '';
 
-  // Pre-fill last value
-  const lastSet = activeSession.sets.filter(
+  // Korrektur-Fall: eigenen Satz vorbefüllen, sonst Werte vom vorherigen Satz
+  const ownSet = activeSession.sets.find(
+    s => s.exercise_id === ex.exercise_id && s.set_number === setNum
+  );
+  const lastSet = ownSet || activeSession.sets.filter(
     s => s.exercise_id === ex.exercise_id && s.set_number === setNum - 1
   ).pop();
-  document.getElementById('input-reps').value = lastSet?.reps || (isHit ? '' : '');
+  document.getElementById('input-reps').value = lastSet?.reps || '';
   document.getElementById('input-weight').value = lastSet?.weight_kg || '';
 
   document.getElementById('set-modal-overlay').classList.add('open');
@@ -261,13 +265,21 @@ function saveSet() {
   const reps = parseInt(document.getElementById('input-reps').value) || 0;
   const weight = parseFloat(document.getElementById('input-weight').value) || 0;
 
-  activeSession.sets.push({
+  // Korrektur statt Duplikat: erneutes Eintragen desselben Satzes ersetzt den
+  // Eintrag — sonst zählt die Fertig-Logik doppelt und schließt die Übung
+  // (oder das ganze Workout) zu früh ab
+  const entry = {
     exercise_id: ex.exercise_id,
     set_number: setNum,
     reps,
     weight_kg: weight,
     completed: 1,
-  });
+  };
+  const idx = activeSession.sets.findIndex(
+    s => s.exercise_id === ex.exercise_id && s.set_number === setNum
+  );
+  if (idx >= 0) activeSession.sets[idx] = entry;
+  else activeSession.sets.push(entry);
 
   const btn = document.getElementById(`set-${exIdx}-${setNum}`);
   btn.classList.add('done');
@@ -349,19 +361,21 @@ let timerInterval = null;
 
 function startTimer(seconds, nextExercise) {
   if (timerInterval) clearInterval(timerInterval);
-  let remaining = seconds;
+  // Endzeitpunkt statt Tick-Zählung: Android drosselt Intervalle bei gedimmtem
+  // Display — mit Zeitstempel stimmt die Restzeit trotzdem
+  const end = Date.now() + seconds * 1000;
 
   const overlay = document.getElementById('timer-overlay');
   const count = document.getElementById('timer-count');
   const exLabel = document.getElementById('timer-exercise');
 
   overlay.classList.add('open');
-  count.textContent = remaining;
+  count.textContent = seconds;
   count.classList.remove('urgent');
   exLabel.textContent = nextExercise ? I18N.t('dyn.nextExercise', { name: nextExercise }) : I18N.t('dyn.lastRest');
 
   timerInterval = setInterval(() => {
-    remaining--;
+    const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
     count.textContent = remaining;
     if (remaining <= 5) count.classList.add('urgent');
     if (remaining <= 0) {
@@ -370,7 +384,7 @@ function startTimer(seconds, nextExercise) {
       overlay.classList.remove('open');
       playBeep();
     }
-  }, 1000);
+  }, 250);
 }
 
 document.getElementById('timer-skip').addEventListener('click', () => {
