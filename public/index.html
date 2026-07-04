@@ -16,6 +16,32 @@
     #backup-json{width:100%;box-sizing:border-box;min-height:64px;background:#050f0d;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.7rem;padding:10px;resize:vertical;}
     .btn.small{font-size:0.7rem;padding:9px 12px;margin-top:8px;}
     .backup-msg{min-height:18px;margin-top:10px;font-size:0.72rem;color:var(--neon,#00ffcc);font-family:'Share Tech Mono',monospace;}
+    /* Freies Training + eigene Pläne (v2.5) */
+    .wsel-row{display:flex;gap:8px;}
+    .wsel-row .btn:first-child{flex:1;}
+    .wsel-row .plan-mini{flex:0 0 auto;width:46px;padding:10px 0;text-align:center;}
+    #workout-extra{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+    #workout-extra .btn{flex:1;min-width:160px;}
+    #workout-controls{display:flex;gap:10px;margin:14px 0;}
+    #workout-controls .btn{flex:1;}
+    .set-btn.set-add{opacity:.6;}
+    #picker-overlay,#editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:none;align-items:center;justify-content:center;padding:16px;}
+    #picker-overlay.open,#editor-overlay.open{display:flex;}
+    #picker-modal,#editor-modal{background:var(--card,#050f0d);border:1px solid rgba(0,255,204,.3);border-radius:12px;max-width:540px;width:100%;max-height:84vh;display:flex;flex-direction:column;padding:18px;}
+    #picker-modal h3,#editor-modal h3{font-family:Orbitron,sans-serif;font-size:0.85rem;letter-spacing:1px;color:var(--neon,#00ffcc);margin:0 0 10px;}
+    #picker-list{overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    .picker-item{display:flex;justify-content:space-between;gap:10px;background:none;border:1px solid rgba(0,255,204,.18);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.75rem;padding:10px 12px;cursor:pointer;text-align:left;}
+    .picker-item:hover{border-color:var(--neon,#00ffcc);}
+    .picker-item .pi-muscle{color:var(--muted,#7a8a86);flex:0 0 auto;}
+    #picker-search,#editor-name{width:100%;box-sizing:border-box;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.8rem;padding:9px 12px;}
+    #editor-type{background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.75rem;padding:9px;margin-top:8px;width:100%;box-sizing:border-box;}
+    #editor-rows{overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0;}
+    .editor-head,.editor-row{display:grid;grid-template-columns:1fr 50px 62px 54px 28px;gap:6px;align-items:center;}
+    .editor-head{font-size:0.55rem;color:var(--muted,#7a8a86);font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:12px;}
+    .editor-row select,.editor-row input{width:100%;box-sizing:border-box;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:6px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.68rem;padding:7px 5px;}
+    .editor-row .er-del{background:none;border:none;color:var(--muted,#7a8a86);cursor:pointer;font-size:0.9rem;padding:0;}
+    .editor-row .er-del:hover{color:#ff4466;}
+    #editor-btns{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
   </style>
 </head>
 <body>
@@ -61,6 +87,10 @@
     <div id="workout-select-screen">
       <h2 data-i18n="workout.start">Training starten</h2>
       <div id="workout-plan-list" class="plans-grid"></div>
+      <div id="workout-extra">
+        <button class="btn ghost" id="btn-free-workout" data-i18n="adhoc.start">＋ Freies Training</button>
+        <button class="btn ghost" id="btn-new-plan" data-i18n="plan.new">＋ Eigener Plan</button>
+      </div>
     </div>
 
     <div id="workout-active-screen" style="display:none">
@@ -72,6 +102,10 @@
         <div id="workout-progress-fill" style="height:100%;background:var(--neon);border-radius:2px;width:0%;transition:width 0.3s;"></div>
       </div>
       <div id="exercise-list"></div>
+      <div id="workout-controls">
+        <button class="btn ghost" id="btn-add-exercise" style="display:none" data-i18n="adhoc.addEx">＋ Übung hinzufügen</button>
+        <button class="btn" id="btn-finish" data-i18n="workout.finish">✓ Beenden &amp; speichern</button>
+      </div>
       <div id="workout-done-banner" class="done-banner" style="display:none">
         <span data-i18n="workout.doneTitle">✓ TRAINING ABGESCHLOSSEN</span><br>
         <span style="font-size:0.6rem;color:var(--muted);margin-top:8px;display:block;" data-i18n="workout.doneSaved">Einheit gespeichert</span>
@@ -205,9 +239,45 @@
         </div>
       </div>
       <div class="help-section">
+        <div class="help-section-title" data-i18n="help.custom.t">Eigene Pläne &amp; Freies Training</div>
+        <p data-i18n="help.custom.b">Unter Training: „＋ Eigener Plan" erstellt einen eigenen Trainingsplan aus allen Übungen (Sätze, Wiederholungen, Pause frei wählbar) — bearbeiten und löschen jederzeit möglich. „＋ Freies Training" startet ohne Plan: Übungen unterwegs hinzufügen, Sätze loggen, mit „Beenden &amp; speichern" abschließen.</p>
+      </div>
+      <div class="help-section">
         <div class="help-section-title" data-i18n="help.equipment.t">Equipment</div>
         <p data-i18n="help.equipment.b">Klimmzugstange · Kurzhanteln · Hantelbank · Körpergewicht</p>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Übungs-Picker (Freies Training) -->
+<div id="picker-overlay">
+  <div id="picker-modal">
+    <h3 data-i18n="picker.title">Übung wählen</h3>
+    <input id="picker-search" data-i18n-ph="picker.searchPh" placeholder="Suchen…" autocomplete="off" spellcheck="false">
+    <div id="picker-list"></div>
+    <button class="btn ghost btn-sm" id="picker-close" style="margin-top:10px" data-i18n="set.cancel">Abbrechen</button>
+  </div>
+</div>
+
+<!-- Plan-Editor (eigene Pläne) -->
+<div id="editor-overlay">
+  <div id="editor-modal">
+    <h3 id="editor-title" data-i18n="plan.newTitle">Eigenen Plan erstellen</h3>
+    <input id="editor-name" data-i18n-ph="plan.namePh" placeholder="z.B. Oberkörper A" autocomplete="off" spellcheck="false">
+    <select id="editor-type">
+      <option value="strength" data-i18n="plan.typeStrength">Kraft</option>
+      <option value="hit" data-i18n="plan.typeHit">HIT</option>
+    </select>
+    <div class="editor-head">
+      <span data-i18n="plan.colEx">Übung</span><span data-i18n="plan.colSets">Sätze</span>
+      <span data-i18n="plan.colReps">Wdh</span><span data-i18n="plan.colRest">Pause</span><span></span>
+    </div>
+    <div id="editor-rows"></div>
+    <button class="btn ghost btn-sm" id="editor-add-row" data-i18n="plan.addEx">＋ Übung</button>
+    <div id="editor-btns">
+      <button class="btn" id="editor-save" data-i18n="plan.save">✓ Plan speichern</button>
+      <button class="btn ghost btn-sm" id="editor-cancel" data-i18n="set.cancel">Abbrechen</button>
     </div>
   </div>
 </div>

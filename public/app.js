@@ -64,8 +64,16 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     lightbox.classList.remove('open');
     helpOverlay.classList.remove('open');
+    const picker = document.getElementById('picker-overlay');
+    const editor = document.getElementById('editor-overlay');
+    if (picker) picker.classList.remove('open');
+    if (editor) editor.classList.remove('open');
   }
 });
+
+// ── HTML-Escape (Plan-Namen sind seit v2.5 Nutzereingaben) ────────────────────
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ── Image helper ──────────────────────────────────────────────────────────────
 const MUSCLE_ICONS = {
@@ -108,7 +116,7 @@ async function loadDashboard() {
       document.getElementById('stat-streak').textContent = ago === 0 ? I18N.t('dyn.today') : ago + 'd';
       document.getElementById('last-session-card').style.display = 'block';
       document.getElementById('last-session-info').innerHTML =
-        `<span class="neon">${stats.last_session.plan_name || I18N.t('dyn.freeTraining')}</span><br>
+        `<span class="neon">${esc(stats.last_session.plan_name) || I18N.t('dyn.freeTraining')}</span><br>
          <span class="muted" style="font-size:0.65rem">${d.toLocaleDateString(I18N.locale(), { weekday:'long', day:'numeric', month:'long' })}</span>`;
     }
 
@@ -120,10 +128,10 @@ async function loadDashboard() {
       div.className = 'plan-item';
       div.innerHTML = `
         <div>
-          <div class="plan-name">${p.name}</div>
-          <div class="plan-meta">${p.day_label || ''}</div>
+          <div class="plan-name">${esc(p.name)}</div>
+          <div class="plan-meta">${esc(p.day_label || '')}</div>
         </div>
-        <span class="badge ${p.type === 'hit' ? 'hit' : ''}">${p.type === 'hit' ? I18N.t('badge.hit') : I18N.t('badge.strength')}</span>`;
+        <span>${p.custom ? `<span class="badge">${I18N.t('badge.custom')}</span> ` : ''}<span class="badge ${p.type === 'hit' ? 'hit' : ''}">${p.type === 'hit' ? I18N.t('badge.hit') : I18N.t('badge.strength')}</span></span>`;
       div.addEventListener('click', () => startWorkout(p.id));
       el.appendChild(div);
     });
@@ -136,21 +144,40 @@ async function loadWorkoutSelect() {
   const el = document.getElementById('workout-plan-list');
   el.innerHTML = '';
   plans.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'wsel-row';
     const btn = document.createElement('button');
     btn.className = 'btn';
     btn.textContent = p.name;
     btn.addEventListener('click', () => startWorkout(p.id));
-    el.appendChild(btn);
+    row.appendChild(btn);
+    if (p.custom) {
+      const edit = document.createElement('button');
+      edit.className = 'btn ghost btn-sm plan-mini';
+      edit.textContent = '✎';
+      edit.title = I18N.t('plan.edit');
+      edit.addEventListener('click', () => openPlanEditor(p.id));
+      row.appendChild(edit);
+      const del = document.createElement('button');
+      del.className = 'btn ghost btn-sm plan-mini';
+      del.textContent = '✕';
+      del.title = I18N.t('plan.delete');
+      del.addEventListener('click', async () => {
+        if (!confirm(I18N.t('plan.deleteConfirm', { name: p.name }))) return;
+        await LocalData.deletePlan(p.id);
+        loadWorkoutSelect();
+        loadDashboard();
+      });
+      row.appendChild(del);
+    }
+    el.appendChild(row);
   });
 }
 
 // ── WORKOUT ACTIVE ────────────────────────────────────────────────────────────
 let activeSession = null;
 
-async function startWorkout(planId) {
-  const plan = await api('plans/' + planId);
-
-  // Switch to workout view + active screen
+function showWorkoutScreen(title, adhoc) {
   navBtns.forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="workout"]').classList.add('active');
   views.forEach(v => v.classList.remove('active'));
@@ -158,7 +185,15 @@ async function startWorkout(planId) {
   document.getElementById('workout-select-screen').style.display = 'none';
   document.getElementById('workout-active-screen').style.display = 'block';
   document.getElementById('workout-done-banner').style.display = 'none';
-  document.getElementById('workout-plan-name').textContent = plan.name;
+  document.getElementById('exercise-list').style.display = 'block';
+  document.getElementById('workout-controls').style.display = 'flex';
+  document.getElementById('btn-add-exercise').style.display = adhoc ? '' : 'none';
+  document.getElementById('workout-plan-name').textContent = title;
+}
+
+async function startWorkout(planId) {
+  const plan = await api('plans/' + planId);
+  showWorkoutScreen(plan.name, false);
 
   activeSession = {
     planId: plan.id,
@@ -170,6 +205,81 @@ async function startWorkout(planId) {
 
   renderExercises(plan.exercises);
   updateProgress();
+}
+
+// ── Freies Training (ohne Plan): Übungen unterwegs hinzufügen ────────────────
+function startFreeWorkout() {
+  activeSession = {
+    planId: null,
+    adhoc: true,
+    startedAt: new Date().toISOString(),
+    exercises: [],
+    sets: [],
+    completedSets: {},
+  };
+  showWorkoutScreen(I18N.t('dyn.freeTraining'), true);
+  renderExercises([]);
+  updateProgress();
+}
+document.getElementById('btn-free-workout').addEventListener('click', startFreeWorkout);
+
+// Nach einem Re-Render (Übung/Satz hinzugefügt) die geloggten Sätze wieder markieren
+function applyLoggedSets() {
+  activeSession.sets.forEach(s => {
+    const ei = activeSession.exercises.findIndex(e => e.exercise_id === s.exercise_id);
+    if (ei < 0) return;
+    const btn = document.getElementById(`set-${ei}-${s.set_number}`);
+    if (!btn) return;
+    btn.classList.add('done');
+    btn.querySelector('.set-val').textContent =
+      s.weight_kg > 0 ? `${s.reps}×${s.weight_kg}kg` : `${s.reps} ${I18N.t('dyn.reps')}`;
+  });
+}
+function reRenderAdhoc() {
+  renderExercises(activeSession.exercises);
+  applyLoggedSets();
+  updateProgress();
+}
+
+document.getElementById('btn-add-exercise').addEventListener('click', openExercisePicker);
+document.getElementById('picker-close').addEventListener('click', () =>
+  document.getElementById('picker-overlay').classList.remove('open'));
+document.getElementById('picker-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
+async function openExercisePicker() {
+  const list = await api('exercises');
+  const box = document.getElementById('picker-list');
+  const search = document.getElementById('picker-search');
+  const render = () => {
+    const q = search.value.trim().toLowerCase();
+    box.innerHTML = '';
+    list
+      .filter(e => !activeSession.exercises.some(x => x.exercise_id === e.id))
+      .filter(e => !q || e.name.toLowerCase().includes(q) || I18N.muscle(e.muscle_group).toLowerCase().includes(q))
+      .forEach(e => {
+        const b = document.createElement('button');
+        b.className = 'picker-item';
+        const nm = document.createElement('span'); nm.textContent = e.name;
+        const mg = document.createElement('span'); mg.className = 'pi-muscle'; mg.textContent = I18N.muscle(e.muscle_group);
+        b.appendChild(nm); b.appendChild(mg);
+        b.addEventListener('click', () => {
+          activeSession.exercises.push({
+            exercise_id: e.id, name: e.name, muscle_group: e.muscle_group,
+            description: e.description, type: e.type, sets: 3, reps: '–', rest_seconds: 90,
+          });
+          document.getElementById('picker-overlay').classList.remove('open');
+          reRenderAdhoc();
+        });
+        box.appendChild(b);
+      });
+  };
+  search.value = '';
+  search.oninput = render;
+  render();
+  document.getElementById('picker-overlay').classList.add('open');
+  setTimeout(() => search.focus(), 100);
 }
 
 function renderExercises(exercises) {
@@ -216,6 +326,16 @@ function renderExercises(exercises) {
       btn.addEventListener('click', () => openSetModal(ei, s, ex));
       setsRow.appendChild(btn);
     });
+
+    // Freies Training: Sätze on-the-fly ergänzen
+    if (activeSession && activeSession.adhoc) {
+      const plus = document.createElement('button');
+      plus.className = 'set-btn set-add';
+      plus.title = I18N.t('adhoc.addSet');
+      plus.innerHTML = '<span class="set-num">＋</span><span class="set-val"></span>';
+      plus.addEventListener('click', () => { ex.sets++; reRenderAdhoc(); });
+      setsRow.appendChild(plus);
+    }
 
     card.appendChild(setsRow);
     el.appendChild(card);
@@ -288,21 +408,24 @@ function saveSet() {
   closeSetModal();
   updateProgress();
 
-  // Check if exercise fully done
-  const totalSets = activeSession.exercises[exIdx].sets;
-  const doneSets = activeSession.sets.filter(
-    s => s.exercise_id === ex.exercise_id && s.completed
-  ).length;
+  // Freies Training: kein Auto-Abschluss — der Nutzer beendet über den Button
+  if (!activeSession.adhoc) {
+    // Check if exercise fully done
+    const totalSets = activeSession.exercises[exIdx].sets;
+    const doneSets = activeSession.sets.filter(
+      s => s.exercise_id === ex.exercise_id && s.completed
+    ).length;
 
-  if (doneSets >= totalSets) {
-    document.getElementById('ex-card-' + exIdx).classList.remove('current');
-    document.getElementById('ex-card-' + exIdx).classList.add('done');
-    // Mark next exercise as current
-    if (exIdx + 1 < activeSession.exercises.length) {
-      document.getElementById('ex-card-' + (exIdx + 1)).classList.add('current');
-      document.getElementById('ex-card-' + (exIdx + 1)).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (doneSets >= totalSets) {
+      document.getElementById('ex-card-' + exIdx).classList.remove('current');
+      document.getElementById('ex-card-' + exIdx).classList.add('done');
+      // Mark next exercise as current
+      if (exIdx + 1 < activeSession.exercises.length) {
+        document.getElementById('ex-card-' + (exIdx + 1)).classList.add('current');
+        document.getElementById('ex-card-' + (exIdx + 1)).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      checkWorkoutDone();
     }
-    checkWorkoutDone();
   }
 
   // Start rest timer
@@ -337,8 +460,15 @@ async function finishWorkout() {
     });
   } catch(e) { console.error(e); }
   document.getElementById('exercise-list').style.display = 'none';
+  document.getElementById('workout-controls').style.display = 'none';
   document.getElementById('workout-done-banner').style.display = 'block';
 }
+
+// Manuell beenden: speichert auch Teil-Workouts (Plan) und Freies Training
+document.getElementById('btn-finish').addEventListener('click', () => {
+  if (!activeSession || !activeSession.sets.length) return;
+  finishWorkout();
+});
 
 document.getElementById('btn-abort').addEventListener('click', () => {
   document.getElementById('workout-active-screen').style.display = 'none';
@@ -502,6 +632,81 @@ async function renderProgressChart(exId, mode) {
   });
 }
 
+// ── PLAN-EDITOR (eigene Pläne, IndexedDB via LocalData) ───────────────────────
+let editorPlanId = null;
+
+function addEditorRow(pe) {
+  const row = document.createElement('div');
+  row.className = 'editor-row';
+  const sel = document.createElement('select');
+  sel.className = 'er-ex';
+  allExercises.forEach(e => {
+    const o = document.createElement('option');
+    o.value = e.id;
+    o.textContent = e.name;
+    sel.appendChild(o);
+  });
+  if (pe) sel.value = pe.exercise_id;
+  const mk = (cls, val, type, attrs) => {
+    const i = document.createElement('input');
+    i.className = cls; i.type = type;
+    Object.assign(i, attrs || {});
+    i.value = val;
+    return i;
+  };
+  const sets = mk('er-sets', pe ? pe.sets : 3, 'number', { min: 1, max: 20 });
+  const reps = mk('er-reps', pe ? pe.reps : '8-12', 'text', {});
+  const rest = mk('er-rest', pe ? pe.rest_seconds : 90, 'number', { min: 0, max: 600, step: 15 });
+  const del = document.createElement('button');
+  del.className = 'er-del'; del.textContent = '✕';
+  del.addEventListener('click', () => row.remove());
+  row.append(sel, sets, reps, rest, del);
+  document.getElementById('editor-rows').appendChild(row);
+}
+
+async function openPlanEditor(planId) {
+  editorPlanId = planId;
+  if (!allExercises.length) allExercises = await api('exercises');
+  document.getElementById('editor-title').textContent = I18N.t(planId ? 'plan.editTitle' : 'plan.newTitle');
+  const data = (planId && LocalData.getCustomPlan(planId)) || { name: '', type: 'strength', exercises: [] };
+  document.getElementById('editor-name').value = data.name;
+  document.getElementById('editor-type').value = data.type;
+  document.getElementById('editor-rows').innerHTML = '';
+  (data.exercises.length ? data.exercises : [null]).forEach(addEditorRow);
+  document.getElementById('editor-overlay').classList.add('open');
+}
+
+async function savePlanFromEditor() {
+  const name = document.getElementById('editor-name').value.trim();
+  if (!name) { alert(I18N.t('plan.needName')); return; }
+  const exercises = [...document.querySelectorAll('#editor-rows .editor-row')].map((r, i) => ({
+    exercise_id: Number(r.querySelector('.er-ex').value),
+    sets: Math.min(20, Math.max(1, parseInt(r.querySelector('.er-sets').value) || 3)),
+    reps: r.querySelector('.er-reps').value.trim() || '8-12',
+    rest_seconds: Math.min(600, Math.max(0, parseInt(r.querySelector('.er-rest').value) || 90)),
+    sort_order: i,
+  })).filter(e => e.exercise_id);
+  if (!exercises.length) { alert(I18N.t('plan.needEx')); return; }
+  await LocalData.savePlan({
+    id: editorPlanId,
+    name,
+    type: document.getElementById('editor-type').value,
+    exercises,
+  });
+  document.getElementById('editor-overlay').classList.remove('open');
+  loadWorkoutSelect();
+  loadDashboard();
+}
+
+document.getElementById('btn-new-plan').addEventListener('click', () => openPlanEditor(null));
+document.getElementById('editor-save').addEventListener('click', savePlanFromEditor);
+document.getElementById('editor-add-row').addEventListener('click', () => addEditorRow(null));
+document.getElementById('editor-cancel').addEventListener('click', () =>
+  document.getElementById('editor-overlay').classList.remove('open'));
+document.getElementById('editor-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
 // ── LIBRARY ───────────────────────────────────────────────────────────────────
 let allExercises = [];
 let libraryBound = false;
@@ -573,7 +778,7 @@ async function loadHistory() {
     div.className = 'session-item';
     div.innerHTML = `
       <div class="session-date">${dateStr} · ${timeStr}</div>
-      <div class="session-plan">${s.plan_name || I18N.t('dyn.freeTraining')}</div>
+      <div class="session-plan">${esc(s.plan_name) || I18N.t('dyn.freeTraining')}</div>
       <div class="session-meta">${dur}</div>`;
     el.appendChild(div);
   });

@@ -10,11 +10,15 @@
 
 window.LocalData = (function () {
   const DB_NAME = 'alien-fitness';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;          // v2: custom_plans (eigene Trainingspläne)
+  // Eigene Pläne bekommen öffentliche IDs ab 1000 — kollidiert nie mit den
+  // Seed-Plänen (1..n) und bleibt in sessions.plan_id stabil referenzierbar.
+  const CUSTOM_OFFSET = 1000;
 
   let seed = null;          // { exercises, plans, plan_exercises }
   let exById = null;        // Map exercise_id -> exercise
-  let planById = null;      // Map plan_id -> plan
+  let planById = null;      // Map plan_id -> plan (nur Seed-Pläne)
+  let customById = new Map(); // Map öffentliche ID (1000+) -> eigener Plan (Rohdaten)
   let idb = null;           // IndexedDB-Handle
 
   // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -31,6 +35,9 @@ window.LocalData = (function () {
           s.createIndex('session_id', 'session_id', { unique: false });
           s.createIndex('exercise_id', 'exercise_id', { unique: false });
         }
+        if (!db.objectStoreNames.contains('custom_plans')) {
+          db.createObjectStore('custom_plans', { keyPath: 'id', autoIncrement: true });
+        }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -45,10 +52,16 @@ window.LocalData = (function () {
     planById = new Map(seed.plans.map(p => [p.id, p]));
   }
 
+  async function refreshCustomCache() {
+    const rows = await allFrom('custom_plans');
+    customById = new Map(rows.map(r => [CUSTOM_OFFSET + r.id, r]));
+  }
+
   const ready = (async () => {
     await loadSeed();
     if (window.I18N) await window.I18N.ready;   // EN-Inhalte bereit, bevor gerendert wird
     idb = await openIDB();
+    await refreshCustomCache();
   })();
 
   // ── Sprach-Overlay (EN-Inhalte aus i18n-content.json; DE = Originaldaten) ────────
@@ -64,9 +77,16 @@ window.LocalData = (function () {
   }
   function planNameById(id) {
     const p = planById.get(id);
-    if (!p) return null;
+    if (!p) {
+      const c = customById.get(id);
+      return c ? c.name : null;
+    }
     const tr = window.I18N && window.I18N.plan(id);
     return tr ? tr.name : p.name;
+  }
+  function planTypeById(id) {
+    const p = planById.get(id) || customById.get(id);
+    return p ? (p.type || 'strength') : null;
   }
   function exName(id, fallback) {
     const tr = window.I18N && window.I18N.exercise(id);
@@ -101,35 +121,80 @@ window.LocalData = (function () {
     return exOverlay(exById.get(Number(id))) || null;
   }
 
+  function joinExercise(pe, idx) {
+    const e = exById.get(pe.exercise_id) || {};
+    const trx = window.I18N && window.I18N.exercise(pe.exercise_id);
+    return {
+      ...pe, sort_order: pe.sort_order != null ? pe.sort_order : idx,
+      name: trx ? trx.name : e.name, muscle_group: e.muscle_group, equipment: e.equipment,
+      description: trx ? trx.description : e.description, type: e.type,
+    };
+  }
+
   async function getPlans() {
-    return seed.plans.map(planOverlay).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const seedPlans = seed.plans.map(planOverlay).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    // Eigene Pläne (custom: true) hinter den Seed-Plänen
+    const custom = Array.from(customById.entries())
+      .map(([pid, r]) => ({ id: pid, name: r.name, type: r.type || 'strength', day_label: r.day_label || '', custom: true }))
+      .sort((a, b) => a.id - b.id);
+    return [...seedPlans, ...custom];
   }
 
   async function getPlan(id) {
-    const plan = planById.get(Number(id));
+    id = Number(id);
+    if (id >= CUSTOM_OFFSET) {
+      const r = customById.get(id);
+      if (!r) return null;
+      return {
+        id, name: r.name, type: r.type || 'strength', day_label: r.day_label || '', custom: true,
+        exercises: (r.exercises || []).map(joinExercise),
+      };
+    }
+    const plan = planById.get(id);
     if (!plan) return null;
     const exercises = seed.plan_exercises
-      .filter(pe => pe.plan_id === Number(id))
+      .filter(pe => pe.plan_id === id)
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-      .map(pe => {
-        const e = exById.get(pe.exercise_id) || {};
-        const trx = window.I18N && window.I18N.exercise(pe.exercise_id);
-        return {
-          ...pe,
-          name: trx ? trx.name : e.name, muscle_group: e.muscle_group, equipment: e.equipment,
-          description: trx ? trx.description : e.description, type: e.type,
-        };
-      });
+      .map(joinExercise);
     return { ...planOverlay(plan), exercises };
+  }
+
+  // ── Eigene Pläne (CRUD) ─────────────────────────────────────────────────────────
+  async function savePlan(plan) {
+    // plan: { id? (öffentliche 1000er-ID beim Bearbeiten), name, type, day_label, exercises }
+    const rec = {
+      name: plan.name, type: plan.type || 'strength',
+      day_label: plan.day_label || '', exercises: plan.exercises || [],
+    };
+    const store = tx(['custom_plans'], 'readwrite');
+    if (plan.id != null) rec.id = Number(plan.id) - CUSTOM_OFFSET;
+    const newId = await reqP(store.put(rec));
+    await refreshCustomCache();
+    return CUSTOM_OFFSET + newId;
+  }
+
+  function getCustomPlan(id) {
+    // Rohdaten für den Editor (ohne Übersetzungs-Overlay, ohne Join)
+    const r = customById.get(Number(id));
+    return r ? {
+      id: Number(id), name: r.name, type: r.type || 'strength',
+      day_label: r.day_label || '', exercises: r.exercises || [],
+    } : null;
+  }
+
+  async function deletePlan(id) {
+    await reqP(tx(['custom_plans'], 'readwrite').delete(Number(id) - CUSTOM_OFFSET));
+    await refreshCustomCache();
   }
 
   async function getSessions(limit = 20) {
     const sessions = await allFrom('sessions');
     sessions.sort((a, b) => (a.started_at < b.started_at ? 1 : -1));
-    return sessions.slice(0, limit).map(s => {
-      const p = s.plan_id != null ? planById.get(s.plan_id) : null;
-      return { ...s, plan_name: p ? planNameById(s.plan_id) : null, plan_type: p ? p.type : null };
-    });
+    return sessions.slice(0, limit).map(s => ({
+      ...s,
+      plan_name: s.plan_id != null ? planNameById(s.plan_id) : null,
+      plan_type: s.plan_id != null ? planTypeById(s.plan_id) : null,
+    }));
   }
 
   async function getSession(id) {
@@ -208,19 +273,20 @@ window.LocalData = (function () {
     let last_session;
     if (sessions.length) {
       const s = sessions[0];
-      const p = s.plan_id != null ? planById.get(s.plan_id) : null;
-      last_session = { started_at: s.started_at, plan_name: p ? planNameById(s.plan_id) : null };
+      last_session = { started_at: s.started_at, plan_name: s.plan_id != null ? planNameById(s.plan_id) : null };
     }
     return { total_sessions, last_session, this_week };
   }
 
   // ── Backup: Export / Import ─────────────────────────────────────────────────────
   async function exportAll() {
-    const [sessions, sets] = await Promise.all([allFrom('sessions'), allFrom('sets')]);
+    const [sessions, sets, custom_plans] = await Promise.all([
+      allFrom('sessions'), allFrom('sets'), allFrom('custom_plans'),
+    ]);
     return {
-      format: 'alien-fitness-backup', version: 1,
+      format: 'alien-fitness-backup', version: 2,   // v2: + custom_plans
       exported_at: new Date().toISOString(),
-      sessions, sets,
+      sessions, sets, custom_plans,
     };
   }
 
@@ -229,16 +295,26 @@ window.LocalData = (function () {
       throw new Error(window.I18N ? window.I18N.t('err.invalidBackup') : 'Invalid backup file.');
     const sessions = Array.isArray(obj.sessions) ? obj.sessions : [];
     const sets = Array.isArray(obj.sets) ? obj.sets : [];
-    const [sessStore, setStore] = tx(['sessions', 'sets'], 'readwrite');
+    const customPlans = Array.isArray(obj.custom_plans) ? obj.custom_plans : []; // fehlt in v1-Backups → leer
+    const [sessStore, setStore, planStore] = tx(['sessions', 'sets', 'custom_plans'], 'readwrite');
     if (!merge) {
       await reqP(sessStore.clear());
       await reqP(setStore.clear());
+      await reqP(planStore.clear());
     }
-    // Merge vergibt neue Session-IDs (add ohne id) — die session_id der Sätze
-    // muss auf die NEUE ID umgehängt werden, sonst hängen sie an fremden/keinen Sessions
+    // Merge vergibt neue IDs (add ohne id) — Referenzen müssen auf die NEUEN IDs
+    // umgehängt werden: sets.session_id → neue Session-ID, sessions.plan_id →
+    // neue öffentliche Plan-ID (1000+), sonst hängen sie an fremden/keinen Einträgen
+    const planIdMap = new Map();
+    for (const p of customPlans) {
+      const newId = await reqP(merge ? planStore.add(stripId(p)) : planStore.put(p));
+      if (merge) planIdMap.set(CUSTOM_OFFSET + p.id, CUSTOM_OFFSET + newId);
+    }
     const idMap = new Map();
     for (const s of sessions) {
-      const newId = await reqP(merge ? sessStore.add(stripId(s)) : sessStore.put(s));
+      const rec = merge ? stripId(s) : s;
+      if (merge && planIdMap.has(rec.plan_id)) rec.plan_id = planIdMap.get(rec.plan_id);
+      const newId = await reqP(merge ? sessStore.add(rec) : sessStore.put(rec));
       if (merge) idMap.set(s.id, newId);
     }
     for (const s of sets) {
@@ -250,7 +326,8 @@ window.LocalData = (function () {
         await reqP(setStore.put(s));
       }
     }
-    return { sessions: sessions.length, sets: sets.length };
+    await refreshCustomCache();
+    return { sessions: sessions.length, sets: sets.length, plans: customPlans.length };
   }
 
   function stripId(o) { const c = { ...o }; delete c.id; return c; }
@@ -258,6 +335,7 @@ window.LocalData = (function () {
   return {
     ready,
     getExercises, getExercise, getPlans, getPlan,
+    savePlan, getCustomPlan, deletePlan,
     getSessions, getSession, addSession, getProgress, getStats,
     exportAll, importAll,
   };
