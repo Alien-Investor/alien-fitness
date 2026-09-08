@@ -1,20 +1,30 @@
 # Alien Fitness — Android Client
 
-A minimal **personal workout tracker**, packaged as a native Android app (Capacitor)
-around the Alien Investor fitness web app — so you stay logged in instead of
-re-authenticating every time.
+A minimal, fully **offline** personal workout tracker, packaged as a native Android app
+(Capacitor). No account, no server, no tracking — training plans, logged sessions and
+progress stay on your device and never leave it.
+
+Ein minimalistischer, **vollständig offline** laufender Trainings-Tracker als native
+Android-App. Kein Konto, kein Server, kein Tracking — Pläne, Trainingsverlauf und
+Fortschritt bleiben auf deinem Gerät.
 
 This repository contains the **Android client** (web frontend + Capacitor wrapper).
-The backend is private and requires a one-time login, so this app is primarily
-useful to its owner.
+Since July 2026 (v2.4) the app runs entirely on-device; the former login-based backend
+has been retired.
 
 ## Features
 
-- Training plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
-- Live session logging with automatic rest timer
+- Create your own training plans: any exercise, sets, reps and rest — edit any time
+- Ad-hoc free workouts: start empty, add exercises on the fly, save when done
+- Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
+- Live session logging with automatic rest timer, corrections supported
 - Progress charts per exercise (max weight / reps over time)
 - Exercise library with images, muscle groups and equipment
-- Dark neon UI, mobile-first; the login persists on-device (no constant re-login)
+- JSON backup: export and import your history and plans to move between devices
+- German and English interface, switchable in-app
+- Dark neon UI, mobile-first
+
+Built-in plans use bodyweight, pull-up bar and dumbbells — no gym required.
 
 ## Install
 
@@ -44,9 +54,9 @@ npx cap add android          # one-time
 ./build-apk.sh               # signed release APK (needs a signing keystore)
 ```
 
-The frontend lives in `public/` (bundled into the APK by `build-www.sh`). API calls go
-to the private backend with the Authorization header from a one-time on-device login;
-in the native app they run via CapacitorHttp (bypassing CORS).
+The frontend lives in `public/` and is bundled into the APK by `build-www.sh`. All data is
+kept in on-device storage; the only file the app loads is its own bundled exercise seed.
+No network calls.
 
 ## License
 
