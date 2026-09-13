@@ -1,6 +1,6 @@
 # YouTube EN – App trailer „Alien Fitness: offline workout tracker"
 
-**Status:** READY to upload. File `out/trailer-en-16x9.mp4` (57 s), thumbnail suggestion V2 (`thumbs/thumb-v2-en.jpg`).
+**Status:** LIVE since 2026-09-13, https://youtu.be/FIXtYe8OSd8 (title = suggestion 1). Website embed set. File `out/trailer-en-16x9.mp4` (57 s), thumbnail suggestion V2 (`thumbs/thumb-v2-en.jpg`).
 After upload: enter the ID here, `python3 embed_website.py <ID_DE> <ID_EN>`, push website, Obsidian `projekte/yt-videos.md` + `projekte/alien-fitness.md`.
 
 ## Title (suggestion 1 recommended)

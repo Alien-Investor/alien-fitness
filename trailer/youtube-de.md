@@ -1,6 +1,6 @@
 # YouTube DE – App-Trailer „Alien Fitness: Offline-Trainings-Tracker"
 
-**Status:** BEREIT zum Upload. Datei `out/trailer-de-16x9.mp4` (57 s), Thumbnail-Vorschlag V2 (`thumbs/thumb-v2-de.jpg`).
+**Status:** LIVE seit 2026-09-13, https://youtu.be/R1NdqSpS_zI (Titel = Vorschlag 1). Website-Embed gesetzt. Datei `out/trailer-de-16x9.mp4` (57 s), Thumbnail-Vorschlag V2 (`thumbs/thumb-v2-de.jpg`).
 Nach dem Upload: ID hier eintragen, `python3 embed_website.py <ID_DE> <ID_EN>`, Website pushen, Obsidian `projekte/yt-videos.md` + `projekte/alien-fitness.md`.
 
 ## Titel (Vorschlag 1 empfohlen)
