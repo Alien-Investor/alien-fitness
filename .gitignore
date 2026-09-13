@@ -32,3 +32,11 @@ apk/patch-signing.mjs
 apk/build-apk.sh
 apk/finish-build.sh
 apk/cb-setup.sh
+apk/publish-zapstore.sh
+trailer/out/
+trailer/shots/
+trailer/frames/
+trailer/cards/
+trailer/thumbs/
+trailer/musik/
+trailer/assets_icon_src.png
