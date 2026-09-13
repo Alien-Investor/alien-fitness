@@ -227,8 +227,16 @@ function timedSeconds(ex) {
   const m = String(ex.reps || '').match(/^\s*(\d+)\s*(s|sek|sec|sekunden|seconds?)\b/i);
   return m ? Number(m[1]) : null;
 }
-function isLogged(ex, setNum) {
-  return activeSession.sets.some(s => s.exercise_id === ex.exercise_id && s.set_number === setNum && s.completed);
+// Geloggte Sätze werden nach ZEILE (row = Index in activeSession.exercises) geführt,
+// nicht nach exercise_id — sonst überschreiben sich zwei Zeilen mit derselben Übung
+// gegenseitig (dieselbe Übung als Aufwärmen und Finisher ist ein normaler Plan).
+function isLogged(row, setNum) {
+  return activeSession.sets.some(s => s.row === row && s.set_number === setNum && s.completed);
+}
+// Zeilen-Index eines geloggten Satzes (Alt-Drafts ohne row: über exercise_id auflösen)
+function setRow(s) {
+  if (Number.isInteger(s.row)) return s.row;
+  return activeSession.exercises.findIndex(e => e.exercise_id === s.exercise_id);
 }
 function fmtSet(s) {
   if (s.duration_seconds) return `${s.duration_seconds}${I18N.t('dyn.sec')}`;
@@ -317,7 +325,12 @@ async function saveDraftAsSession(draft) {
         finished_at: draft.savedAt || new Date().toISOString(),
         sets: draft.sets,
       }) });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      // Speichern fehlgeschlagen: Draft NICHT löschen, sonst gehen die Sätze verloren.
+      console.error(e);
+      alert(I18N.t('workout.saveFailed'));
+      return;
+    }
   }
   clearDraft();
   loadDashboard();
@@ -336,7 +349,7 @@ document.getElementById('resume-drop').addEventListener('click', () => {
 // markieren und bei Plan-Workouts erledigte Übungen abhaken / die aktuelle setzen
 function applyLoggedSets() {
   activeSession.sets.forEach(s => {
-    const ei = activeSession.exercises.findIndex(e => e.exercise_id === s.exercise_id);
+    const ei = setRow(s);
     if (ei < 0) return;
     const btn = document.getElementById(`set-${ei}-${s.set_number}`);
     if (!btn) return;
@@ -348,7 +361,7 @@ function applyLoggedSets() {
   activeSession.exercises.forEach((ex, ei) => {
     const card = document.getElementById('ex-card-' + ei);
     if (!card) return;
-    const done = activeSession.sets.filter(s => s.exercise_id === ex.exercise_id && s.completed).length;
+    const done = activeSession.sets.filter(s => setRow(s) === ei && s.completed).length;
     card.classList.remove('current', 'done');
     if (done >= ex.sets) card.classList.add('done');
     else if (!currentSet) { card.classList.add('current'); currentSet = true; }
@@ -410,8 +423,12 @@ function renderExercises(exercises) {
     card.className = 'exercise-card' + (ei === 0 ? ' current' : '');
     card.id = 'ex-card-' + ei;
 
+    // Satzzahl hart begrenzen: eine importierte/eigene Übung mit absurdem sets-Wert
+    // (z.B. 1e9) würde sonst hier Milliarden DOM-Knoten bauen und die App aufhängen.
+    const nSets = Math.min(30, Math.max(0, parseInt(ex.sets) || 0));
+    ex.sets = nSets;
     const setsArr = [];
-    for (let s = 1; s <= ex.sets; s++) setsArr.push(s);
+    for (let s = 1; s <= nSets; s++) setsArr.push(s);
 
     const header = document.createElement('div');
     header.className = 'ex-header';
@@ -422,10 +439,11 @@ function renderExercises(exercises) {
     const timed = timedSeconds(ex);
     const info = document.createElement('div');
     info.className = 'ex-info';
-    // reps ist bei eigenen Plänen Freitext → escapen
+    // ALLE eingesetzten Felder escapen — bei eigenen/importierten Plänen sind reps,
+    // sets und rest_seconds Nutzer- bzw. Fremddaten (Freitext bzw. aus Backup-JSON).
     info.innerHTML = `
       <div class="ex-name">${esc(ex.name)}</div>
-      <div class="ex-meta">${ex.sets} ${I18N.t('dyn.sets')} × ${esc(ex.reps)} · ${I18N.t('dyn.rest')}: ${ex.rest_seconds}s · ${I18N.muscle(ex.muscle_group)}</div>`;
+      <div class="ex-meta">${esc(ex.sets)} ${I18N.t('dyn.sets')} × ${esc(ex.reps)} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
     header.appendChild(info);
     card.appendChild(header);
 
@@ -498,10 +516,10 @@ async function openSetModal(exIdx, setNum, ex) {
   // Vorbelegung: eigener Satz (Korrektur) > voriger Satz dieser Einheit >
   // gleicher Satz vom letzten Mal > letzter Satz vom letzten Mal
   const ownSet = activeSession.sets.find(
-    s => s.exercise_id === ex.exercise_id && s.set_number === setNum
+    s => setRow(s) === exIdx && s.set_number === setNum
   );
   const prevSet = activeSession.sets.filter(
-    s => s.exercise_id === ex.exercise_id && s.set_number === setNum - 1
+    s => setRow(s) === exIdx && s.set_number === setNum - 1
   ).pop();
   const lastSame = last && (last.sets.find(s => s.set_number === setNum) || last.sets[last.sets.length - 1]);
   const src = ownSet || prevSet || lastSame;
@@ -527,8 +545,9 @@ function closeSetModal() {
 // Fortschritt + Draft aktualisieren, bei Plan-Workouts Übung/Workout abschließen.
 // Liefert { exerciseDone, workoutDone }.
 function commitSet(exIdx, setNum, ex, entry) {
+  entry.row = exIdx;   // Zeilen-Index mitführen (F3: gleiche Übung in mehreren Zeilen)
   const idx = activeSession.sets.findIndex(
-    s => s.exercise_id === ex.exercise_id && s.set_number === setNum
+    s => setRow(s) === exIdx && s.set_number === setNum
   );
   if (idx >= 0) activeSession.sets[idx] = entry;
   else activeSession.sets.push(entry);
@@ -547,7 +566,7 @@ function commitSet(exIdx, setNum, ex, entry) {
 
   const totalSets = activeSession.exercises[exIdx].sets;
   const doneSets = activeSession.sets.filter(
-    s => s.exercise_id === ex.exercise_id && s.completed
+    s => setRow(s) === exIdx && s.completed
   ).length;
   if (doneSets >= totalSets) {
     result.exerciseDone = true;
@@ -598,7 +617,7 @@ function startTimedSet(exIdx, setNum, ex) {
     if (r.workoutDone) return;
     const rest = ex.rest_seconds || 10;
     const next = setNum + 1;
-    const chainNext = next <= ex.sets && !isLogged(ex, next);
+    const chainNext = next <= ex.sets && !isLogged(exIdx, next);
     const nextEx = activeSession.exercises[exIdx + 1];
     startTimer(rest, {
       chain: chainNext,
@@ -634,8 +653,15 @@ async function finishWorkout() {
         sets: activeSession.sets,
       }),
     });
-    clearDraft();
-  } catch(e) { console.error(e); }
+  } catch (e) {
+    // Speichern fehlgeschlagen (z.B. IndexedDB-Fehler): NICHT "gespeichert" melden
+    // und die Einheit auf dem Schirm lassen — der Draft bleibt erhalten, damit die
+    // geloggten Sätze nicht verloren gehen.
+    console.error(e);
+    alert(I18N.t('workout.saveFailed'));
+    return;
+  }
+  clearDraft();
   releaseWakeLock();
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
@@ -959,8 +985,8 @@ function renderLibrary(filter) {
     body.innerHTML = `
       <div class="ex-lib-name">${esc(ex.name)}</div>
       <div class="ex-lib-tags">
-        <span class="tag">${I18N.muscle(ex.muscle_group)}</span>
-        <span class="tag">${I18N.equip(ex.equipment)}</span>
+        <span class="tag">${esc(I18N.muscle(ex.muscle_group))}</span>
+        <span class="tag">${esc(I18N.equip(ex.equipment))}</span>
         ${ex.type === 'hit' ? '<span class="tag hit">HIT</span>' : ''}
       </div>
       <div class="ex-lib-desc">${esc(ex.description || '')}</div>`;

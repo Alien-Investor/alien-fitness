@@ -338,60 +338,113 @@ window.LocalData = (function () {
     };
   }
 
+  // ── Import-Normalisierung ─────────────────────────────────────────────────────
+  // Backup-Dateien sind FREMDE Eingabe (können von jemand anderem stammen). Jeder
+  // Datensatz wird vor dem Schreiben auf feste Typen gebracht — dieselben Regeln wie
+  // der Plan-Editor (savePlanFromEditor). Das schließt gleich mehrere Klassen:
+  //  - Stored XSS: sets/rest_seconds/reps werden Zahl bzw. gekürzter String, kein Markup.
+  //  - App-Hänger: sets/rest_seconds hart begrenzt (kein 1e9-Render).
+  //  - Geister-/Kollisions-Pläne: eigene IDs werden IMMER neu vergeben, nie übernommen.
+  const clampInt = (v, lo, hi, def) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def;
+  };
+  const finiteOrNull = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+  const str = (v, max) => (v == null ? '' : String(v)).slice(0, max);
+
+  function cleanPlan(p) {
+    return {
+      name: str(p && p.name, 80) || 'Import',
+      type: p && p.type === 'hit' ? 'hit' : 'strength',
+      day_label: str(p && p.day_label, 40),
+      exercises: (Array.isArray(p && p.exercises) ? p.exercises : []).map((e, i) => ({
+        exercise_id: clampInt(e && e.exercise_id, 0, 1e6, 0),
+        sets: clampInt(e && e.sets, 1, 20, 3),
+        reps: str(e && e.reps, 40) || '8-12',
+        rest_seconds: clampInt(e && e.rest_seconds, 0, 600, 90),
+        sort_order: i,
+      })).filter(e => e.exercise_id),
+    };
+  }
+  function cleanSession(s) {
+    const plan_id = (s && s.plan_id != null) ? finiteOrNull(s.plan_id) : null;
+    return {
+      plan_id,
+      started_at: str(s && s.started_at, 40) || new Date().toISOString(),
+      finished_at: s && s.finished_at != null ? str(s.finished_at, 40) : null,
+      notes: s && s.notes != null ? str(s.notes, 2000) : null,
+    };
+  }
+  function cleanSet(s) {
+    return {
+      exercise_id: clampInt(s && s.exercise_id, 0, 1e6, 0),
+      set_number: clampInt(s && s.set_number, 1, 1000, 1),
+      reps: s && s.reps != null ? finiteOrNull(s.reps) : null,
+      weight_kg: (() => { const n = Number(s && s.weight_kg); return Number.isFinite(n) ? n : 0; })(),
+      duration_seconds: s && s.duration_seconds != null ? finiteOrNull(s.duration_seconds) : null,
+      completed: s && s.completed ? 1 : 0,
+    };
+  }
+
   async function importAll(obj, { merge = false } = {}) {
     if (!obj || obj.format !== 'alien-fitness-backup')
       throw new Error(window.I18N ? window.I18N.t('err.invalidBackup') : 'Invalid backup file.');
-    const sessions = Array.isArray(obj.sessions) ? obj.sessions : [];
-    const sets = Array.isArray(obj.sets) ? obj.sets : [];
-    const customPlans = Array.isArray(obj.custom_plans) ? obj.custom_plans : []; // fehlt in v1-Backups → leer
+    const rawSessions = Array.isArray(obj.sessions) ? obj.sessions : [];
+    const rawSets = Array.isArray(obj.sets) ? obj.sets : [];
+    const rawPlans = Array.isArray(obj.custom_plans) ? obj.custom_plans : []; // fehlt in v1-Backups → leer
     // VOR dem Öffnen der Schreib-Transaktion lesen: ein await auf eine fremde
     // Transaktion würde die readwrite-Transaktion auto-committen (TransactionInactiveError)
     const existingStarts = new Set(merge ? (await allFrom('sessions')).map(s => s.started_at) : []);
+
     const [sessStore, setStore, planStore] = tx(['sessions', 'sets', 'custom_plans'], 'readwrite');
     if (!merge) {
       await reqP(sessStore.clear());
       await reqP(setStore.clear());
       await reqP(planStore.clear());
     }
-    // Merge vergibt neue IDs (add ohne id) — Referenzen müssen auf die NEUEN IDs
-    // umgehängt werden: sets.session_id → neue Session-ID, sessions.plan_id →
-    // neue öffentliche Plan-ID (1000+), sonst hängen sie an fremden/keinen Einträgen
+
+    // IDs werden IMMER neu vergeben (add, nie put mit Fremd-ID). Referenzen werden auf
+    // die neuen IDs umgehängt: sets.session_id → neue Session-ID; sessions.plan_id →
+    // neue öffentliche Plan-ID (1000+). Gilt auch für „Alles ersetzen" — so kann eine
+    // Fremd-ID den IndexedDB-Schlüsselgenerator nicht vergiften und keine Kollision
+    // mit Seed-Plänen erzeugen.
     const planIdMap = new Map();
-    for (const p of customPlans) {
-      const newId = await reqP(merge ? planStore.add(stripId(p)) : planStore.put(p));
-      if (merge) planIdMap.set(CUSTOM_OFFSET + p.id, CUSTOM_OFFSET + newId);
+    for (const p of rawPlans) {
+      const origId = finiteOrNull(p && p.id);
+      const newId = await reqP(planStore.add(cleanPlan(p)));
+      if (origId != null) planIdMap.set(CUSTOM_OFFSET + origId, CUSTOM_OFFSET + newId);
     }
+
     const idMap = new Map();
     let imported = 0;
-    for (const s of sessions) {
-      const rec = merge ? stripId(s) : s;
-      if (merge && planIdMap.has(rec.plan_id)) rec.plan_id = planIdMap.get(rec.plan_id);
+    for (const s of rawSessions) {
+      const rec = cleanSession(s);
+      if (rec.plan_id != null && rec.plan_id >= CUSTOM_OFFSET) {
+        // Verweis auf einen eigenen Plan: nur behalten, wenn er in DIESEM Backup steckt
+        // (sonst würde er fälschlich auf einen gleichnummerierten Plan des Nutzers zeigen)
+        rec.plan_id = planIdMap.has(rec.plan_id) ? planIdMap.get(rec.plan_id) : null;
+      }
       // Merge: Einheit mit identischem Startzeitpunkt existiert schon (gleiches Backup
-      // zweimal eingespielt) → überspringen statt duplizieren; ihre Sätze hängen dann
-      // an keiner neuen ID und werden unten ebenfalls verworfen
+      // zweimal) → überspringen; ihre Sätze werden unten ebenfalls verworfen
       if (merge && rec.started_at && existingStarts.has(rec.started_at)) continue;
-      const newId = await reqP(merge ? sessStore.add(rec) : sessStore.put(rec));
-      if (merge) idMap.set(s.id, newId);
+      const newId = await reqP(sessStore.add(rec));
+      if (s && s.id != null) idMap.set(s.id, newId);
       imported++;
     }
+
     let importedSets = 0;
-    for (const s of sets) {
-      if (merge) {
-        if (!idMap.has(s.session_id)) continue;   // Einheit übersprungen (Duplikat) oder verwaist
-        const c = stripId(s);
-        c.session_id = idMap.get(s.session_id);
-        await reqP(setStore.add(c));
-      } else {
-        await reqP(setStore.put(s));
-      }
+    for (const s of rawSets) {
+      if (!s || !idMap.has(s.session_id)) continue;   // Session übersprungen (Duplikat) oder verwaist
+      const c = cleanSet(s);
+      c.session_id = idMap.get(s.session_id);
+      await reqP(setStore.add(c));
       importedSets++;
     }
-    await refreshCustomCache();
-    return { sessions: imported, sets: importedSets, plans: customPlans.length,
-             skipped: sessions.length - imported };
-  }
 
-  function stripId(o) { const c = { ...o }; delete c.id; return c; }
+    await refreshCustomCache();
+    return { sessions: imported, sets: importedSets, plans: rawPlans.length,
+             skipped: rawSessions.length - imported };
+  }
 
   return {
     ready,
