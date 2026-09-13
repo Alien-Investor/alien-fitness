@@ -68,6 +68,8 @@ document.addEventListener('keydown', e => {
     const editor = document.getElementById('editor-overlay');
     if (picker) picker.classList.remove('open');
     if (editor) editor.classList.remove('open');
+    const sess = document.getElementById('session-overlay');
+    if (sess) sess.classList.remove('open');
   }
 });
 
@@ -104,6 +106,16 @@ function exImageEl(ex, isLibrary = false) {
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 async function loadDashboard() {
   try {
+    // Unterbrochene Einheit (Draft in localStorage) anbieten
+    const draft = readDraft();
+    const rc = document.getElementById('resume-card');
+    if (draft && !activeSession) {
+      const when = new Date(draft.startedAt).toLocaleString(I18N.locale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      document.getElementById('resume-body').textContent =
+        I18N.t('resume.body', { name: draft.title || I18N.t('dyn.freeTraining'), n: draft.sets.length, time: when });
+      rc.style.display = 'block';
+    } else rc.style.display = 'none';
+
     const stats = await api('stats');
     document.getElementById('stat-total').textContent = stats.total_sessions;
     document.getElementById('stat-week').textContent = stats.this_week;
@@ -176,6 +188,52 @@ async function loadWorkoutSelect() {
 
 // ── WORKOUT ACTIVE ────────────────────────────────────────────────────────────
 let activeSession = null;
+let lastSetsCache = {};   // exercise_id -> { date, sets } | null („Letztes Mal“, pro Einheit gecacht)
+
+// Zwischenstand in localStorage: Android räumt die App bei langen Einheiten gern weg
+// (Musik-App, Display aus, Anruf) — ohne Draft wäre die halbe Stunde Training verloren.
+// Nach jedem Satz gespeichert, beim Start bietet das Dashboard das Fortsetzen an.
+const DRAFT_KEY = 'fit-active-workout';
+function saveDraft() {
+  try {
+    if (activeSession) localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...activeSession, savedAt: new Date().toISOString() }));
+    else localStorage.removeItem(DRAFT_KEY);
+  } catch (e) {}
+}
+function readDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    return d && Array.isArray(d.exercises) && Array.isArray(d.sets) && d.startedAt ? d : null;
+  } catch (e) { return null; }
+}
+function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+
+// Display wach halten, solange eine Einheit läuft (Screen Wake Lock API; fehlt sie, passiert nichts)
+let wakeLock = null;
+async function acquireWakeLock() {
+  try {
+    if (!('wakeLock' in navigator) || wakeLock) return;
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) { wakeLock = null; }
+}
+function releaseWakeLock() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && activeSession) acquireWakeLock();
+});
+
+// Intervall-Übung? „20 Sek“ / „30 s“ / „45 sec“ statt Wiederholungen → Sekunden, sonst null
+function timedSeconds(ex) {
+  const m = String(ex.reps || '').match(/^\s*(\d+)\s*(s|sek|sec|sekunden|seconds?)\b/i);
+  return m ? Number(m[1]) : null;
+}
+function isLogged(ex, setNum) {
+  return activeSession.sets.some(s => s.exercise_id === ex.exercise_id && s.set_number === setNum && s.completed);
+}
+function fmtSet(s) {
+  if (s.duration_seconds) return `${s.duration_seconds}${I18N.t('dyn.sec')}`;
+  return s.weight_kg > 0 ? `${s.reps}×${s.weight_kg}kg` : `${s.reps} ${I18N.t('dyn.reps')}`;
+}
 
 function showWorkoutScreen(title, adhoc) {
   navBtns.forEach(b => b.classList.remove('active'));
@@ -189,6 +247,8 @@ function showWorkoutScreen(title, adhoc) {
   document.getElementById('workout-controls').style.display = 'flex';
   document.getElementById('btn-add-exercise').style.display = adhoc ? '' : 'none';
   document.getElementById('workout-plan-name').textContent = title;
+  document.getElementById('resume-card').style.display = 'none';
+  acquireWakeLock();
 }
 
 async function startWorkout(planId) {
@@ -197,14 +257,17 @@ async function startWorkout(planId) {
 
   activeSession = {
     planId: plan.id,
+    title: plan.name,
     startedAt: new Date().toISOString(),
     exercises: plan.exercises,
     sets: [],
     completedSets: {},
   };
+  lastSetsCache = {};
 
   renderExercises(plan.exercises);
   updateProgress();
+  saveDraft();
 }
 
 // ── Freies Training (ohne Plan): Übungen unterwegs hinzufügen ────────────────
@@ -212,18 +275,65 @@ function startFreeWorkout() {
   activeSession = {
     planId: null,
     adhoc: true,
+    title: I18N.t('dyn.freeTraining'),
     startedAt: new Date().toISOString(),
     exercises: [],
     sets: [],
     completedSets: {},
   };
+  lastSetsCache = {};
   showWorkoutScreen(I18N.t('dyn.freeTraining'), true);
   renderExercises([]);
   updateProgress();
+  saveDraft();
 }
 document.getElementById('btn-free-workout').addEventListener('click', startFreeWorkout);
 
-// Nach einem Re-Render (Übung/Satz hinzugefügt) die geloggten Sätze wieder markieren
+// Unterbrochene Einheit aus dem Draft wieder aufnehmen
+function resumeWorkout(draft) {
+  activeSession = {
+    planId: draft.planId != null ? draft.planId : null,
+    adhoc: !!draft.adhoc,
+    title: draft.title || I18N.t('dyn.freeTraining'),
+    startedAt: draft.startedAt,
+    exercises: draft.exercises,
+    sets: draft.sets,
+    completedSets: {},
+  };
+  lastSetsCache = {};
+  showWorkoutScreen(activeSession.title, activeSession.adhoc);
+  renderExercises(activeSession.exercises);
+  applyLoggedSets();
+  updateProgress();
+}
+
+// Draft ohne Umweg über den Trainingsbildschirm als Einheit speichern („So speichern“)
+async function saveDraftAsSession(draft) {
+  if (draft.sets.length) {
+    try {
+      await api('sessions', { method: 'POST', body: JSON.stringify({
+        plan_id: draft.planId != null ? draft.planId : null,
+        started_at: draft.startedAt,
+        finished_at: draft.savedAt || new Date().toISOString(),
+        sets: draft.sets,
+      }) });
+    } catch (e) { console.error(e); }
+  }
+  clearDraft();
+  loadDashboard();
+}
+
+document.getElementById('resume-go').addEventListener('click', () => { const d = readDraft(); if (d) resumeWorkout(d); });
+document.getElementById('resume-save').addEventListener('click', () => { const d = readDraft(); if (d) saveDraftAsSession(d); });
+document.getElementById('resume-drop').addEventListener('click', () => {
+  const d = readDraft();
+  if (d && d.sets.length && !confirm(I18N.t('resume.dropConfirm', { n: d.sets.length }))) return;
+  clearDraft();
+  loadDashboard();
+});
+
+// Nach einem Re-Render (Übung/Satz hinzugefügt, Fortsetzen) die geloggten Sätze wieder
+// markieren und bei Plan-Workouts erledigte Übungen abhaken / die aktuelle setzen
 function applyLoggedSets() {
   activeSession.sets.forEach(s => {
     const ei = activeSession.exercises.findIndex(e => e.exercise_id === s.exercise_id);
@@ -231,14 +341,24 @@ function applyLoggedSets() {
     const btn = document.getElementById(`set-${ei}-${s.set_number}`);
     if (!btn) return;
     btn.classList.add('done');
-    btn.querySelector('.set-val').textContent =
-      s.weight_kg > 0 ? `${s.reps}×${s.weight_kg}kg` : `${s.reps} ${I18N.t('dyn.reps')}`;
+    btn.querySelector('.set-val').textContent = fmtSet(s);
+  });
+  if (activeSession.adhoc) return;
+  let currentSet = false;
+  activeSession.exercises.forEach((ex, ei) => {
+    const card = document.getElementById('ex-card-' + ei);
+    if (!card) return;
+    const done = activeSession.sets.filter(s => s.exercise_id === ex.exercise_id && s.completed).length;
+    card.classList.remove('current', 'done');
+    if (done >= ex.sets) card.classList.add('done');
+    else if (!currentSet) { card.classList.add('current'); currentSet = true; }
   });
 }
 function reRenderAdhoc() {
   renderExercises(activeSession.exercises);
   applyLoggedSets();
   updateProgress();
+  saveDraft();
 }
 
 document.getElementById('btn-add-exercise').addEventListener('click', openExercisePicker);
@@ -266,7 +386,7 @@ async function openExercisePicker() {
         b.appendChild(nm); b.appendChild(mg);
         b.addEventListener('click', () => {
           activeSession.exercises.push({
-            exercise_id: e.id, name: e.name, muscle_group: e.muscle_group,
+            exercise_id: e.id, name: e.name, muscle_group: e.muscle_group, equipment: e.equipment,
             description: e.description, type: e.type, sets: 3, reps: '–', rest_seconds: 90,
           });
           document.getElementById('picker-overlay').classList.remove('open');
@@ -299,11 +419,13 @@ function renderExercises(exercises) {
     const img = exImageEl(ex, false);
     header.appendChild(img);
 
+    const timed = timedSeconds(ex);
     const info = document.createElement('div');
     info.className = 'ex-info';
+    // reps ist bei eigenen Plänen Freitext → escapen
     info.innerHTML = `
-      <div class="ex-name">${ex.name}</div>
-      <div class="ex-meta">${ex.sets} ${I18N.t('dyn.sets')} × ${ex.reps} · ${I18N.t('dyn.rest')}: ${ex.rest_seconds}s · ${I18N.muscle(ex.muscle_group)}</div>`;
+      <div class="ex-name">${esc(ex.name)}</div>
+      <div class="ex-meta">${ex.sets} ${I18N.t('dyn.sets')} × ${esc(ex.reps)} · ${I18N.t('dyn.rest')}: ${ex.rest_seconds}s · ${I18N.muscle(ex.muscle_group)}</div>`;
     header.appendChild(info);
     card.appendChild(header);
 
@@ -322,8 +444,8 @@ function renderExercises(exercises) {
       const btn = document.createElement('button');
       btn.className = 'set-btn';
       btn.id = `set-${ei}-${s}`;
-      btn.innerHTML = `<span class="set-num">${s}</span><span class="set-val">–</span>`;
-      btn.addEventListener('click', () => openSetModal(ei, s, ex));
+      btn.innerHTML = `<span class="set-num">${s}</span><span class="set-val">${timed ? '▶' : '–'}</span>`;
+      btn.addEventListener('click', () => timed ? startTimedSet(ei, s, ex) : openSetModal(ei, s, ex));
       setsRow.appendChild(btn);
     });
 
@@ -345,7 +467,15 @@ function renderExercises(exercises) {
 // ── Set Modal ─────────────────────────────────────────────────────────────────
 let pendingSet = null;
 
-function openSetModal(exIdx, setNum, ex) {
+async function lastSetsFor(exId) {
+  if (!(exId in lastSetsCache)) {
+    try { lastSetsCache[exId] = await LocalData.getLastSets(exId); }
+    catch (e) { lastSetsCache[exId] = null; }
+  }
+  return lastSetsCache[exId];
+}
+
+async function openSetModal(exIdx, setNum, ex) {
   pendingSet = { exIdx, setNum, ex };
 
   document.getElementById('set-modal-title').textContent =
@@ -354,15 +484,29 @@ function openSetModal(exIdx, setNum, ex) {
   const isBodyweight = ex.equipment === 'Körpergewicht' || ex.equipment === 'Stange';
   document.getElementById('weight-group').style.display = isBodyweight ? 'none' : '';
 
-  // Korrektur-Fall: eigenen Satz vorbefüllen, sonst Werte vom vorherigen Satz
+  // „Letztes Mal“: Sätze dieser Übung aus der jüngsten früheren Einheit
+  const last = await lastSetsFor(ex.exercise_id);
+  if (pendingSet == null || pendingSet.ex !== ex || pendingSet.setNum !== setNum) return; // inzwischen geschlossen
+  const lastEl = document.getElementById('set-last');
+  if (last && last.sets.length) {
+    const d = new Date(last.date).toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short' });
+    lastEl.innerHTML = `${esc(I18N.t('set.lastTime', { date: d }))} <b>${esc(last.sets.map(fmtSet).join(' · '))}</b>`;
+  } else {
+    lastEl.textContent = I18N.t('set.noLast');
+  }
+
+  // Vorbelegung: eigener Satz (Korrektur) > voriger Satz dieser Einheit >
+  // gleicher Satz vom letzten Mal > letzter Satz vom letzten Mal
   const ownSet = activeSession.sets.find(
     s => s.exercise_id === ex.exercise_id && s.set_number === setNum
   );
-  const lastSet = ownSet || activeSession.sets.filter(
+  const prevSet = activeSession.sets.filter(
     s => s.exercise_id === ex.exercise_id && s.set_number === setNum - 1
   ).pop();
-  document.getElementById('input-reps').value = lastSet?.reps || '';
-  document.getElementById('input-weight').value = lastSet?.weight_kg || '';
+  const lastSame = last && (last.sets.find(s => s.set_number === setNum) || last.sets[last.sets.length - 1]);
+  const src = ownSet || prevSet || lastSame;
+  document.getElementById('input-reps').value = (src && src.reps) || '';
+  document.getElementById('input-weight').value = (src && src.weight_kg) || '';
 
   document.getElementById('set-modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('input-reps').focus(), 100);
@@ -379,6 +523,45 @@ function closeSetModal() {
   pendingSet = null;
 }
 
+// Satz in die Einheit übernehmen (Korrektur ersetzt, sonst anhängen), Button markieren,
+// Fortschritt + Draft aktualisieren, bei Plan-Workouts Übung/Workout abschließen.
+// Liefert { exerciseDone, workoutDone }.
+function commitSet(exIdx, setNum, ex, entry) {
+  const idx = activeSession.sets.findIndex(
+    s => s.exercise_id === ex.exercise_id && s.set_number === setNum
+  );
+  if (idx >= 0) activeSession.sets[idx] = entry;
+  else activeSession.sets.push(entry);
+
+  const btn = document.getElementById(`set-${exIdx}-${setNum}`);
+  if (btn) {
+    btn.classList.add('done');
+    btn.querySelector('.set-val').textContent = fmtSet(entry);
+  }
+  updateProgress();
+  saveDraft();
+
+  const result = { exerciseDone: false, workoutDone: false };
+  // Freies Training: kein Auto-Abschluss — der Nutzer beendet über den Button
+  if (activeSession.adhoc) return result;
+
+  const totalSets = activeSession.exercises[exIdx].sets;
+  const doneSets = activeSession.sets.filter(
+    s => s.exercise_id === ex.exercise_id && s.completed
+  ).length;
+  if (doneSets >= totalSets) {
+    result.exerciseDone = true;
+    document.getElementById('ex-card-' + exIdx).classList.remove('current');
+    document.getElementById('ex-card-' + exIdx).classList.add('done');
+    if (exIdx + 1 < activeSession.exercises.length) {
+      document.getElementById('ex-card-' + (exIdx + 1)).classList.add('current');
+      document.getElementById('ex-card-' + (exIdx + 1)).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    result.workoutDone = checkWorkoutDone();
+  }
+  return result;
+}
+
 function saveSet() {
   if (!pendingSet) return;
   const { exIdx, setNum, ex } = pendingSet;
@@ -388,50 +571,42 @@ function saveSet() {
   // Korrektur statt Duplikat: erneutes Eintragen desselben Satzes ersetzt den
   // Eintrag — sonst zählt die Fertig-Logik doppelt und schließt die Übung
   // (oder das ganze Workout) zu früh ab
-  const entry = {
+  commitSet(exIdx, setNum, ex, {
     exercise_id: ex.exercise_id,
     set_number: setNum,
     reps,
     weight_kg: weight,
     completed: 1,
-  };
-  const idx = activeSession.sets.findIndex(
-    s => s.exercise_id === ex.exercise_id && s.set_number === setNum
-  );
-  if (idx >= 0) activeSession.sets[idx] = entry;
-  else activeSession.sets.push(entry);
-
-  const btn = document.getElementById(`set-${exIdx}-${setNum}`);
-  btn.classList.add('done');
-  btn.querySelector('.set-val').textContent = weight > 0 ? `${reps}×${weight}kg` : `${reps} ${I18N.t('dyn.reps')}`;
-
+  });
   closeSetModal();
-  updateProgress();
-
-  // Freies Training: kein Auto-Abschluss — der Nutzer beendet über den Button
-  if (!activeSession.adhoc) {
-    // Check if exercise fully done
-    const totalSets = activeSession.exercises[exIdx].sets;
-    const doneSets = activeSession.sets.filter(
-      s => s.exercise_id === ex.exercise_id && s.completed
-    ).length;
-
-    if (doneSets >= totalSets) {
-      document.getElementById('ex-card-' + exIdx).classList.remove('current');
-      document.getElementById('ex-card-' + exIdx).classList.add('done');
-      // Mark next exercise as current
-      if (exIdx + 1 < activeSession.exercises.length) {
-        document.getElementById('ex-card-' + (exIdx + 1)).classList.add('current');
-        document.getElementById('ex-card-' + (exIdx + 1)).scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      checkWorkoutDone();
-    }
-  }
 
   // Start rest timer
   const rest = activeSession.exercises[exIdx].rest_seconds || 90;
   const nextEx = activeSession.exercises[exIdx + 1];
-  startTimer(rest, nextEx ? nextEx.name : null);
+  startTimer(rest, { sub: nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest') });
+}
+
+// ── Intervall-Sätze (HIT): Arbeits-Timer → Satz mit Dauer loggen → Pause → nächster Satz
+function startTimedSet(exIdx, setNum, ex) {
+  const secs = timedSeconds(ex) || 20;
+  const sub = `${ex.name} · ${I18N.t('dyn.setN')} ${setNum}/${ex.sets}`;
+  startTimer(secs, { kind: 'work', chain: true, sub, onDone: (elapsed) => {
+    const r = commitSet(exIdx, setNum, ex, {
+      exercise_id: ex.exercise_id, set_number: setNum,
+      reps: null, weight_kg: 0, duration_seconds: elapsed, completed: 1,
+    });
+    if (r.workoutDone) return;
+    const rest = ex.rest_seconds || 10;
+    const next = setNum + 1;
+    const chainNext = next <= ex.sets && !isLogged(ex, next);
+    const nextEx = activeSession.exercises[exIdx + 1];
+    startTimer(rest, {
+      chain: chainNext,
+      sub: chainNext ? `${ex.name} · ${I18N.t('dyn.setN')} ${next}/${ex.sets}`
+                     : (nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest')),
+      onDone: chainNext ? () => startTimedSet(exIdx, next, ex) : null,
+    });
+  } });
 }
 
 function updateProgress() {
@@ -444,7 +619,8 @@ function updateProgress() {
 function checkWorkoutDone() {
   const total = activeSession.exercises.reduce((a, e) => a + e.sets, 0);
   const done = activeSession.sets.filter(s => s.completed).length;
-  if (done >= total) finishWorkout();
+  if (done >= total) { finishWorkout(); return true; }
+  return false;
 }
 
 async function finishWorkout() {
@@ -458,7 +634,9 @@ async function finishWorkout() {
         sets: activeSession.sets,
       }),
     });
+    clearDraft();
   } catch(e) { console.error(e); }
+  releaseWakeLock();
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
   document.getElementById('workout-done-banner').style.display = 'block';
@@ -467,17 +645,24 @@ async function finishWorkout() {
 // Manuell beenden: speichert auch Teil-Workouts (Plan) und Freies Training
 document.getElementById('btn-finish').addEventListener('click', () => {
   if (!activeSession || !activeSession.sets.length) return;
+  cancelTimer();
   finishWorkout();
 });
 
 document.getElementById('btn-abort').addEventListener('click', () => {
+  if (activeSession && activeSession.sets.length &&
+      !confirm(I18N.t('workout.abortConfirm', { n: activeSession.sets.length }))) return;
+  cancelTimer();
   document.getElementById('workout-active-screen').style.display = 'none';
   document.getElementById('workout-select-screen').style.display = 'block';
   document.getElementById('exercise-list').style.display = 'block';
   activeSession = null;
+  clearDraft();
+  releaseWakeLock();
 });
 
 document.getElementById('btn-done-ok').addEventListener('click', () => {
+  cancelTimer();
   document.getElementById('workout-active-screen').style.display = 'none';
   document.getElementById('workout-select-screen').style.display = 'block';
   document.getElementById('exercise-list').style.display = 'block';
@@ -486,41 +671,68 @@ document.getElementById('btn-done-ok').addEventListener('click', () => {
   document.querySelector('[data-view="dashboard"]').click();
 });
 
-// ── REST TIMER ────────────────────────────────────────────────────────────────
+// ── TIMER (Pause + Intervall-Arbeit) ──────────────────────────────────────────
 let timerInterval = null;
+let timerState = null;   // { kind: 'rest'|'work', chain, start, end, seconds, onDone }
 
-function startTimer(seconds, nextExercise) {
-  if (timerInterval) clearInterval(timerInterval);
+// opts: kind ('rest' default | 'work'), chain (Stopp-Taste zeigen, Intervall-Kette),
+//       sub (Zeile unter dem Zähler), onDone(elapsedSeconds, skipped)
+function startTimer(seconds, opts = {}) {
+  stopTicking();
   // Endzeitpunkt statt Tick-Zählung: Android drosselt Intervalle bei gedimmtem
   // Display — mit Zeitstempel stimmt die Restzeit trotzdem
-  const end = Date.now() + seconds * 1000;
+  const start = Date.now();
+  timerState = { kind: opts.kind || 'rest', chain: !!opts.chain, start, end: start + seconds * 1000,
+                 seconds, onDone: opts.onDone || null };
 
   const overlay = document.getElementById('timer-overlay');
   const count = document.getElementById('timer-count');
-  const exLabel = document.getElementById('timer-exercise');
-
-  overlay.classList.add('open');
+  overlay.classList.toggle('work', timerState.kind === 'work');
+  overlay.classList.toggle('chain', timerState.chain);
+  document.getElementById('timer-label').textContent = I18N.t(timerState.kind === 'work' ? 'timer.work' : 'timer.label');
+  document.getElementById('timer-skip').textContent = I18N.t(timerState.kind === 'work' ? 'timer.done' : 'timer.skip');
+  document.getElementById('timer-exercise').textContent = opts.sub || '';
   count.textContent = seconds;
   count.classList.remove('urgent');
-  exLabel.textContent = nextExercise ? I18N.t('dyn.nextExercise', { name: nextExercise }) : I18N.t('dyn.lastRest');
+  overlay.classList.add('open');
 
+  const urgentAt = timerState.kind === 'work' ? 3 : 5;
   timerInterval = setInterval(() => {
-    const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    if (!timerState) { stopTicking(); return; }
+    const remaining = Math.max(0, Math.ceil((timerState.end - Date.now()) / 1000));
     count.textContent = remaining;
-    if (remaining <= 5) count.classList.add('urgent');
-    if (remaining <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      overlay.classList.remove('open');
-      playBeep();
-    }
+    if (remaining <= urgentAt) count.classList.add('urgent');
+    if (remaining <= 0) endTimer(false);
   }, 250);
 }
+function stopTicking() { if (timerInterval) clearInterval(timerInterval); timerInterval = null; }
+function closeTimerOverlay() {
+  document.getElementById('timer-overlay').classList.remove('open', 'work', 'chain');
+}
+// Regulär abgelaufen (Beep + Vibration) oder per Taste beendet (skipped) → onDone
+function endTimer(skipped) {
+  const st = timerState;
+  if (!st) return;
+  stopTicking();
+  timerState = null;
+  closeTimerOverlay();
+  if (!skipped) { playBeep(); vibrate(); }
+  const elapsed = Math.max(1, Math.round((Math.min(Date.now(), st.end) - st.start) / 1000));
+  if (st.onDone) st.onDone(skipped ? elapsed : st.seconds, skipped);
+}
+// Abbrechen ohne onDone: Intervall-Kette stoppen, laufender Arbeits-Satz wird NICHT geloggt
+function cancelTimer() {
+  stopTicking();
+  timerState = null;
+  closeTimerOverlay();
+}
 
-document.getElementById('timer-skip').addEventListener('click', () => {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  document.getElementById('timer-overlay').classList.remove('open');
-});
+document.getElementById('timer-skip').addEventListener('click', () => endTimer(true));
+document.getElementById('timer-stop').addEventListener('click', cancelTimer);
+
+function vibrate() {
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+}
 
 function playBeep() {
   try {
@@ -599,9 +811,11 @@ async function renderProgressChart(exId, mode) {
   canvas.style.display = 'block';
 
   const labels = data.map(r => r.date);
+  // Intervall-Sätze (HIT) haben keine Wiederholungen, nur Sekunden → im Reps-Modus die Dauer zeigen
+  const timed = mode !== 'weight' && data.some(r => r.max_duration > 0);
   const values = mode === 'weight'
     ? data.map(r => r.max_weight)
-    : data.map(r => r.max_reps);
+    : data.map(r => r.max_reps || r.max_duration || 0);
 
   if (progressChart) progressChart.destroy();
   progressChart = new Chart(canvas, {
@@ -609,7 +823,7 @@ async function renderProgressChart(exId, mode) {
     data: {
       labels,
       datasets: [{
-        label: mode === 'weight' ? I18N.t('dyn.maxWeight') : I18N.t('dyn.maxReps'),
+        label: mode === 'weight' ? I18N.t('dyn.maxWeight') : I18N.t(timed ? 'dyn.maxRepsSec' : 'dyn.maxReps'),
         data: values,
         borderColor: '#00ffcc',
         backgroundColor: 'rgba(0,255,204,0.08)',
@@ -743,13 +957,13 @@ function renderLibrary(filter) {
     const body = document.createElement('div');
     body.className = 'ex-lib-body';
     body.innerHTML = `
-      <div class="ex-lib-name">${ex.name}</div>
+      <div class="ex-lib-name">${esc(ex.name)}</div>
       <div class="ex-lib-tags">
         <span class="tag">${I18N.muscle(ex.muscle_group)}</span>
         <span class="tag">${I18N.equip(ex.equipment)}</span>
         ${ex.type === 'hit' ? '<span class="tag hit">HIT</span>' : ''}
       </div>
-      <div class="ex-lib-desc">${ex.description || ''}</div>`;
+      <div class="ex-lib-desc">${esc(ex.description || '')}</div>`;
     card.appendChild(body);
     el.appendChild(card);
   });
@@ -779,10 +993,77 @@ async function loadHistory() {
     div.innerHTML = `
       <div class="session-date">${dateStr} · ${timeStr}</div>
       <div class="session-plan">${esc(s.plan_name) || I18N.t('dyn.freeTraining')}</div>
-      <div class="session-meta">${dur}</div>`;
+      <div class="session-meta">${dur}</div>
+      ${s.notes ? `<div class="session-notes">${esc(s.notes)}</div>` : ''}`;
+    div.addEventListener('click', () => openSessionDetail(s.id));
     el.appendChild(div);
   });
 }
+
+// ── Session-Detail (Sätze, Notiz, Löschen) ──────────────────────────────────────
+let detailSessionId = null;
+
+async function openSessionDetail(id) {
+  const s = await api('sessions/' + id);
+  if (!s) return;
+  detailSessionId = s.id;
+  const d = new Date(s.started_at);
+  const dateStr = d.toLocaleDateString(I18N.locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const timeStr = d.toLocaleTimeString(I18N.locale(), { hour: '2-digit', minute: '2-digit' });
+  const dur = s.finished_at ? Math.round((new Date(s.finished_at) - d) / 60000) + ' ' + I18N.t('dyn.min') : '';
+  document.getElementById('session-title').textContent = s.plan_name || I18N.t('dyn.freeTraining');
+  document.getElementById('session-meta').textContent = `${dateStr} · ${timeStr}${dur ? ' · ' + dur : ''}`;
+
+  // Sätze je Übung gruppieren (Reihenfolge: erstes Vorkommen)
+  const box = document.getElementById('session-sets');
+  box.innerHTML = '';
+  const groups = new Map();
+  s.sets.forEach(st => {
+    if (!groups.has(st.exercise_id)) groups.set(st.exercise_id, { name: st.exercise_name || ('#' + st.exercise_id), sets: [] });
+    groups.get(st.exercise_id).sets.push(st);
+  });
+  if (!groups.size) {
+    box.innerHTML = `<div class="ss-row"><div class="ss-vals">${I18N.t('session.noSets')}</div></div>`;
+  }
+  groups.forEach(g => {
+    const row = document.createElement('div');
+    row.className = 'ss-row';
+    const nm = document.createElement('div'); nm.className = 'ss-name'; nm.textContent = g.name;
+    const vals = document.createElement('div'); vals.className = 'ss-vals';
+    vals.textContent = g.sets.sort((a, b) => a.set_number - b.set_number).map(fmtSet).join(' · ');
+    row.appendChild(nm); row.appendChild(vals);
+    box.appendChild(row);
+  });
+
+  document.getElementById('session-notes').value = s.notes || '';
+  document.getElementById('session-msg').textContent = '';
+  document.getElementById('session-overlay').classList.add('open');
+}
+
+function closeSessionDetail() {
+  document.getElementById('session-overlay').classList.remove('open');
+  detailSessionId = null;
+}
+document.getElementById('session-close').addEventListener('click', closeSessionDetail);
+document.getElementById('session-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeSessionDetail();
+});
+document.getElementById('session-save-notes').addEventListener('click', async () => {
+  if (detailSessionId == null) return;
+  const notes = document.getElementById('session-notes').value.trim() || null;
+  await LocalData.updateSession(detailSessionId, { notes });
+  document.getElementById('session-msg').textContent = I18N.t('session.notesSaved');
+  loadHistory();
+});
+document.getElementById('session-delete').addEventListener('click', async () => {
+  if (detailSessionId == null) return;
+  const meta = document.getElementById('session-meta').textContent.split(' · ')[0];
+  if (!confirm(I18N.t('session.deleteConfirm', { date: meta }))) return;
+  await LocalData.deleteSession(detailSessionId);
+  closeSessionDetail();
+  loadHistory();
+  loadDashboard();
+});
 
 // ── Backup (Export / Import) ────────────────────────────────────────────────────
 // Da die Daten nur auf dem Gerät liegen: JSON-Backup zum Sichern / Umziehen.
@@ -798,8 +1079,22 @@ function downloadJSON(obj, filename) {
 async function applyImport(text) {
   const msg = document.getElementById('backup-msg');
   try {
-    const r = await LocalData.importAll(JSON.parse(text));
-    if (msg) msg.textContent = I18N.t('backup.imported', { s: r.sessions, n: r.sets });
+    const obj = JSON.parse(text);
+    if (!obj || obj.format !== 'alien-fitness-backup') throw new Error(I18N.t('err.invalidBackup'));
+    const modeEl = document.getElementById('backup-mode');
+    const merge = !modeEl || modeEl.value !== 'replace';
+    if (!merge) {
+      // „Alles ersetzen“ ist destruktiv → vorher zeigen, was verloren geht
+      const cur = await LocalData.hasData();
+      if ((cur.sessions || cur.plans) &&
+          !confirm(I18N.t('backup.replaceConfirm', { s: cur.sessions, p: cur.plans }))) {
+        if (msg) msg.textContent = '';
+        return;
+      }
+    }
+    const r = await LocalData.importAll(obj, { merge });
+    if (msg) msg.textContent = I18N.t('backup.importedFull', { s: r.sessions, n: r.sets, p: r.plans })
+      + (r.skipped ? I18N.t('backup.skipped', { k: r.skipped }) : '');
     loadHistory(); loadDashboard();
   } catch (err) {
     if (msg) msg.textContent = I18N.t('backup.error', { msg: err.message });

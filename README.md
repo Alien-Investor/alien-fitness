@@ -18,13 +18,24 @@ has been retired.
 - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
 - Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
 - Live session logging with automatic rest timer, corrections supported
-- Progress charts per exercise (max weight / reps over time)
+- "Last time" shown and pre-filled for every set — progressive overload at a glance
+- HIT intervals: timed sets ("20 sec") run with a work timer, rest and auto-chained next set
+- Interrupted workouts survive an app kill and can be resumed, saved or discarded
+- Session details with every set, a free-text note and delete
+- Progress charts per exercise (max weight / reps or seconds over time)
 - Exercise library with images, muscle groups and equipment
-- JSON backup: export and import your history and plans to move between devices
+- JSON backup: export and import (merge with duplicate detection, or replace) to move between devices
 - German and English interface, switchable in-app
-- Dark neon UI, mobile-first
+- Dark neon UI, mobile-first; screen stays awake during a workout, timer ends with beep and vibration
 
 Built-in plans use bodyweight, pull-up bar and dumbbells — no gym required.
+
+## Privacy
+
+The APK has **no `INTERNET` permission** (stripped at build time by `apk/patch-hardening.mjs`,
+which also fails the build if any bundled asset references an external URL). Fonts and Chart.js
+are bundled; the app cannot make a single network request. Your history lives in the app's
+IndexedDB on the device and leaves it only through the JSON backup you export yourself.
 
 ## Install
 
@@ -55,8 +66,10 @@ npx cap add android          # one-time
 ```
 
 The frontend lives in `public/` and is bundled into the APK by `build-www.sh`. All data is
-kept in on-device storage; the only file the app loads is its own bundled exercise seed.
-No network calls.
+kept in on-device storage; the only files the app loads are its own bundled assets
+(exercise seed, fonts, Chart.js). No network calls — and no permission to make any.
+
+End-to-end tests (Brave via playwright-core): `node apk/serve-test.mjs &` then `node apk/e2e-test.mjs`.
 
 ## License
 

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@400;500&display=swap');
+/* Fonts lokal gebündelt (vendor/fonts/fonts.css, per <link> in index.html) — kein Google-Fonts-Import, die App funkt nicht. */
 
 :root {
   --bg: #000;
@@ -14,7 +14,7 @@
   --border: rgba(0,255,204,0.18);
   --font-h: 'Orbitron', monospace;
   --font-b: 'Share Tech Mono', monospace;
-  --font-r: 'Inter', 'Share Tech Mono', sans-serif;
+  --font-r: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius: 4px;
 }
 

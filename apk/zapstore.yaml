@@ -4,25 +4,32 @@ repository: https://codeberg.org/Alien-Investor/alien-fitness
 name: Alien Fitness
 pubkey: npub1cnlymdm5jz8eayycwynhze4s2zh9n0y04atce8ahxl5qfkptplls0s40hp
 
-summary: Minimal, offline-first workout tracker — custom plans, ad-hoc workouts, live logging and progress charts.
+summary: Minimal, fully offline workout tracker without internet permission — custom plans, HIT intervals, live logging and progress charts.
 
 description: |
   A minimal, fully offline workout tracker. No account, no server, no tracking
-  — all your data stays on your device and never leaves it.
+  — the APK has no internet permission at all, so your data cannot leave your device.
 
   Features:
   - Create your own training plans: any exercise, sets, reps and rest — edit any time
   - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
   - Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
   - Live session logging with automatic rest timer, corrections supported
-  - Progress charts per exercise (max weight / reps over time)
+  - "Last time" shown and pre-filled for every set — progressive overload at a glance
+  - HIT intervals: timed sets run with a work timer, rest and auto-chained next set
+  - Interrupted workouts survive an app kill — resume, save or discard
+  - Session details with every set, a free-text note and delete
+  - Progress charts per exercise (max weight / reps or seconds over time)
   - Exercise library with images, muscle groups and equipment
-  - JSON backup: export and import your history and plans to move between devices
+  - JSON backup: export and import (merge with duplicate detection, or replace)
   - German and English interface, switchable in-app
-  - Dark neon UI, fully mobile-first
+  - Dark neon UI, screen stays awake during a workout, timer ends with beep and vibration
 
   Works completely offline. Built-in plans use bodyweight, pull-up bar and dumbbells —
   no gym required.
+
+  Signing certificate SHA-256 (verify with AppVerifier), identical for every version:
+  85:9E:88:B7:43:5F:84:1D:8B:C1:CF:F1:FE:A9:12:56:A6:33:DE:A5:59:D9:5A:91:02:4B:22:53:A2:AD:13:26
 
 tags:
   - fitness

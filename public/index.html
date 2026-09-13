@@ -2,8 +2,9 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ALIEN FITNESS</title>
+  <link rel="stylesheet" href="vendor/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
   <script src="vendor/chart.umd.min.js"></script>
   <style>
@@ -42,6 +43,36 @@
     .editor-row .er-del{background:none;border:none;color:var(--muted,#7a8a86);cursor:pointer;font-size:0.9rem;padding:0;}
     .editor-row .er-del:hover{color:#ff4466;}
     #editor-btns{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    /* v2.6: Letztes Mal, Fortsetzen, Session-Detail, Import-Modus, Stopp-Taste */
+    .set-last{font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:#7a8a86;margin:-10px 0 14px;line-height:1.5;}
+    .set-last b{color:var(--neon,#00ffcc);font-weight:400;}
+    #resume-card{border-color:rgba(255,204,68,.5);}
+    #resume-card .card-title{color:#ffcc44;}
+    #resume-body{font-size:0.75rem;margin-bottom:12px;color:#c8ffe8;}
+    #resume-btns{display:flex;flex-wrap:wrap;gap:8px;}
+    #resume-btns .btn{flex:1;min-width:110px;margin-bottom:0;}
+    #timer-stop{margin-top:10px;background:transparent;border-color:rgba(255,68,102,.4);color:#ff4466;display:none;}
+    #timer-overlay.work #timer-label{color:var(--neon,#00ffcc);}
+    #timer-overlay.chain #timer-stop{display:inline-block;}
+    .history-hint{font-size:0.68rem;color:#7a8a86;font-family:'Share Tech Mono',monospace;margin:-6px 0 14px;}
+    .session-item{cursor:pointer;}
+    .session-item:hover{border-color:var(--neon,#00ffcc);}
+    .session-notes{font-size:0.72rem;color:#7a8a86;margin-top:6px;font-style:italic;}
+    #session-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:900;display:none;align-items:center;justify-content:center;padding:16px;}
+    #session-overlay.open{display:flex;}
+    #session-modal{background:var(--card,#050f0d);border:1px solid rgba(0,255,204,.3);border-radius:12px;max-width:540px;width:100%;max-height:88vh;display:flex;flex-direction:column;padding:18px;}
+    #session-modal h3{font-family:Orbitron,sans-serif;font-size:0.85rem;letter-spacing:1px;color:var(--neon,#00ffcc);margin:0 0 4px;}
+    #session-meta{font-size:0.7rem;color:#7a8a86;font-family:'Share Tech Mono',monospace;margin-bottom:12px;}
+    #session-sets{overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+    .ss-row{border:1px solid rgba(0,255,204,.15);border-radius:8px;padding:8px 10px;}
+    .ss-name{font-size:0.75rem;color:#c8ffe8;margin-bottom:3px;}
+    .ss-vals{font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--neon,#00ffcc);}
+    #session-notes{width:100%;box-sizing:border-box;min-height:56px;margin-top:12px;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:inherit;font-size:0.78rem;padding:9px 12px;resize:vertical;}
+    #session-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+    #session-btns .btn{flex:1;min-width:120px;margin-bottom:0;}
+    #session-msg{min-height:16px;font-size:0.68rem;color:var(--neon,#00ffcc);font-family:'Share Tech Mono',monospace;margin-top:6px;}
+    .backup-mode-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:0.68rem;color:#7a8a86;font-family:'Share Tech Mono',monospace;}
+    #backup-mode{flex:1;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.72rem;padding:8px;}
   </style>
 </head>
 <body>
@@ -71,6 +102,16 @@
       <div class="stat-box"><span class="stat-num" id="stat-total">–</span><span class="stat-label" data-i18n="stat.total">Einheiten</span></div>
       <div class="stat-box"><span class="stat-num" id="stat-week">–</span><span class="stat-label" data-i18n="stat.week">Diese Woche</span></div>
       <div class="stat-box"><span class="stat-num" id="stat-streak">–</span><span class="stat-label" data-i18n="stat.last">Zuletzt</span></div>
+    </div>
+
+    <div class="card" id="resume-card" style="display:none">
+      <div class="card-title" data-i18n="resume.title">Unterbrochenes Training</div>
+      <div id="resume-body"></div>
+      <div id="resume-btns">
+        <button class="btn" id="resume-go" data-i18n="resume.go">Fortsetzen</button>
+        <button class="btn ghost" id="resume-save" data-i18n="resume.saveNow">So speichern</button>
+        <button class="btn ghost" id="resume-drop" data-i18n="resume.drop">Verwerfen</button>
+      </div>
     </div>
 
     <div class="card" id="last-session-card" style="display:none">
@@ -150,11 +191,19 @@
   <!-- ── HISTORY ────────────────────────────────────────────────────────────── -->
   <div id="view-history" class="view">
     <h2 data-i18n="history.title">Trainingshistorie</h2>
+    <p class="history-hint" data-i18n="history.hint">Antippen für Details, Notiz und Löschen.</p>
     <div id="history-list" class="history-grid"></div>
 
     <div id="backup-panel">
       <h3 data-i18n="backup.title">Backup</h3>
       <p class="backup-hint" data-i18n="backup.hint">Deine Daten liegen nur auf diesem Gerät. Sichere oder übertrage sie als JSON-Datei.</p>
+      <div class="backup-mode-row">
+        <label for="backup-mode" data-i18n="backup.mode">Import-Modus</label>
+        <select id="backup-mode">
+          <option value="merge" data-i18n="backup.modeMerge">Zusammenführen (empfohlen)</option>
+          <option value="replace" data-i18n="backup.modeReplace">Alles ersetzen</option>
+        </select>
+      </div>
       <div class="backup-row">
         <button id="backup-export" class="btn ghost" data-i18n="backup.export">Backup exportieren</button>
         <label for="backup-import-file" class="btn ghost" data-i18n="backup.import">Backup importieren</label>
@@ -173,6 +222,7 @@
 <div id="set-modal-overlay">
   <div id="set-modal">
     <h3 id="set-modal-title" data-i18n="set.title">Satz eintragen</h3>
+    <div id="set-last" class="set-last"></div>
     <div class="input-row">
       <div class="input-group">
         <label data-i18n="set.reps">Wiederholungen</label>
@@ -194,6 +244,23 @@
   <div id="timer-count">90</div>
   <div id="timer-exercise"></div>
   <button class="btn btn-sm" id="timer-skip" data-i18n="timer.skip">Überspringen →</button>
+  <button class="btn btn-sm" id="timer-stop" data-i18n="timer.stop">■ Stopp</button>
+</div>
+
+<!-- Session-Detail (Historie): Sätze, Notiz, Löschen -->
+<div id="session-overlay">
+  <div id="session-modal">
+    <h3 id="session-title"></h3>
+    <div id="session-meta"></div>
+    <div id="session-sets"></div>
+    <textarea id="session-notes" data-i18n-ph="session.notesPh" placeholder="z.B. wenig geschlafen, Schulter zwickt"></textarea>
+    <div id="session-msg"></div>
+    <div id="session-btns">
+      <button class="btn btn-sm" id="session-save-notes" data-i18n="session.saveNotes">Notiz speichern</button>
+      <button class="btn btn-sm red" id="session-delete" data-i18n="session.delete">Einheit löschen</button>
+      <button class="btn btn-sm ghost" id="session-close" data-i18n="session.close">Schließen</button>
+    </div>
+  </div>
 </div>
 
 <!-- Help Modal -->
@@ -215,6 +282,10 @@
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.timer.t">Pause-Timer</div>
         <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz. Am Ende ertönt ein Beep-Signal. Mit "Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title" data-i18n="help.hit.t">HIT-Intervalle</div>
+        <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek") laufen als Intervall: Satz antippen startet den Arbeits-Timer, danach folgt die Pause und der nächste Satz derselben Übung startet von selbst. „■ Stopp" unterbricht die Kette, „Fertig →" beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.progress.t">Fortschritt</div>
@@ -243,8 +314,16 @@
         <p data-i18n="help.custom.b">Unter Training: „＋ Eigener Plan" erstellt einen eigenen Trainingsplan aus allen Übungen (Sätze, Wiederholungen, Pause frei wählbar) — bearbeiten und löschen jederzeit möglich. „＋ Freies Training" startet ohne Plan: Übungen unterwegs hinzufügen, Sätze loggen, mit „Beenden &amp; speichern" abschließen.</p>
       </div>
       <div class="help-section">
+        <div class="help-section-title" data-i18n="help.backup.t">Backup</div>
+        <p data-i18n="help.backup.b">Unter Historie: Export schreibt alle Einheiten, Sätze und eigenen Pläne in eine JSON-Datei. Import „Zusammenführen" ergänzt vorhandene Daten und überspringt Einheiten, die es schon gibt. „Alles ersetzen" löscht vorher alles auf dem Gerät und fragt vorher nach.</p>
+      </div>
+      <div class="help-section">
         <div class="help-section-title" data-i18n="help.equipment.t">Equipment</div>
         <p data-i18n="help.equipment.b">Klimmzugstange · Kurzhanteln · Hantelbank · Körpergewicht</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title" data-i18n="help.privacy.t">Privatsphäre</div>
+        <p data-i18n="help.privacy.b">Die App hat keine Internet-Berechtigung. Alle Daten bleiben auf dem Gerät, nichts wird gesendet — auch keine Schriftarten oder Bibliotheken nachgeladen.</p>
       </div>
     </div>
   </div>

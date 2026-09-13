@@ -207,7 +207,54 @@ window.LocalData = (function () {
         const e = exById.get(st.exercise_id) || {};
         return { ...st, exercise_name: exName(st.exercise_id, e.name), muscle_group: e.muscle_group };
       });
-    return { ...session, sets };
+    return {
+      ...session, sets,
+      plan_name: session.plan_id != null ? planNameById(session.plan_id) : null,
+      plan_type: session.plan_id != null ? planTypeById(session.plan_id) : null,
+    };
+  }
+
+  // „Letztes Mal“: die Sätze dieser Übung aus der jüngsten Einheit, in der sie
+  // vorkam (für Vorbelegung + Referenzzeile im Satz-Modal — progressive Steigerung
+  // braucht den Vergleich zur Vorwoche, nicht nur zum vorigen Satz derselben Einheit)
+  async function getLastSets(exId) {
+    exId = Number(exId);
+    const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
+    const mine = allSets.filter(st => st.exercise_id === exId && st.completed);
+    if (!mine.length) return null;
+    const started = new Map(allSessions.map(s => [s.id, s.started_at || '']));
+    let best = null;
+    for (const st of mine) {
+      const d = started.get(st.session_id);
+      if (d == null) continue;
+      if (!best || d > best.date) best = { date: d, session_id: st.session_id };
+    }
+    if (!best) return null;
+    const sets = mine.filter(st => st.session_id === best.session_id)
+      .sort((a, b) => a.set_number - b.set_number);
+    return { date: best.date, sets };
+  }
+
+  async function deleteSession(id) {
+    id = Number(id);
+    const [sessStore, setStore] = tx(['sessions', 'sets'], 'readwrite');
+    const keys = await reqP(setStore.index('session_id').getAllKeys(id));
+    for (const k of keys) await reqP(setStore.delete(k));
+    await reqP(sessStore.delete(id));
+  }
+
+  async function updateSession(id, patch) {
+    const store = tx(['sessions'], 'readwrite');
+    const s = await reqP(store.get(Number(id)));
+    if (!s) return null;
+    const upd = { ...s, ...patch, id: s.id };
+    await reqP(store.put(upd));
+    return upd;
+  }
+
+  async function hasData() {
+    const [s, p] = await Promise.all([allFrom('sessions'), allFrom('custom_plans')]);
+    return { sessions: s.length, plans: p.length };
   }
 
   async function addSession(payload) {
@@ -245,9 +292,10 @@ window.LocalData = (function () {
       const date = sessDate.get(st.session_id);
       if (!date) continue;
       let row = byDate.get(date);
-      if (!row) { row = { date, max_reps: 0, max_weight: 0, total_sets: 0 }; byDate.set(date, row); }
+      if (!row) { row = { date, max_reps: 0, max_weight: 0, max_duration: 0, total_sets: 0 }; byDate.set(date, row); }
       row.max_reps = Math.max(row.max_reps, st.reps || 0);
       row.max_weight = Math.max(row.max_weight, st.weight_kg || 0);
+      row.max_duration = Math.max(row.max_duration, st.duration_seconds || 0);  // Intervall-Sätze (HIT)
       row.total_sets++;
     }
     // Die NEUESTEN 60 Trainingstage (slice(-60)) — slice(0,60) wären die ältesten,
@@ -296,6 +344,9 @@ window.LocalData = (function () {
     const sessions = Array.isArray(obj.sessions) ? obj.sessions : [];
     const sets = Array.isArray(obj.sets) ? obj.sets : [];
     const customPlans = Array.isArray(obj.custom_plans) ? obj.custom_plans : []; // fehlt in v1-Backups → leer
+    // VOR dem Öffnen der Schreib-Transaktion lesen: ein await auf eine fremde
+    // Transaktion würde die readwrite-Transaktion auto-committen (TransactionInactiveError)
+    const existingStarts = new Set(merge ? (await allFrom('sessions')).map(s => s.started_at) : []);
     const [sessStore, setStore, planStore] = tx(['sessions', 'sets', 'custom_plans'], 'readwrite');
     if (!merge) {
       await reqP(sessStore.clear());
@@ -311,23 +362,33 @@ window.LocalData = (function () {
       if (merge) planIdMap.set(CUSTOM_OFFSET + p.id, CUSTOM_OFFSET + newId);
     }
     const idMap = new Map();
+    let imported = 0;
     for (const s of sessions) {
       const rec = merge ? stripId(s) : s;
       if (merge && planIdMap.has(rec.plan_id)) rec.plan_id = planIdMap.get(rec.plan_id);
+      // Merge: Einheit mit identischem Startzeitpunkt existiert schon (gleiches Backup
+      // zweimal eingespielt) → überspringen statt duplizieren; ihre Sätze hängen dann
+      // an keiner neuen ID und werden unten ebenfalls verworfen
+      if (merge && rec.started_at && existingStarts.has(rec.started_at)) continue;
       const newId = await reqP(merge ? sessStore.add(rec) : sessStore.put(rec));
       if (merge) idMap.set(s.id, newId);
+      imported++;
     }
+    let importedSets = 0;
     for (const s of sets) {
       if (merge) {
+        if (!idMap.has(s.session_id)) continue;   // Einheit übersprungen (Duplikat) oder verwaist
         const c = stripId(s);
-        if (idMap.has(s.session_id)) c.session_id = idMap.get(s.session_id);
+        c.session_id = idMap.get(s.session_id);
         await reqP(setStore.add(c));
       } else {
         await reqP(setStore.put(s));
       }
+      importedSets++;
     }
     await refreshCustomCache();
-    return { sessions: sessions.length, sets: sets.length, plans: customPlans.length };
+    return { sessions: imported, sets: importedSets, plans: customPlans.length,
+             skipped: sessions.length - imported };
   }
 
   function stripId(o) { const c = { ...o }; delete c.id; return c; }
@@ -336,7 +397,8 @@ window.LocalData = (function () {
     ready,
     getExercises, getExercise, getPlans, getPlan,
     savePlan, getCustomPlan, deletePlan,
-    getSessions, getSession, addSession, getProgress, getStats,
+    getSessions, getSession, addSession, deleteSession, updateSession, getLastSets,
+    getProgress, getStats, hasData,
     exportAll, importAll,
   };
 })();
