@@ -1,5 +1,10 @@
 'use strict';
 
+// Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
+// apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
+// prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
+const APP_VERSION = '2.6.0';
+
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
 // Trainingsverlauf in IndexedDB (local-db.js). Kein Server, kein Konto, keine
@@ -46,6 +51,10 @@ navBtns.forEach(btn => {
 // ── Help Modal ────────────────────────────────────────────────────────────────
 const helpOverlay = document.getElementById('help-overlay');
 document.getElementById('btn-help').addEventListener('click', () => helpOverlay.classList.add('open'));
+function renderAbout() {
+  const el = document.getElementById('about-line');
+  if (el) el.textContent = I18N.t('about', { v: APP_VERSION });
+}
 document.getElementById('btn-help-close').addEventListener('click', () => helpOverlay.classList.remove('open'));
 helpOverlay.addEventListener('click', e => { if (e.target === helpOverlay) helpOverlay.classList.remove('open'); });
 
@@ -1178,6 +1187,7 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
   I18N.setLang(I18N.lang === 'de' ? 'en' : 'de');
   I18N.applyStatic();
   updateLangToggle();
+  renderAbout();
   // Übungs-Cache IMMER leeren — sonst zeigen Plan-Editor-Dropdown und Bibliothek
   // nach dem Sprachwechsel die Namen der alten Sprache (Cache wurde vorher nur
   // in der Bibliotheks-Ansicht geleert)
@@ -1190,4 +1200,5 @@ document.documentElement.lang = I18N.lang;
 I18N.applyStatic();
 I18N.ready.then(() => I18N.applyStatic());   // Muskel-Filter-Labels nach Content-Load
 updateLangToggle();
+renderAbout();
 loadDashboard();
