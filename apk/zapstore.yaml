@@ -30,6 +30,7 @@ description: |
 
   Signing certificate SHA-256 (verify with AppVerifier), identical for every version:
   85:9E:88:B7:43:5F:84:1D:8B:C1:CF:F1:FE:A9:12:56:A6:33:DE:A5:59:D9:5A:91:02:4B:22:53:A2:AD:13:26
+  apksigner (no separators): 859e88b7435f841d8bc1cff1fea91256a633dea559d95a91024b2253a2ad1326
 
 tags:
   - fitness
