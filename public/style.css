@@ -444,19 +444,8 @@ h3 {
 #timer-skip { margin-top: 0; }
 
 /* ── Progress Charts ─────────────────────────────────────────────────────────── */
-.chart-select {
-  background: var(--card2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-family: var(--font-r);
-  font-size: 0.9rem;
-  padding: 12px 14px;
-  width: 100%;
-  margin-bottom: 18px;
-  cursor: pointer;
-}
-.chart-select:focus { outline: none; border-color: var(--neon); }
+/* Das Auswahlfeld ist seit v2.7 ein Kombifeld — das Aussehen steckt in .combo-btn. */
+.chart-combo { margin-bottom: 18px; }
 .chart-wrap {
   background: var(--card);
   border: 1px solid var(--border);
@@ -763,4 +752,89 @@ h3 {
   border-radius: var(--radius);
   background: var(--neon-dim);
   margin-top: 18px;
+}
+
+/* ── Auswahlfelder (Kombifelder, v2.7) ───────────────────────────────────────────
+   Die aufgeklappte Liste eines nativen <select> ist in der Android-WebView grau und
+   nicht gestaltbar — mehr als option{background} erreicht CSS nicht. Deshalb bleibt
+   das <select> als Wertspeicher unsichtbar im DOM (.combo-native), und darüber liegen
+   ein eigener Knopf und ein eigenes Menü im Cyan-Look. Muster: Alien Pass v1.5.
+
+   Das Menü ist position:fixed, weil der Plan-Editor seine Zeilen in einem scrollenden
+   Container (#editor-rows) hält — absolut positioniert würde es dort abgeschnitten.
+   Position, Breite und Höhe setzt placeComboMenu() in app.js (beim Öffnen, Scrollen, Resize). */
+.hidden { display: none !important; }
+
+/* min-width:0 — sonst hält das nowrap-Label das Flex-/Grid-Element auf voller Textbreite
+   (min-width:auto) und die Ellipse greift nie: bei 360 px rutschte im Plan-Editor der
+   ✕-Knopf aus dem Bild. */
+.combo { position: relative; min-width: 0; }
+.combo-native { display: none; }
+
+.combo-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-r);
+  font-size: 0.9rem;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.combo-btn:hover, .combo-btn:focus { outline: none; border-color: var(--neon); }
+.combo-btn .combo-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combo-btn .caret { color: var(--muted); flex: none; }
+
+.combo-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--neon-mid);
+  border-radius: var(--radius);
+  box-shadow: 0 0 18px rgba(0, 255, 204, 0.18);
+}
+.combo-list { overflow-y: auto; }
+.combo-opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-r);
+  font-size: 0.85rem;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+.combo-opt:last-child { border-bottom: 0; }
+.combo-opt:hover, .combo-opt.on { color: var(--neon); background: var(--neon-dim); }
+
+.combo-filter {
+  flex: none;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--card2);
+  border: 0;
+  border-bottom: 1px solid var(--neon-mid);
+  color: var(--text);
+  font-family: var(--font-b);
+  font-size: 0.8rem;
+  padding: 10px 12px;
+}
+.combo-filter:focus { outline: none; }
+.combo-empty {
+  padding: 11px 12px;
+  font-family: var(--font-b);
+  font-size: 0.78rem;
+  color: var(--muted);
 }

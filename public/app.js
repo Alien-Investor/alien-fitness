@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
@@ -71,6 +71,9 @@ function openLightbox(src, caption) {
 lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    // Ein offenes Auswahlmenü schluckt Escape. Sonst schlösse die Taste den Plan-Editor
+    // mitsamt der halb fertigen Eingabe, obwohl nur das Menü weg sollte.
+    if (closeMenus()) return;
     lightbox.classList.remove('open');
     helpOverlay.classList.remove('open');
     const picker = document.getElementById('picker-overlay');
@@ -85,6 +88,156 @@ document.addEventListener('keydown', e => {
 // ── HTML-Escape (Plan-Namen sind seit v2.5 Nutzereingaben) ────────────────────
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ── Auswahlfelder (Kombifelder, v2.7) ─────────────────────────────────────────
+// Die aufgeklappte Liste eines nativen <select> ist in der Android-WebView grau und
+// nicht gestaltbar. Deshalb bleibt das <select> als Wertspeicher im DOM (unsichtbar,
+// .combo-native) und darüber liegen Knopf und Menü im Cyan-Look. Muster: Alien Pass v1.5.
+//
+// WICHTIG: chooseOpt-Pfad setzt sel.value und feuert ein bubbelndes change-Event —
+// bestehende change-Listener und .value-Leser der App bleiben dadurch unverändert.
+// Optionstexte NUR per textContent: Übungs- und Plan-Namen können aus einem fremden
+// Backup stammen (Dauerregel „Backup-Import ist fremde Eingabe", local-db.js).
+const COMBO_FILTER_MIN = 8;   // ab so vielen Optionen bekommt das Menü ein Filterfeld
+const COMBO_MENU_MIN_W = 260; // Mindestbreite: die Übungsspalte im Editor ist auf dem Handy schmal
+
+function closeMenus() {
+  let wasOpen = false;
+  document.querySelectorAll('.combo-menu:not(.hidden)').forEach(m => {
+    wasOpen = true;
+    m.classList.add('hidden');
+    m.replaceChildren();
+    const btn = m.parentElement && m.parentElement.querySelector('.combo-btn');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  });
+  return wasOpen;
+}
+
+function syncCombo(combo) {
+  if (!combo) return;
+  const sel = combo.querySelector('.combo-native');
+  const lab = combo.querySelector('.combo-label');
+  if (!sel || !lab) return;
+  const o = sel.options[sel.selectedIndex];
+  lab.textContent = o ? o.textContent : '';
+}
+
+function syncCombos(root) {
+  (root || document).querySelectorAll('.combo').forEach(syncCombo);
+}
+
+// Das Menü ist position:fixed (der Plan-Editor scrollt seine Zeilen in #editor-rows,
+// ein absolut positioniertes Menü würde dort abgeschnitten). Also von Hand an den Knopf
+// hängen, mindestens COMBO_MENU_MIN_W breit, horizontal im Bild halten — und dorthin
+// aufklappen, wo mehr Platz ist.
+function placeComboMenu(combo, menu) {
+  const r = combo.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const below = window.innerHeight - r.bottom - 8;
+  const above = r.top - 8;
+  const width = Math.min(Math.max(r.width, COMBO_MENU_MIN_W), vw - 16);
+  menu.style.left = Math.max(8, Math.min(r.left, vw - 8 - width)) + 'px';
+  menu.style.width = width + 'px';
+  if (below >= above) {
+    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.bottom = 'auto';
+    menu.style.maxHeight = Math.max(120, below) + 'px';
+  } else {
+    menu.style.top = 'auto';
+    menu.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+    menu.style.maxHeight = Math.max(120, above) + 'px';
+  }
+}
+
+function comboOpt(label, value, on, pick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'combo-opt' + (on ? ' on' : '');
+  b.dataset.value = value;
+  b.textContent = label;
+  b.addEventListener('click', () => pick(value));
+  return b;
+}
+
+function openCombo(combo) {
+  const sel = combo.querySelector('.combo-native');
+  const menu = combo.querySelector('.combo-menu');
+  const btn = combo.querySelector('.combo-btn');
+  if (!sel || !menu) return;
+  closeMenus();
+
+  const opts = [...sel.options];
+  const pick = value => {
+    closeMenus();
+    sel.value = value;
+    syncCombo(combo);
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const list = document.createElement('div');
+  list.className = 'combo-list';
+  const render = q => {
+    const needle = q.trim().toLowerCase();
+    const hits = opts.filter(o => !needle || o.textContent.toLowerCase().includes(needle));
+    list.replaceChildren();
+    if (!hits.length) {
+      const empty = document.createElement('div');
+      empty.className = 'combo-empty';
+      empty.textContent = I18N.t('combo.noHit');
+      list.appendChild(empty);
+      return;
+    }
+    hits.forEach(o => list.appendChild(comboOpt(o.textContent, o.value, o.value === sel.value, pick)));
+  };
+
+  // Lange Listen (Übungsauswahl im Plan-Editor, Fortschritts-Chart) filtern beim Tippen.
+  if (opts.length >= COMBO_FILTER_MIN) {
+    const f = document.createElement('input');
+    f.type = 'text';
+    f.className = 'combo-filter';
+    f.placeholder = I18N.t('combo.filterPh');
+    f.autocomplete = 'off';
+    f.spellcheck = false;
+    f.addEventListener('input', () => render(f.value));
+    f.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const first = list.querySelector('.combo-opt');
+      if (first) first.click();
+    });
+    menu.appendChild(f);
+  }
+  menu.appendChild(list);
+  render('');
+  menu.classList.remove('hidden');
+  if (btn) btn.setAttribute('aria-expanded', 'true');
+  placeComboMenu(combo, menu);
+  const filter = menu.querySelector('.combo-filter');
+  if (filter) setTimeout(() => filter.focus(), 30);
+}
+
+function toggleCombo(combo) {
+  const menu = combo.querySelector('.combo-menu');
+  if (menu && !menu.classList.contains('hidden')) { closeMenus(); return; }
+  openCombo(combo);
+}
+
+// Delegation: so brauchen die per JS erzeugten Zeilen im Plan-Editor keine eigenen Listener.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.combo-btn');
+  if (btn) { toggleCombo(btn.closest('.combo')); return; }
+  if (!e.target.closest('.combo-menu')) closeMenus();
+});
+
+// Scroll und Resize richten das offene Menü neu am Knopf aus, statt es zu schließen.
+// NICHT auf closeMenus umstellen: auf dem Handy öffnet der Fokus im Filterfeld die
+// Tastatur, die WebView schrumpft (resize) und scrollt das Feld ins Bild — das Menü
+// klappte sonst sofort wieder zu (Fund aus dem Diff-Review zu v2.7).
+function placeOpenMenus() {
+  document.querySelectorAll('.combo-menu:not(.hidden)').forEach(m => placeComboMenu(m.parentElement, m));
+}
+document.addEventListener('scroll', placeOpenMenus, true);
+window.addEventListener('resize', placeOpenMenus);
 
 // ── Image helper ──────────────────────────────────────────────────────────────
 const MUSCLE_ICONS = {
@@ -802,6 +955,7 @@ async function loadProgressView() {
     opt.textContent = ex.name;
     sel.appendChild(opt);
   });
+  syncCombo(document.getElementById('progress-combo'));   // Knopf zeigt die neue Auswahl
 }
 
 document.getElementById('progress-exercise-select').addEventListener('change', async function() {
@@ -887,8 +1041,24 @@ let editorPlanId = null;
 function addEditorRow(pe) {
   const row = document.createElement('div');
   row.className = 'editor-row';
+  // Übungsauswahl als Kombifeld — die Liste ist lang (32 Übungen), das Menü bekommt
+  // deshalb automatisch ein Filterfeld. Das <select> bleibt als .er-ex der Wertspeicher,
+  // den savePlanFromEditor() unverändert ausliest.
+  const combo = document.createElement('div');
+  combo.className = 'combo';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'combo-btn';
+  btn.setAttribute('aria-haspopup', 'listbox');
+  btn.setAttribute('aria-expanded', 'false');
+  const lab = document.createElement('span');
+  lab.className = 'combo-label';
+  const caret = document.createElement('span');
+  caret.className = 'caret';
+  caret.textContent = '▾';
+  btn.append(lab, caret);
   const sel = document.createElement('select');
-  sel.className = 'er-ex';
+  sel.className = 'er-ex combo-native';
   allExercises.forEach(e => {
     const o = document.createElement('option');
     o.value = e.id;
@@ -896,6 +1066,10 @@ function addEditorRow(pe) {
     sel.appendChild(o);
   });
   if (pe) sel.value = pe.exercise_id;
+  const menu = document.createElement('div');
+  menu.className = 'combo-menu hidden';
+  combo.append(btn, sel, menu);
+  syncCombo(combo);
   const mk = (cls, val, type, attrs) => {
     const i = document.createElement('input');
     i.className = cls; i.type = type;
@@ -909,7 +1083,7 @@ function addEditorRow(pe) {
   const del = document.createElement('button');
   del.className = 'er-del'; del.textContent = '✕';
   del.addEventListener('click', () => row.remove());
-  row.append(sel, sets, reps, rest, del);
+  row.append(combo, sets, reps, rest, del);
   document.getElementById('editor-rows').appendChild(row);
 }
 
@@ -920,6 +1094,7 @@ async function openPlanEditor(planId) {
   const data = (planId && LocalData.getCustomPlan(planId)) || { name: '', type: 'strength', exercises: [] };
   document.getElementById('editor-name').value = data.name;
   document.getElementById('editor-type').value = data.type;
+  syncCombo(document.getElementById('editor-type-combo'));
   document.getElementById('editor-rows').innerHTML = '';
   (data.exercises.length ? data.exercises : [null]).forEach(addEditorRow);
   document.getElementById('editor-overlay').classList.add('open');
@@ -1174,6 +1349,7 @@ function rerenderCurrentView() {
     loadProgressView().then(() => {
       if (currentProgressExId) {
         document.getElementById('progress-exercise-select').value = currentProgressExId;
+        syncCombo(document.getElementById('progress-combo'));
         renderProgressChart(currentProgressExId, progressMode);
       }
     });
@@ -1186,6 +1362,7 @@ const _langToggle = document.getElementById('lang-toggle');
 if (_langToggle) _langToggle.addEventListener('click', () => {
   I18N.setLang(I18N.lang === 'de' ? 'en' : 'de');
   I18N.applyStatic();
+  syncCombos();            // applyStatic übersetzt die <option>-Texte — Knöpfe nachziehen
   updateLangToggle();
   renderAbout();
   // Übungs-Cache IMMER leeren — sonst zeigen Plan-Editor-Dropdown und Bibliothek
@@ -1198,7 +1375,8 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.documentElement.lang = I18N.lang;
 I18N.applyStatic();
-I18N.ready.then(() => I18N.applyStatic());   // Muskel-Filter-Labels nach Content-Load
+syncCombos();                                // Knopfbeschriftungen aus den Selects setzen
+I18N.ready.then(() => { I18N.applyStatic(); syncCombos(); });   // Muskel-Filter-Labels nach Content-Load
 updateLangToggle();
 renderAbout();
 loadDashboard();

@@ -108,6 +108,9 @@ window.I18N = (function () {
       'help.backup.b': 'Unter Historie: Export schreibt alle Einheiten, Sätze und eigenen Pläne in eine JSON-Datei. Import „Zusammenführen" ergänzt vorhandene Daten und überspringt Einheiten, die es schon gibt. „Alles ersetzen" löscht vorher alles auf dem Gerät und fragt vorher nach.',
       'help.privacy.t': 'Privatsphäre',
       'help.privacy.b': 'Die App hat keine Internet-Berechtigung. Alle Daten bleiben auf dem Gerät, nichts wird gesendet — auch keine Schriftarten oder Bibliotheken nachgeladen.',
+      // v2.7
+      'combo.filterPh': 'Tippen zum Filtern…',
+      'combo.noHit': 'Kein Treffer',
     },
     en: {
       'nav.dashboard': 'Dashboard', 'nav.training': 'Training', 'nav.progress': 'Progress',
@@ -206,6 +209,9 @@ window.I18N = (function () {
       'help.backup.b': 'Under History: export writes all sessions, sets and custom plans to a JSON file. Import "Merge" adds to existing data and skips sessions that already exist. "Replace everything" wipes the device first and asks before doing so.',
       'help.privacy.t': 'Privacy',
       'help.privacy.b': 'The app has no internet permission. All data stays on the device, nothing is sent — no fonts or libraries are loaded from the web either.',
+      // v2.7
+      'combo.filterPh': 'Type to filter…',
+      'combo.noHit': 'No match',
     },
   };
 

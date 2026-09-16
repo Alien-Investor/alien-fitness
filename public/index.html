@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Content-Security-Policy (v2.7): die App lädt ausschließlich eigene, gebündelte Dateien.
+       connect-src 'self' deckt die beiden fetch()-Aufrufe ab (seed.json, i18n-content.json),
+       style-src die <style>-Blöcke und die style="…"-Attribute, die app.js setzt. Bewusst
+       KEINE externe URL — apk/patch-hardening.mjs bricht den Build sonst ab. frame-ancestors
+       fehlt absichtlich: per <meta> ausgeliefert ignorieren Browser die Direktive und warnen.
+       img-src ohne data:/blob: (derzeit ungenutzt; der Backup-Download per createObjectURL
+       fällt nicht unter img-src). Kommt eine data:-SVG-Maske dazu: img-src 'self' data:. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>ALIEN FITNESS</title>
   <link rel="stylesheet" href="vendor/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
@@ -35,11 +43,12 @@
     .picker-item:hover{border-color:var(--neon,#00ffcc);}
     .picker-item .pi-muscle{color:var(--muted,#7a8a86);flex:0 0 auto;}
     #picker-search,#editor-name{width:100%;box-sizing:border-box;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.8rem;padding:9px 12px;}
-    #editor-type{background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.75rem;padding:9px;margin-top:8px;width:100%;box-sizing:border-box;}
+    #editor-type-combo{margin-top:8px;}
+    #editor-type-combo .combo-btn{background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.75rem;padding:9px;}
     #editor-rows{overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0;}
     .editor-head,.editor-row{display:grid;grid-template-columns:1fr 50px 62px 54px 28px;gap:6px;align-items:center;}
     .editor-head{font-size:0.55rem;color:var(--muted,#7a8a86);font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:12px;}
-    .editor-row select,.editor-row input{width:100%;box-sizing:border-box;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:6px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.68rem;padding:7px 5px;}
+    .editor-row .combo-btn,.editor-row input{width:100%;box-sizing:border-box;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:6px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.68rem;padding:7px 5px;}
     .editor-row .er-del{background:none;border:none;color:var(--muted,#7a8a86);cursor:pointer;font-size:0.9rem;padding:0;}
     .editor-row .er-del:hover{color:#ff4466;}
     #editor-btns{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
@@ -72,7 +81,8 @@
     #session-btns .btn{flex:1;min-width:120px;margin-bottom:0;}
     #session-msg{min-height:16px;font-size:0.68rem;color:var(--neon,#00ffcc);font-family:'Share Tech Mono',monospace;margin-top:6px;}
     .backup-mode-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:0.68rem;color:#7a8a86;font-family:'Share Tech Mono',monospace;}
-    #backup-mode{flex:1;background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.72rem;padding:8px;}
+    #backup-mode-combo{flex:1;}
+    #backup-mode-combo .combo-btn{background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.72rem;padding:8px;}
     .about-line{margin-top:22px;padding-top:16px;border-top:1px solid rgba(0,255,204,.12);text-align:center;font-family:'Share Tech Mono',monospace;font-size:0.66rem;color:#7a8a86;letter-spacing:0.5px;}
   </style>
 </head>
@@ -159,9 +169,13 @@
   <!-- ── PROGRESS ───────────────────────────────────────────────────────────── -->
   <div id="view-progress" class="view">
     <h2 data-i18n="progress.title">Fortschritt</h2>
-    <select class="chart-select" id="progress-exercise-select">
-      <option value="" data-i18n="progress.selectOption">– Übung wählen –</option>
-    </select>
+    <div class="combo chart-combo" id="progress-combo">
+      <button type="button" class="combo-btn" aria-haspopup="listbox" aria-expanded="false"><span class="combo-label"></span><span class="caret">▾</span></button>
+      <select class="combo-native" id="progress-exercise-select">
+        <option value="" data-i18n="progress.selectOption">– Übung wählen –</option>
+      </select>
+      <div class="combo-menu hidden"></div>
+    </div>
     <div class="chart-wrap" id="chart-wrap">
       <div class="chart-empty" data-i18n="progress.emptyHint">Übung wählen um Fortschritt zu sehen</div>
       <canvas id="progress-chart" style="display:none;max-height:260px;"></canvas>
@@ -200,10 +214,14 @@
       <p class="backup-hint" data-i18n="backup.hint">Deine Daten liegen nur auf diesem Gerät. Sichere oder übertrage sie als JSON-Datei.</p>
       <div class="backup-mode-row">
         <label for="backup-mode" data-i18n="backup.mode">Import-Modus</label>
-        <select id="backup-mode">
-          <option value="merge" data-i18n="backup.modeMerge">Zusammenführen (empfohlen)</option>
-          <option value="replace" data-i18n="backup.modeReplace">Alles ersetzen</option>
-        </select>
+        <div class="combo" id="backup-mode-combo">
+          <button type="button" class="combo-btn" aria-haspopup="listbox" aria-expanded="false"><span class="combo-label"></span><span class="caret">▾</span></button>
+          <select class="combo-native" id="backup-mode">
+            <option value="merge" data-i18n="backup.modeMerge">Zusammenführen (empfohlen)</option>
+            <option value="replace" data-i18n="backup.modeReplace">Alles ersetzen</option>
+          </select>
+          <div class="combo-menu hidden"></div>
+        </div>
       </div>
       <div class="backup-row">
         <button id="backup-export" class="btn ghost" data-i18n="backup.export">Backup exportieren</button>
@@ -346,10 +364,14 @@
   <div id="editor-modal">
     <h3 id="editor-title" data-i18n="plan.newTitle">Eigenen Plan erstellen</h3>
     <input id="editor-name" data-i18n-ph="plan.namePh" placeholder="z.B. Oberkörper A" autocomplete="off" spellcheck="false">
-    <select id="editor-type">
-      <option value="strength" data-i18n="plan.typeStrength">Kraft</option>
-      <option value="hit" data-i18n="plan.typeHit">HIT</option>
-    </select>
+    <div class="combo" id="editor-type-combo">
+      <button type="button" class="combo-btn" aria-haspopup="listbox" aria-expanded="false"><span class="combo-label"></span><span class="caret">▾</span></button>
+      <select class="combo-native" id="editor-type">
+        <option value="strength" data-i18n="plan.typeStrength">Kraft</option>
+        <option value="hit" data-i18n="plan.typeHit">HIT</option>
+      </select>
+      <div class="combo-menu hidden"></div>
+    </div>
     <div class="editor-head">
       <span data-i18n="plan.colEx">Übung</span><span data-i18n="plan.colSets">Sätze</span>
       <span data-i18n="plan.colReps">Wdh</span><span data-i18n="plan.colRest">Pause</span><span></span>

@@ -34,7 +34,8 @@ Built-in plans use bodyweight, pull-up bar and dumbbells — no gym required.
 
 The APK has **no `INTERNET` permission** (stripped at build time by `apk/patch-hardening.mjs`,
 which also fails the build if any bundled asset references an external URL). Fonts and Chart.js
-are bundled; the app cannot make a single network request. Your history lives in the app's
+are bundled; the app cannot make a single network request. On top of that, a strict Content Security
+Policy only allows the app's own bundled scripts, styles, images and data. Your history lives in the app's
 IndexedDB on the device and leaves it only through the JSON backup you export yourself.
 
 ## Install
