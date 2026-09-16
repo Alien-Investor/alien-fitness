@@ -14,6 +14,7 @@ generate-images.py
 nginx-fitness.conf
 DEPLOY.md
 CLAUDE.md
+HISTORIE.md
 
 # ── Dependencies / Build-Artefakte (regenerierbar) ────────────────────────────
 node_modules/
@@ -32,6 +33,7 @@ apk/patch-signing.mjs
 apk/build-apk.sh
 apk/finish-build.sh
 apk/cb-setup.sh
+apk/cb-release.sh
 apk/publish-zapstore.sh
 trailer/out/
 trailer/shots/
