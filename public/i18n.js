@@ -111,6 +111,11 @@ window.I18N = (function () {
       // v2.7
       'combo.filterPh': 'Tippen zum Filtern…',
       'combo.noHit': 'Kein Treffer',
+      // v2.8: Rückfrage-Dialog (Knopf je Frage, nie nur „OK“)
+      'dlg.cancel': 'Abbrechen', 'dlg.ok': 'OK',
+      'dlg.deletePlan': 'Plan löschen', 'dlg.deleteForever': 'Endgültig löschen',
+      'dlg.discard': 'Verwerfen', 'dlg.abort': 'Training abbrechen', 'dlg.keepGoing': 'Weitertrainieren',
+      'dlg.replace': 'Alles ersetzen',
     },
     en: {
       'nav.dashboard': 'Dashboard', 'nav.training': 'Training', 'nav.progress': 'Progress',
@@ -212,6 +217,11 @@ window.I18N = (function () {
       // v2.7
       'combo.filterPh': 'Type to filter…',
       'combo.noHit': 'No match',
+      // v2.8: confirmation dialog
+      'dlg.cancel': 'Cancel', 'dlg.ok': 'OK',
+      'dlg.deletePlan': 'Delete plan', 'dlg.deleteForever': 'Delete permanently',
+      'dlg.discard': 'Discard', 'dlg.abort': 'Cancel workout', 'dlg.keepGoing': 'Keep training',
+      'dlg.replace': 'Replace all',
     },
   };
 

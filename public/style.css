@@ -408,6 +408,13 @@ h3 {
 .input-group input::-webkit-outer-spin-button,
 .input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
 .input-group input:focus { outline: none; border-color: var(--neon); box-shadow: 0 0 10px rgba(0,255,204,0.2); }
+/* Autofill: Browser legt sonst ein helles Feld mit eigener Schriftfarbe drüber. Hintergrund lässt sich nicht direkt setzen, daher Innenschatten. */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--card2) inset;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
 
 /* ── Rest Timer ──────────────────────────────────────────────────────────────── */
 #timer-overlay {
@@ -838,3 +845,41 @@ h3 {
   font-size: 0.78rem;
   color: var(--muted);
 }
+
+/* ── Rückfrage-Dialog (v2.8, statt confirm()/alert()) ────────────────────────────
+   Der Android-Systemdialog (Capacitor-AlertDialog) erbt FLAG_SECURE nicht — ein Screenshot
+   bei offener Löschnachfrage zeigte den Text, während die App dahinter schwarz war — und er
+   bricht den Look. Muster: Alien Pass v1.9 / Sachwert-Tresor v3.5, Farben über die eigenen
+   Variablen. z-index 1100: über Editor-/Picker-/Session-Overlay (900) und Kombimenü (1000).
+   Bei 360 px stehen die Knöpfe untereinander (flex-wrap), ab 412 px nebeneinander. */
+.dlg-back {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.dlg {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--neon-mid);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 0 24px rgba(0,255,204,0.25);
+}
+.dlg-msg {
+  font-family: var(--font-r);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+.dlg-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.dlg-btns .btn { flex: 1 1 auto; width: auto; min-height: 44px; margin-bottom: 0; padding: 10px 12px; letter-spacing: 1px; font-size: 0.68rem; }

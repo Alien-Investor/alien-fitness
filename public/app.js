@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.8.0';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
@@ -69,7 +69,70 @@ function openLightbox(src, caption) {
   lightbox.classList.add('open');
 }
 lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
+
+// ── Rückfrage-Dialog (v2.8) statt confirm()/alert() ────────────────────────────
+// Der Android-Systemdialog (Capacitor-AlertDialog) erbt FLAG_SECURE nicht: ein Screenshot
+// bei offener Löschnachfrage zeigte den Text, während die App dahinter schwarz war
+// (Querfund Alien Notes, Gerätetest 25.09.2026). Muster: Alien Pass v1.9 / Sachwert-Tresor v3.5.
+//   ask(msg, { ok, cancel, danger }) → Promise<boolean>. ok/cancel sind i18n-Schlüssel (je Frage
+//   der passende Knopf, nie nur „OK“), danger färbt den OK-Knopf rot (.btn.red).
+//   ask(msg, { alert: true }) → nur „OK“ (alert()-Ersatz), Fokus auf OK.
+// Nur ein Dialog zur Zeit — eine zweite Frage gilt sofort als abgelehnt (Doppeltipp).
+// Fokus-Vorgabe „Abbrechen“ (Enter tut nichts Schlimmes), Escape und ein Tipp auf den
+// Hintergrund brechen ab, Tab pendelt zwischen den Knöpfen. Text NUR per textContent
+// (Plan-Namen sind Nutzer-/Importdaten). Jeder Aufrufer ist async und prüft nach dem await
+// seinen Zustand neu (Einheit noch aktiv? Detail noch offen? Draft noch derselbe?).
+let dlgResolve = null, dlgPrev = null;
+function ask(msg, opt) {
+  opt = opt || {};
+  if (dlgResolve) return Promise.resolve(false);
+  return new Promise(res => {
+    dlgResolve = res;
+    dlgPrev = document.activeElement;
+    document.getElementById('dlg-msg').textContent = msg;
+    const ok = document.getElementById('dlg-ok');
+    const cancel = document.getElementById('dlg-cancel');
+    ok.textContent = I18N.t(opt.ok || 'dlg.ok');
+    ok.classList.toggle('red', !!opt.danger);
+    cancel.textContent = I18N.t(opt.cancel || 'dlg.cancel');
+    cancel.classList.toggle('hidden', !!opt.alert);
+    document.getElementById('dlg').classList.remove('hidden');
+    (opt.alert ? ok : cancel).focus();
+  });
+}
+function dialogClose(v) {
+  const r = dlgResolve;
+  if (!r) return;
+  dlgResolve = null;
+  document.getElementById('dlg').classList.add('hidden');
+  document.getElementById('dlg-msg').textContent = '';
+  document.getElementById('dlg-ok').classList.remove('red');
+  document.getElementById('dlg-cancel').classList.remove('hidden');
+  const f = dlgPrev; dlgPrev = null;
+  if (f && document.contains(f) && typeof f.focus === 'function') { try { f.focus(); } catch (e) {} }
+  r(!!v);
+}
+function dialogOpen() { return !!dlgResolve; }
+// Tastatur bei offenem Dialog: Escape bricht ab, Tab pendelt; alles andere bleibt beim
+// fokussierten Knopf (Enter löst ihn aus). Liefert true, wenn die Taste verbraucht ist.
+function dialogKey(e) {
+  if (!dlgResolve) return false;
+  if (e.key === 'Escape') { dialogClose(false); return true; }
+  if (e.key === 'Tab') {
+    const ring = ['dlg-cancel', 'dlg-ok'].map(id => document.getElementById(id))
+      .filter(n => !n.classList.contains('hidden'));
+    const i = ring.indexOf(document.activeElement);
+    ring[(i + (e.shiftKey ? -1 : 1) + ring.length) % ring.length].focus();
+    return true;
+  }
+  return false;
+}
+document.getElementById('dlg-ok').addEventListener('click', () => dialogClose(true));
+document.getElementById('dlg-cancel').addEventListener('click', () => dialogClose(false));
+document.getElementById('dlg').addEventListener('click', e => { if (e.target.id === 'dlg') dialogClose(false); });
+
 document.addEventListener('keydown', e => {
+  if (dialogKey(e)) { e.preventDefault(); return; }   // offener Dialog: Escape bricht ab, Tab pendelt
   if (e.key === 'Escape') {
     // Ein offenes Auswahlmenü schluckt Escape. Sonst schlösse die Taste den Plan-Editor
     // mitsamt der halb fertigen Eingabe, obwohl nur das Menü weg sollte.
@@ -167,8 +230,11 @@ function openCombo(combo) {
   closeMenus();
 
   const opts = [...sel.options];
+  // Guard (Kit chooseOpt, v2.8): nur Werte aus sel.options — ein fremder Wert setzte sonst
+  // selectedIndex -1 — und bei gleichem Wert kein change (sonst unnötiges Neuzeichnen/Speichern).
   const pick = value => {
     closeMenus();
+    if (!opts.some(o => o.value === value) || sel.value === value) return;
     sel.value = value;
     syncCombo(combo);
     sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -337,7 +403,8 @@ async function loadWorkoutSelect() {
       del.textContent = '✕';
       del.title = I18N.t('plan.delete');
       del.addEventListener('click', async () => {
-        if (!confirm(I18N.t('plan.deleteConfirm', { name: p.name }))) return;
+        if (!(await ask(I18N.t('plan.deleteConfirm', { name: p.name }), { ok: 'dlg.deletePlan', danger: true }))) return;
+        if (!document.contains(del)) return;   // Liste wurde während der Frage neu gebaut (Sprachwechsel, Import)
         await LocalData.deletePlan(p.id);
         loadWorkoutSelect();
         loadDashboard();
@@ -490,7 +557,7 @@ async function saveDraftAsSession(draft) {
     } catch (e) {
       // Speichern fehlgeschlagen: Draft NICHT löschen, sonst gehen die Sätze verloren.
       console.error(e);
-      alert(I18N.t('workout.saveFailed'));
+      await ask(I18N.t('workout.saveFailed'), { alert: true });
       return;
     }
   }
@@ -500,9 +567,13 @@ async function saveDraftAsSession(draft) {
 
 document.getElementById('resume-go').addEventListener('click', () => { const d = readDraft(); if (d) resumeWorkout(d); });
 document.getElementById('resume-save').addEventListener('click', () => { const d = readDraft(); if (d) saveDraftAsSession(d); });
-document.getElementById('resume-drop').addEventListener('click', () => {
+document.getElementById('resume-drop').addEventListener('click', async () => {
   const d = readDraft();
-  if (d && d.sets.length && !confirm(I18N.t('resume.dropConfirm', { n: d.sets.length }))) return;
+  if (d && d.sets.length && !(await ask(I18N.t('resume.dropConfirm', { n: d.sets.length }), { ok: 'dlg.discard', danger: true }))) return;
+  // Zustand nach dem await neu prüfen: ist der Draft inzwischen ein anderer (Training fortgesetzt
+  // und neu unterbrochen), darf die alte Antwort ihn nicht löschen.
+  const now = readDraft();
+  if (d && now && now.startedAt !== d.startedAt) { loadDashboard(); return; }
   clearDraft();
   loadDashboard();
 });
@@ -805,14 +876,15 @@ function checkWorkoutDone() {
 }
 
 async function finishWorkout() {
+  const s = activeSession;   // Einheit festhalten: während des Speicherns kann eine Abbruch-Antwort activeSession leeren (Review v2.8)
   try {
     await api('sessions', {
       method: 'POST',
       body: JSON.stringify({
-        plan_id: activeSession.planId,
-        started_at: activeSession.startedAt,
+        plan_id: s.planId,
+        started_at: s.startedAt,
         finished_at: new Date().toISOString(),
-        sets: activeSession.sets,
+        sets: s.sets,
       }),
     });
   } catch (e) {
@@ -820,10 +892,12 @@ async function finishWorkout() {
     // und die Einheit auf dem Schirm lassen — der Draft bleibt erhalten, damit die
     // geloggten Sätze nicht verloren gehen.
     console.error(e);
-    alert(I18N.t('workout.saveFailed'));
+    await ask(I18N.t('workout.saveFailed'), { alert: true });
     return;
   }
   clearDraft();
+  s.finished = true;   // Marke für späte Antworten (Abbruch-Rückfrage, v2.8): gespeichert ist gespeichert
+  if (activeSession !== s) return;   // während des Speicherns abgebrochen: Auswahl-Schirm steht schon, kein Banner mehr
   releaseWakeLock();
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
@@ -837,9 +911,11 @@ document.getElementById('btn-finish').addEventListener('click', () => {
   finishWorkout();
 });
 
-document.getElementById('btn-abort').addEventListener('click', () => {
-  if (activeSession && activeSession.sets.length &&
-      !confirm(I18N.t('workout.abortConfirm', { n: activeSession.sets.length }))) return;
+document.getElementById('btn-abort').addEventListener('click', async () => {
+  const s = activeSession;
+  if (s && s.sets.length &&
+      !(await ask(I18N.t('workout.abortConfirm', { n: s.sets.length }), { ok: 'dlg.abort', cancel: 'dlg.keepGoing', danger: true }))) return;
+  if (activeSession !== s || (s && s.finished)) return;   // Einheit wurde während der Frage gespeichert oder gewechselt
   cancelTimer();
   document.getElementById('workout-active-screen').style.display = 'none';
   document.getElementById('workout-select-screen').style.display = 'block';
@@ -1102,7 +1178,7 @@ async function openPlanEditor(planId) {
 
 async function savePlanFromEditor() {
   const name = document.getElementById('editor-name').value.trim();
-  if (!name) { alert(I18N.t('plan.needName')); return; }
+  if (!name) { await ask(I18N.t('plan.needName'), { alert: true }); return; }
   const exercises = [...document.querySelectorAll('#editor-rows .editor-row')].map((r, i) => ({
     exercise_id: Number(r.querySelector('.er-ex').value),
     sets: Math.min(20, Math.max(1, parseInt(r.querySelector('.er-sets').value) || 3)),
@@ -1110,7 +1186,7 @@ async function savePlanFromEditor() {
     rest_seconds: Math.min(600, Math.max(0, parseInt(r.querySelector('.er-rest').value) || 90)),
     sort_order: i,
   })).filter(e => e.exercise_id);
-  if (!exercises.length) { alert(I18N.t('plan.needEx')); return; }
+  if (!exercises.length) { await ask(I18N.t('plan.needEx'), { alert: true }); return; }
   await LocalData.savePlan({
     id: editorPlanId,
     name,
@@ -1266,10 +1342,12 @@ document.getElementById('session-save-notes').addEventListener('click', async ()
   loadHistory();
 });
 document.getElementById('session-delete').addEventListener('click', async () => {
-  if (detailSessionId == null) return;
+  const id = detailSessionId;
+  if (id == null) return;
   const meta = document.getElementById('session-meta').textContent.split(' · ')[0];
-  if (!confirm(I18N.t('session.deleteConfirm', { date: meta }))) return;
-  await LocalData.deleteSession(detailSessionId);
+  if (!(await ask(I18N.t('session.deleteConfirm', { date: meta }), { ok: 'dlg.deleteForever', danger: true }))) return;
+  if (detailSessionId !== id) return;   // Detail wurde während der Frage geschlossen oder gewechselt
+  await LocalData.deleteSession(id);
   closeSessionDetail();
   loadHistory();
   loadDashboard();
@@ -1297,10 +1375,11 @@ async function applyImport(text) {
       // „Alles ersetzen“ ist destruktiv → vorher zeigen, was verloren geht
       const cur = await LocalData.hasData();
       if ((cur.sessions || cur.plans) &&
-          !confirm(I18N.t('backup.replaceConfirm', { s: cur.sessions, p: cur.plans }))) {
+          !(await ask(I18N.t('backup.replaceConfirm', { s: cur.sessions, p: cur.plans }), { ok: 'dlg.replace', danger: true }))) {
         if (msg) msg.textContent = '';
         return;
       }
+      if (modeEl && modeEl.value !== 'replace') return;   // Modus während der Frage umgestellt: nichts ersetzen
     }
     const r = await LocalData.importAll(obj, { merge });
     if (msg) msg.textContent = I18N.t('backup.importedFull', { s: r.sessions, n: r.sets, p: r.plans })
