@@ -40,8 +40,38 @@ IndexedDB on the device and leaves it only through the JSON backup you export yo
 
 ## Install
 
-- **Zap Store** (Nostr app store): search for *Alien Fitness*
-- Or sideload the APK from the latest release
+Deliberately **not on Google Play**. Signed releases are distributed from our own download address
+[api.alien-investor.org/downloads/alien-fitness/](https://api.alien-investor.org/downloads/alien-fitness/) and through the
+[Zap Store](https://zapstore.dev/apps/org.alieninvestor.fitness) (Nostr app store). Every release is also mirrored on
+[GitHub](https://github.com/Alien-Investor/alien-fitness/releases).
+
+**[Obtainium](https://github.com/ImranR98/Obtainium)** (automatic updates, no Google) — in Obtainium tap **“Add app”**:
+
+1. “App source URL”:
+   ```
+   https://api.alien-investor.org/downloads/alien-fitness/
+   ```
+2. Under “Additional options for HTML”, “Version string extraction RegEx”:
+   ```
+   alien-fitness-([0-9]+(\.[0-9]+)+)\.apk$
+   ```
+3. “Match group to use for version string extraction RegEx”: `$1`
+4. “Expected signing certificate hashes”:
+   ```
+   85:9E:88:B7:43:5F:84:1D:8B:C1:CF:F1:FE:A9:12:56:A6:33:DE:A5:59:D9:5A:91:02:4B:22:53:A2:AD:13:26
+   ```
+5. Tap **“+”** to add → **Install**. Obtainium reports updates automatically.
+
+Obtainium needs the RegEx to read the version number from the file name on a download page; without it, it cannot compare
+against the installed version. The certificate hash is a hard lock: Obtainium will not install an APK signed with a different key.
+To copy the values, or with “Open in Obtainium” (everything prefilled): [Obtainium sheet on the website](https://alien-investor.org/en/apps.html#obtainium-fitness).
+
+> **Still set up with the Codeberg address?** No new releases appear there. Obtainium cannot edit an app's source, so once:
+> export a JSON backup in the history first, remove the “Alien Fitness” entry and in the dialog keep only **“Remove from Obtainium”**
+> switched on (**“Uninstall from device” off** — it deletes the app and your training history), then add it again as above.
+> Obtainium detects the installed app; signing key and package ID stay the same.
+
+**Without Obtainium:** [download page](https://api.alien-investor.org/downloads/alien-fitness/) → download the `.apk` and install it.
 
 **Signature fingerprint** — verify authenticity, stable across all versions.
 Same value, two notations — both are the SHA-256 of the signing certificate:
