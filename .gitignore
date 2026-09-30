@@ -32,7 +32,6 @@ Thumbs.db
 apk/patch-signing.mjs
 apk/build-apk.sh
 apk/finish-build.sh
-apk/cb-setup.sh
 apk/publish-zapstore.sh
 trailer/out/
 trailer/shots/
