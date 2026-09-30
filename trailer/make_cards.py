@@ -23,7 +23,7 @@ TEXT = {
   "l11": "JSON-Backup: zusammenführen oder ersetzen",
   "c12": "Vollständig offline. Open Source, einsehbar.",
   "end1": "Dein Trainingstagebuch bleibt bei dir.",
-  "end2": "Kostenlos und Open Source. Zap Store, Obtainium oder Codeberg.",
+  "end2": "Kostenlos und Open Source. Zap Store, Obtainium oder direkt als APK.",
   "end3": "alien-investor.org/apps.html",
  },
  "en": {
@@ -37,7 +37,7 @@ TEXT = {
   "l11": "JSON backup: merge or replace",
   "c12": "Fully offline. Open source, auditable.",
   "end1": "Your training log stays with you.",
-  "end2": "Free and open source. Zap Store, Obtainium or Codeberg.",
+  "end2": "Free and open source. Zap Store, Obtainium or directly as an APK.",
   "end3": "alien-investor.org/en/apps.html",
  },
 }

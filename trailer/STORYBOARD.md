@@ -49,7 +49,7 @@ Ausgabe: `out/trailer-de-16x9.mp4`, `out/trailer-en-16x9.mp4`.
 | 11 | Backup | Backup-Panel | JSON-Backup: zusammenführen oder ersetzen | 4,4 |
 | 12 | Offline-Schluss | Motiv | Vollständig offline. Open Source, einsehbar. | 5,5 |
 | 13 | Titel | Icon + „Alien Fitness" | — | 5 |
-| 14 | Endkarte | Icon + QR | Dein Trainingstagebuch bleibt bei dir. / Zap Store, Obtainium, Codeberg. | 5 |
+| 14 | Endkarte | Icon + QR | Dein Trainingstagebuch bleibt bei dir. / Zap Store, Obtainium, direkt als APK. | 5 |
 
 QR-Ziel: `apps.html` (DE) / `en/apps.html` (EN) — Alien Fitness hat keine eigene Detailseite.
 

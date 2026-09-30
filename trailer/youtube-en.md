@@ -21,13 +21,16 @@ All data stays in the app on your device. Save and migrate via JSON backup, on i
 ⚡ On the Zap Store
 👉 https://zapstore.dev/apps/org.alieninvestor.fitness
 
-🛠️ Source and releases with APK (Codeberg)
-👉 https://codeberg.org/Alien-Investor/alien-fitness
+📲 Download (signed APK) from our own address
+👉 https://api.alien-investor.org/downloads/alien-fitness/
+
+🛠️ Source code (GitHub)
+👉 https://github.com/Alien-Investor/alien-fitness
 
 📲 All apps by Alien Investor
 👉 https://alien-investor.org/en/apps.html
 
-Deliberately not on the Google Play Store. Install via Zap Store, Obtainium or directly as an APK from Codeberg. The signature fingerprint stays the same across all versions and can be verified with AppVerifier.
+Deliberately not on the Google Play Store. Install via Zap Store, Obtainium or directly as an APK from our own download address. The signature fingerprint stays the same across all versions and can be verified with AppVerifier.
 
 Your training log stays with you.
 

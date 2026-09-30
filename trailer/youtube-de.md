@@ -21,13 +21,16 @@ Alle Daten liegen in der App auf dem Gerät. Sichern und Umziehen per JSON-Backu
 ⚡ Im Zap Store
 👉 https://zapstore.dev/apps/org.alieninvestor.fitness
 
-🛠️ Quellcode und Releases mit APK (Codeberg)
-👉 https://codeberg.org/Alien-Investor/alien-fitness
+📲 Download (signierte APK) von der eigenen Adresse
+👉 https://api.alien-investor.org/downloads/alien-fitness/
+
+🛠️ Quellcode (GitHub)
+👉 https://github.com/Alien-Investor/alien-fitness
 
 📲 Alle Apps von Alien Investor
 👉 https://alien-investor.org/apps.html
 
-Bewusst nicht im Google Play Store. Installation über Zap Store, Obtainium oder direkt als APK von Codeberg. Der Signatur-Fingerprint bleibt über alle Versionen gleich und lässt sich mit AppVerifier prüfen.
+Bewusst nicht im Google Play Store. Installation über Zap Store, Obtainium oder direkt als APK von der eigenen Download-Adresse. Der Signatur-Fingerprint bleibt über alle Versionen gleich und lässt sich mit AppVerifier prüfen.
 
 Dein Trainingstagebuch bleibt bei dir.
 
