@@ -54,4 +54,6 @@ Musik: Instrumental aus dem Kanalfundus (KI-generiert, Lizenz Alien Investor)
 Alien Fitness, Trainings-Tracker, Workout Tracker, Fitness App, GrapheneOS, Android, offline, Open Source, kein Konto, Trainingsplan, HIT, Tabata, Fortschritt, Übungen, Zap Store, Obtainium, Privatsphäre, OpSec, Freedom Tech, Alien Investor, App-Trailer
 
 ## Angepinnter Kommentar
-Alle freien Apps von Alien Investor: https://alien-investor.org/apps.html – Fragen gern hier in die Kommentare.
+📲 Alien Fitness installieren: signierte APK direkt von unserem Server, Einrichtung für Obtainium und Signatur-Fingerprint auf der App-Karte:
+https://alien-investor.org/apps.html#obtainium-fitness
+Fragen gern hier in die Kommentare.
