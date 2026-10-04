@@ -69,7 +69,7 @@ git ls-remote --exit-code "https://github.com/$GH_REPO.git" "refs/tags/$TAG" >/d
 
 NOTES=""; [ -n "$NOTES_FILE" ] && NOTES="$(cat "$NOTES_FILE")"$'\n\n'
 BODY="Android release ${TAG} — install via Zap Store, Obtainium (source: ${DLURL}) or sideload."$'\n\n'"${NOTES}"
-BODY+="Signatur-Fingerprint (SHA-256), über alle Versionen gleich – mit AppVerifier prüfen:"$'\n'
+BODY+="Signing certificate fingerprint (SHA-256), identical for every version – verify with AppVerifier:"$'\n'
 BODY+='```text'$'\n'"AppVerifier: ${FP_COLON}"$'\n'"apksigner:   ${FP_HEX}"$'\n''```'
 
 # GitHub (Spiegel): APK unter Release-Namen bereitstellen

@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.8.1';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
