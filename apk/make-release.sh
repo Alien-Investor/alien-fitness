@@ -46,7 +46,7 @@ if [ "${1:-}" = "--nur-seite" ]; then
   [ "$code" = 200 ] || { echo "FEHLER: ${DLURL}alien-fitness-${NAME}.apk liefert $code – Seite würde ins Leere zeigen"; exit 1; }
   PAGE=$(mktemp -d); trap 'rm -rf "$PAGE"' EXIT
   download_page "$PAGE/index.html"
-  rsync -a --chmod=F644 "$PAGE/index.html" "$DL"
+  rsync -a --no-o --no-g --chmod=F644 "$PAGE/index.html" "$DL"
   echo "=== Download-Seite: ${DLURL} (Link auf alien-fitness-${NAME}.apk) ==="
   exit 0
 fi
@@ -85,7 +85,7 @@ echo "=== GitHub fertig: https://github.com/$GH_REPO/releases/tag/$TAG ==="
 # Die Download-Seite geht erst NACH der APK hoch, damit sie nie auf eine fehlende Datei zeigt.
 echo "=> Server-Downloads: lade nach ${DL#*:} ..."
 download_page "$STAGE/index.html"
-if rsync -a --chmod=F644 "$STAGE/alien-fitness-${NAME}.apk" "$DL" && rsync -a --chmod=F644 "$STAGE/index.html" "$DL"; then
+if rsync -a --no-o --no-g --chmod=F644 "$STAGE/alien-fitness-${NAME}.apk" "$DL" && rsync -a --no-o --no-g --chmod=F644 "$STAGE/index.html" "$DL"; then
   echo "=== Server fertig: ${DLURL}alien-fitness-${NAME}.apk, Download-Seite ${DLURL} ==="
 else
   echo "WARNUNG: Server-Upload fehlgeschlagen (ssh-add -l?) – GitHub-Release steht; Upload von Hand nachholen."
