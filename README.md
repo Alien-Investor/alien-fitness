@@ -105,3 +105,9 @@ End-to-end tests (Brave via playwright-core): `node apk/serve-test.mjs &` then `
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The alien in the app icon is based on the “Alien” emoji (U+1F47D) from [Twemoji](https://github.com/twitter/twemoji),
+Copyright 2019 Twitter, Inc and other contributors, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The outlines of the head and eyes are taken from the original. The antennas, a gradient, an outline and a glow were added,
+the colours were changed and the original mouth was replaced or removed. The authors provide no warranty (Section 5 of the
+license). All license notices: https://alien-investor.org/en/lizenzen.html
