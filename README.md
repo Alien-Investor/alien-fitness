@@ -2,11 +2,13 @@
 
 A minimal, fully **offline** personal workout tracker, packaged as a native Android app
 (Capacitor). No account, no server, no tracking — training plans, logged sessions and
-progress stay on your device and never leave it.
+progress stay on your device and leave it only when you export or share a backup yourself (or through
+Android's system backup, if enabled).
 
 Ein minimalistischer, **vollständig offline** laufender Trainings-Tracker als native
 Android-App. Kein Konto, kein Server, kein Tracking — Pläne, Trainingsverlauf und
-Fortschritt bleiben auf deinem Gerät.
+Fortschritt bleiben auf deinem Gerät, außer du exportierst oder teilst selbst ein Backup (oder über
+die Android-Systemsicherung, falls eingeschaltet).
 
 This repository contains the **Android client** (web frontend + Capacitor wrapper).
 Since July 2026 (v2.4) the app runs entirely on-device; the former login-based backend
@@ -18,17 +20,18 @@ has been retired.
 - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
 - Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
 - Live session logging with automatic rest timer, corrections supported
-- "Last time" shown and pre-filled for every set — progressive overload at a glance
+- "Last time" on every exercise card and pre-filled for every set — progressive overload at a glance
 - HIT intervals: timed sets ("20 sec") run with a work timer, rest and auto-chained next set
+- Hold exercises (plank): pick the hold time per set (30–180 s, custom, or "Max" as a stopwatch), 5 s get-ready countdown
 - Interrupted workouts survive an app kill and can be resumed, saved or discarded
 - Session details with every set, a free-text note and delete
 - Progress charts per exercise (max weight / reps or seconds over time)
 - Exercise library with images, muscle groups and equipment
-- JSON backup: export and import (merge with duplicate detection, or replace) to move between devices
+- JSON backup: export saves a file to "Documents" and opens the share sheet (Android 11+; older versions: share sheet only); import with merge (duplicate detection) or replace
 - German and English interface, switchable in-app
 - Dark neon UI, mobile-first; screen stays awake during a workout, timer ends with beep and vibration
 
-Built-in plans use bodyweight, pull-up bar and dumbbells — no gym required.
+Built-in plans use bodyweight, a pull-up bar, dumbbells and a bench — no gym required.
 
 ## Privacy
 
@@ -36,7 +39,12 @@ The APK has **no `INTERNET` permission** (stripped at build time by `apk/patch-h
 which also fails the build if any bundled asset references an external URL). Fonts and Chart.js
 are bundled; the app cannot make a single network request. On top of that, a strict Content Security
 Policy only allows the app's own bundled scripts, styles, images and data. Your history lives in the app's
-IndexedDB on the device and leaves it only through the JSON backup you export yourself.
+IndexedDB on the device and leaves it only through the JSON backup you export or share yourself, or through
+Android's own system backup if you have it enabled (backup stays allowed so your history survives a phone change).
+Besides Capacitor's built-in core plugins, the only native plugins are Filesystem and Share, used solely for that
+backup file; the build removes the Share plugin's broadcast receiver and checks the finished APK against a
+permission allowlist. The APK requests exactly one Android permission, `VIBRATE` (timer end), plus the
+app-internal signature permission AndroidX adds.
 
 ## Install
 
@@ -91,10 +99,18 @@ installed app and compare against the colon-separated value above.
 
 ```bash
 cd apk
-npm install
-npx cap add android          # one-time
-./build-apk.sh               # signed release APK (needs a signing keystore)
+npm ci                                   # exact pins from package-lock.json
+npx cap add android                      # one-time
+./build-www.sh                           # public/ → www/, APP_VERSION from VERSION
+npx cap sync android
+node patch-hardening.mjs                 # strips INTERNET, adds VIBRATE, patches the Share plugin, scans www/
+(cd android && ./gradlew assembleRelease)   # needs your own release signingConfig, else app-release-unsigned.apk
+node patch-hardening.mjs --check-apk android/app/build/outputs/apk/release/app-release.apk
 ```
+
+`patch-hardening.mjs` must run after every `npm ci` / `cap sync` and before Gradle. Version (`apk/VERSION`) and app icon are
+set by private helper scripts; a self-build without them gets Capacitor's defaults. `--check-apk` verifies the
+finished APK (permission allowlist, Share plugin without receiver in the bytecode, live-update path disabled).
 
 The frontend lives in `public/` and is bundled into the APK by `build-www.sh`. All data is
 kept in on-device storage; the only files the app loads are its own bundled assets
@@ -106,8 +122,3 @@ End-to-end tests (Brave via playwright-core): `node apk/serve-test.mjs &` then `
 
 MIT — see [LICENSE](LICENSE).
 
-The alien in the app icon is based on the “Alien” emoji (U+1F47D) from [Twemoji](https://github.com/twitter/twemoji),
-Copyright 2019 Twitter, Inc and other contributors, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-The outlines of the head and eyes are taken from the original. The antennas, a gradient, an outline and a glow were added,
-the colours were changed and the original mouth was replaced or removed. The authors provide no warranty (Section 5 of the
-license). All license notices: https://alien-investor.org/en/lizenzen.html

@@ -9,8 +9,10 @@
        KEINE externe URL — apk/patch-hardening.mjs bricht den Build sonst ab. frame-ancestors
        fehlt absichtlich: per <meta> ausgeliefert ignorieren Browser die Direktive und warnen.
        img-src ohne data:/blob: (derzeit ungenutzt; der Backup-Download per createObjectURL
-       fällt nicht unter img-src). Kommt eine data:-SVG-Maske dazu: img-src 'self' data:. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+       fällt nicht unter img-src). Kommt eine data:-SVG-Maske dazu: img-src 'self' data:.
+       frame-src/worker-src 'none' (Audit run-2): Capacitor liefert /_capacitor_file_/… am App-Ursprung aus —
+       ein Frame darauf liefe ohne diese CSP mit Zugriff auf die Plugins. Die App nutzt weder Frames noch Worker. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>ALIEN FITNESS</title>
   <link rel="stylesheet" href="vendor/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
@@ -257,6 +259,29 @@
   </div>
 </div>
 
+<!-- Haltezeit (v2.9): Halteübungen wie Plank — Dauer wählen, dann Vorlauf und Halte-Timer.
+     Chips baut app.js (HOLD_CHOICES), Text nur per textContent. -->
+<div id="hold-modal-overlay">
+  <div id="hold-modal">
+    <h3 id="hold-modal-title"></h3>
+    <div id="hold-last" class="set-last"></div>
+    <div class="hold-label" data-i18n="hold.title">Haltezeit</div>
+    <div id="hold-chips" class="hold-chips"></div>
+    <div class="input-row">
+      <div class="input-group">
+        <label for="input-hold" data-i18n="hold.custom">Eigene Zeit (Sekunden)</label>
+        <input type="number" id="input-hold" min="5" max="600" step="5" inputmode="numeric">
+      </div>
+    </div>
+    <div id="hold-max-hint" class="hold-hint hidden" data-i18n="hold.maxHint">Stoppuhr: läuft, bis du „Fertig →“ tippst (höchstens 10 Minuten).</div>
+    <button class="btn" id="btn-hold-start" data-i18n="hold.start">▶ Start</button>
+    <div class="hold-btns">
+      <button class="btn ghost btn-sm" id="btn-hold-log" data-i18n="hold.logOnly">Ohne Timer eintragen</button>
+      <button class="btn ghost btn-sm" id="btn-hold-cancel" data-i18n="set.cancel">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Rest Timer overlay -->
 <div id="timer-overlay">
   <div id="timer-label" data-i18n="timer.label">PAUSE</div>
@@ -307,8 +332,12 @@
         <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek") laufen als Intervall: Satz antippen startet den Arbeits-Timer, danach folgt die Pause und der nächste Satz derselben Übung startet von selbst. „■ Stopp" unterbricht die Kette, „Fertig →" beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
       </div>
       <div class="help-section">
+        <div class="help-section-title" data-i18n="help.hold.t">Halteübungen (Plank)</div>
+        <p data-i18n="help.hold.b">Bei Plank wählst du vor jedem Satz die Haltezeit: 30 bis 180 Sekunden, eine eigene Zeit oder „Max“ als Stoppuhr. Vorbelegt ist die zuletzt gewählte Zeit. Nach „▶ Start“ bleiben 5 Sekunden, um in Position zu kommen, dann läuft der Halte-Timer. „Fertig →“ beendet früher und speichert die gehaltene Zeit, „■ Stopp“ bricht ohne Eintrag ab. „Ohne Timer eintragen“ speichert die gewählte Zeit direkt, etwa zum Korrigieren.</p>
+      </div>
+      <div class="help-section">
         <div class="help-section-title" data-i18n="help.progress.t">Fortschritt</div>
-        <p data-i18n="help.progress.b">Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über alle bisherigen Trainings — umschalten über die Buttons unter dem Chart.</p>
+        <p data-i18n="help.progress.b">Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über die letzten 60 Trainingstage — umschalten über die Buttons unter dem Chart. Übungen ohne Gewicht (z. B. Klimmzüge, Plank) zeigen gleich Wiederholungen bzw. Sekunden.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.library.t">Übungsbibliothek</div>

@@ -8,3 +8,4 @@ gen-seed-json.js
 e2e-test.mjs
 screenshots/post-*.png
 screenshots/v*.png
+shot-store.mjs

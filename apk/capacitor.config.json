@@ -2,5 +2,6 @@
   "appId": "org.alieninvestor.fitness",
   "appName": "Alien Fitness",
   "webDir": "www",
-  "android": { "allowMixedContent": false }
+  "android": { "allowMixedContent": false },
+  "cordova": { "preferences": { "DisableDeploy": "true" } }
 }

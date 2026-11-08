@@ -93,6 +93,14 @@ window.LocalData = (function () {
     return tr ? tr.name : fallback;
   }
 
+  // Zeitstempel einer Einheit für Sortierung/Statistik (Audit run-2 R2-2): echte Zeit statt Textvergleich;
+  // Unlesbares und Zukünftiges (Alt-Importe, falsche Uhr) zählt als „ganz alt“ und kann nichts festnageln.
+  function sessTime(s) {
+    const t = Date.parse(s && s.started_at);
+    return Number.isFinite(t) && t <= Date.now() + 86400000 ? t : -Infinity;
+  }
+  const byNewest = (a, b) => sessTime(b) - sessTime(a) || (a.id || 0) - (b.id || 0);
+
   // ── IndexedDB-Helfer ───────────────────────────────────────────────────────────
   function tx(stores, mode) {
     const t = idb.transaction(stores, mode);
@@ -105,6 +113,23 @@ window.LocalData = (function () {
     });
   }
   function allFrom(store) { return reqP(tx([store], 'readonly').getAll()); }
+  // Schreib-Transaktion (Audit run-2 C1): liefert die Stores UND `done`, das erst mit `complete`
+  // erfüllt wird. Chromium prüft das Speicherkontingent beim COMMIT — alle add()-Anfragen melden
+  // Erfolg, danach bricht die Transaktion mit QuotaExceededError ab (Handy fast voll). Wer nur auf
+  // die letzte Anfrage wartet, meldet „gespeichert“, obwohl nichts gespeichert ist. Darum wartet
+  // JEDER Schreibweg auf `done`. `done` entsteht sofort beim Öffnen (complete kann sonst schon
+  // vorbei sein); der leere catch verhindert eine unbehandelte Ablehnung, wenn zuerst eine
+  // Anfrage scheitert — der Aufrufer sieht dann deren Fehler.
+  function wtx(stores) {
+    const t = idb.transaction(stores, 'readwrite');
+    const done = new Promise((resolve, reject) => {
+      t.oncomplete = () => resolve();
+      t.onabort = () => reject(t.error || new DOMException('Transaction aborted', 'AbortError'));
+    });
+    done.catch(() => {});
+    const os = stores.map(n => t.objectStore(n));
+    return { os: stores.length === 1 ? os[0] : os, done };
+  }
 
   // ── API-kompatible Methoden ─────────────────────────────────────────────────────
   async function getExercises(q = {}) {
@@ -166,9 +191,10 @@ window.LocalData = (function () {
       name: plan.name, type: plan.type || 'strength',
       day_label: plan.day_label || '', exercises: plan.exercises || [],
     };
-    const store = tx(['custom_plans'], 'readwrite');
+    const { os: store, done } = wtx(['custom_plans']);
     if (plan.id != null) rec.id = Number(plan.id) - CUSTOM_OFFSET;
     const newId = await reqP(store.put(rec));
+    await done;
     await refreshCustomCache();
     return CUSTOM_OFFSET + newId;
   }
@@ -183,13 +209,15 @@ window.LocalData = (function () {
   }
 
   async function deletePlan(id) {
-    await reqP(tx(['custom_plans'], 'readwrite').delete(Number(id) - CUSTOM_OFFSET));
+    const { os: store, done } = wtx(['custom_plans']);
+    await reqP(store.delete(Number(id) - CUSTOM_OFFSET));
+    await done;
     await refreshCustomCache();
   }
 
   async function getSessions(limit = 20) {
     const sessions = await allFrom('sessions');
-    sessions.sort((a, b) => (a.started_at < b.started_at ? 1 : -1));
+    sessions.sort(byNewest);
     return sessions.slice(0, limit).map(s => ({
       ...s,
       plan_name: s.plan_id != null ? planNameById(s.plan_id) : null,
@@ -218,16 +246,28 @@ window.LocalData = (function () {
   // vorkam (für Vorbelegung + Referenzzeile im Satz-Modal — progressive Steigerung
   // braucht den Vergleich zur Vorwoche, nicht nur zum vorigen Satz derselben Einheit)
   async function getLastSets(exId) {
-    exId = Number(exId);
     const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
+    return lastSetsFrom(Number(exId), allSets, new Map(allSessions.map(s => [s.id, s.started_at || ''])));
+  }
+  // Für mehrere Übungen auf einmal (Übungskarten im Training, v2.9): ein Lesezugriff statt einer pro Übung
+  async function getLastSetsMany(ids) {
+    const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
+    const started = new Map(allSessions.map(s => [s.id, s.started_at || '']));
+    const out = {};
+    for (const id of ids) out[id] = lastSetsFrom(Number(id), allSets, started);
+    return out;
+  }
+  function lastSetsFrom(exId, allSets, started) {
     const mine = allSets.filter(st => st.exercise_id === exId && st.completed);
     if (!mine.length) return null;
-    const started = new Map(allSessions.map(s => [s.id, s.started_at || '']));
     let best = null;
+    const latest = Date.now() + 86400000;
     for (const st of mine) {
       const d = started.get(st.session_id);
-      if (d == null) continue;
-      if (!best || d > best.date) best = { date: d, session_id: st.session_id };
+      // echte Zeitstempel statt Textvergleich (run-2 B1); Unlesbares und Zukünftiges (Alt-Importe) zählt nicht
+      const t = d == null ? NaN : Date.parse(d);
+      if (!Number.isFinite(t) || t > latest) continue;
+      if (!best || t > best.t) best = { date: d, t, session_id: st.session_id };
     }
     if (!best) return null;
     const sets = mine.filter(st => st.session_id === best.session_id)
@@ -237,18 +277,20 @@ window.LocalData = (function () {
 
   async function deleteSession(id) {
     id = Number(id);
-    const [sessStore, setStore] = tx(['sessions', 'sets'], 'readwrite');
+    const { os: [sessStore, setStore], done } = wtx(['sessions', 'sets']);
     const keys = await reqP(setStore.index('session_id').getAllKeys(id));
     for (const k of keys) await reqP(setStore.delete(k));
     await reqP(sessStore.delete(id));
+    await done;
   }
 
   async function updateSession(id, patch) {
-    const store = tx(['sessions'], 'readwrite');
+    const { os: store, done } = wtx(['sessions']);
     const s = await reqP(store.get(Number(id)));
-    if (!s) return null;
+    if (!s) { await done; return null; }
     const upd = { ...s, ...patch, id: s.id };
     await reqP(store.put(upd));
+    await done;
     return upd;
   }
 
@@ -258,7 +300,7 @@ window.LocalData = (function () {
   }
 
   async function addSession(payload) {
-    const [sessStore, setStore] = tx(['sessions', 'sets'], 'readwrite');
+    const { os: [sessStore, setStore], done } = wtx(['sessions', 'sets']);
     const nowISO = new Date().toISOString();
     const id = await reqP(sessStore.add({
       plan_id: payload.plan_id != null ? payload.plan_id : null,
@@ -279,6 +321,7 @@ window.LocalData = (function () {
         }));
       }
     }
+    await done;   // erst nach dem Commit ist die Einheit wirklich gespeichert (C1)
     return { id };
   }
 
@@ -314,10 +357,10 @@ window.LocalData = (function () {
 
   async function getStats() {
     const sessions = await allFrom('sessions');
-    sessions.sort((a, b) => (a.started_at < b.started_at ? 1 : -1));
+    sessions.sort(byNewest);
     const total_sessions = sessions.length;
-    const weekStart = startOfWeekISO();
-    const this_week = sessions.filter(s => (s.started_at || '') >= weekStart).length;
+    const weekStart = Date.parse(startOfWeekISO());
+    const this_week = sessions.filter(s => sessTime(s) >= weekStart).length;
     let last_session;
     if (sessions.length) {
       const s = sessions[0];
@@ -351,6 +394,18 @@ window.LocalData = (function () {
   };
   const finiteOrNull = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
   const str = (v, max) => (v == null ? '' : String(v)).slice(0, max);
+  // Zeitstempel aus dem Backup (Audit run-2 B1/R2-2): nur lesbare Daten zwischen 2000 und morgen, gespeichert als
+  // ISO-Text. Eine Einheit vom „1. Jan. 9999“ war sonst für immer die neueste — „Letztes Mal“, Vorbelegung,
+  // „Zuletzt“ und die Historie zeigten fremde Werte. Ungültige Werte werden durch die Importzeit ersetzt.
+  // Dubletten (Merge) erkennt importAll über dateKey() des ROH-Werts, also vor dem Ersetzen (R2-3).
+  const DAY_MS = 86400000;
+  const okDate = v => {
+    const t = Date.parse(v);
+    return Number.isFinite(t) && t >= Date.UTC(2000, 0, 1) && t <= Date.now() + DAY_MS ? new Date(t).toISOString() : null;
+  };
+  // Vergleichsschlüssel: gleiche Zeit in anderer Schreibweise ist dieselbe Einheit; Unlesbares über den Text
+  const dateKey = v => { const t = Date.parse(v); return Number.isFinite(t) ? 't' + t : 's' + str(v, 40); };
+  const clampNum = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null; };
 
   function cleanPlan(p) {
     return {
@@ -368,10 +423,14 @@ window.LocalData = (function () {
   }
   function cleanSession(s) {
     const plan_id = (s && s.plan_id != null) ? finiteOrNull(s.plan_id) : null;
+    const start = okDate(s && s.started_at);
+    let end = s && s.finished_at != null ? okDate(s.finished_at) : null;
+    // Ende nur mit gültigem Start und nicht davor (R2-4: sonst „-448687 Min“ in der Historie)
+    if (!start || (end && end < start)) end = null;
     return {
       plan_id,
-      started_at: str(s && s.started_at, 40) || new Date().toISOString(),
-      finished_at: s && s.finished_at != null ? str(s.finished_at, 40) : null,
+      started_at: start || new Date().toISOString(),
+      finished_at: end,
       notes: s && s.notes != null ? str(s.notes, 2000) : null,
     };
   }
@@ -379,9 +438,10 @@ window.LocalData = (function () {
     return {
       exercise_id: clampInt(s && s.exercise_id, 0, 1e6, 0),
       set_number: clampInt(s && s.set_number, 1, 1000, 1),
-      reps: s && s.reps != null ? finiteOrNull(s.reps) : null,
-      weight_kg: (() => { const n = Number(s && s.weight_kg); return Number.isFinite(n) ? n : 0; })(),
-      duration_seconds: s && s.duration_seconds != null ? finiteOrNull(s.duration_seconds) : null,
+      // Obergrenzen (run-2): 1e308 kg oder -5 s ergaben sonst Zeichensalat in „Letztes Mal“ und der Vorbelegung
+      reps: s && s.reps != null ? clampNum(s.reps, 0, 10000) : null,
+      weight_kg: clampNum(s && s.weight_kg, 0, 1000) || 0,
+      duration_seconds: s && s.duration_seconds != null ? clampNum(s.duration_seconds, 0, 86400) : null,
       completed: s && s.completed ? 1 : 0,
     };
   }
@@ -394,9 +454,9 @@ window.LocalData = (function () {
     const rawPlans = Array.isArray(obj.custom_plans) ? obj.custom_plans : []; // fehlt in v1-Backups → leer
     // VOR dem Öffnen der Schreib-Transaktion lesen: ein await auf eine fremde
     // Transaktion würde die readwrite-Transaktion auto-committen (TransactionInactiveError)
-    const existingStarts = new Set(merge ? (await allFrom('sessions')).map(s => s.started_at) : []);
+    const existingStarts = new Set(merge ? (await allFrom('sessions')).map(s => dateKey(s.started_at)) : []);
 
-    const [sessStore, setStore, planStore] = tx(['sessions', 'sets', 'custom_plans'], 'readwrite');
+    const { os: [sessStore, setStore, planStore], done } = wtx(['sessions', 'sets', 'custom_plans']);
     if (!merge) {
       await reqP(sessStore.clear());
       await reqP(setStore.clear());
@@ -426,7 +486,9 @@ window.LocalData = (function () {
       }
       // Merge: Einheit mit identischem Startzeitpunkt existiert schon (gleiches Backup
       // zweimal) → überspringen; ihre Sätze werden unten ebenfalls verworfen
-      if (merge && rec.started_at && existingStarts.has(rec.started_at)) continue;
+      // Schlüssel aus dem ROH-Wert (vor dem Ersetzen durch okDate) — sonst bekäme ein Alt-Datum bei jedem Import
+      // eine neue Importzeit und würde verdoppelt (Audit run-2 R2-3)
+      if (merge && s && s.started_at != null && existingStarts.has(dateKey(s.started_at))) continue;
       const newId = await reqP(sessStore.add(rec));
       if (s && s.id != null) idMap.set(s.id, newId);
       imported++;
@@ -441,6 +503,7 @@ window.LocalData = (function () {
       importedSets++;
     }
 
+    await done;   // Commit abwarten (C1): sonst meldet der Import Zahlen, die nie gespeichert wurden
     await refreshCustomCache();
     return { sessions: imported, sets: importedSets, plans: rawPlans.length,
              skipped: rawSessions.length - imported };
@@ -450,7 +513,7 @@ window.LocalData = (function () {
     ready,
     getExercises, getExercise, getPlans, getPlan,
     savePlan, getCustomPlan, deletePlan,
-    getSessions, getSession, addSession, deleteSession, updateSession, getLastSets,
+    getSessions, getSession, addSession, deleteSession, updateSession, getLastSets, getLastSetsMany,
     getProgress, getStats, hasData,
     exportAll, importAll,
   };

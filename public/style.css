@@ -328,6 +328,9 @@ h3 {
   line-height: 1.6;
   font-family: var(--font-r);
 }
+/* v2.9: „Letztes Mal“ auf der Übungskarte (gleiches Muster wie im Satz-Fenster) */
+.ex-last { font-family: var(--font-b); font-size: 0.7rem; color: var(--muted); padding: 0 16px 12px; line-height: 1.5; }
+.ex-last b { color: var(--neon); font-weight: 400; }
 
 .sets-row {
   display: flex;
@@ -362,7 +365,7 @@ h3 {
 .set-btn .set-val { font-size: 0.65rem; }
 
 /* ── Set input modal ─────────────────────────────────────────────────────────── */
-#set-modal-overlay {
+#set-modal-overlay, #hold-modal-overlay {
   display: none;
   position: fixed;
   inset: 0;
@@ -371,8 +374,8 @@ h3 {
   align-items: flex-end;
   justify-content: center;
 }
-#set-modal-overlay.open { display: flex; }
-#set-modal {
+#set-modal-overlay.open, #hold-modal-overlay.open { display: flex; }
+#set-modal, #hold-modal {
   background: var(--card);
   border: 1px solid var(--neon-mid);
   border-radius: var(--radius) var(--radius) 0 0;
@@ -381,7 +384,24 @@ h3 {
   max-width: 560px;
   box-shadow: 0 -4px 40px rgba(0,255,204,0.15);
 }
-#set-modal h3 { margin-bottom: 18px; color: var(--neon); font-size: 0.78rem; }
+#set-modal h3, #hold-modal h3 { margin-bottom: 18px; color: var(--neon); font-size: 0.78rem; }
+
+/* ── Haltezeit (v2.9, Plank) ─────────────────────────────────────────────────── */
+.hold-label {
+  font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px; font-family: var(--font-b);
+}
+.hold-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
+.hold-chip {
+  min-height: 44px; background: var(--card2); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); font-family: var(--font-b); font-size: 0.85rem; cursor: pointer; padding: 0 4px;
+}
+.hold-chip.on { border-color: var(--neon); background: var(--neon-dim); color: var(--neon); box-shadow: 0 0 10px rgba(0,255,204,0.25); }
+.hold-chip[data-value="max"] { font-family: var(--font-h); font-size: 0.68rem; letter-spacing: 1px; }
+.hold-hint { font-family: var(--font-b); font-size: 0.7rem; color: var(--yellow); margin: -6px 0 14px; }
+.hold-btns { display: flex; gap: 8px; margin-top: 4px; }
+.hold-btns .btn { flex: 1; min-width: 0; }
+.btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 .input-row { display: flex; gap: 14px; margin-bottom: 16px; }
 .input-group { flex: 1; }
 .input-group label {
@@ -447,6 +467,11 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   margin-bottom: 10px;
 }
 #timer-count.urgent { color: var(--red); text-shadow: 0 0 40px var(--red); }
+/* v2.9: m:ss ab einer Minute — „10:00“ passt sonst bei 360 px nicht in die Breite */
+#timer-count.long { font-size: min(7rem, 21vw); }
+/* Vorlauf „Bereit machen“ (Halteübungen) in Gelb, damit er nicht mit dem Halten verwechselt wird */
+#timer-overlay.prep #timer-label { color: var(--yellow); }
+#timer-overlay.prep #timer-count:not(.urgent) { color: var(--yellow); text-shadow: 0 0 40px var(--yellow), 0 0 80px rgba(255,204,68,0.3); }
 #timer-exercise { font-size: 0.9rem; color: var(--muted); margin-bottom: 36px; font-family: var(--font-r); }
 #timer-skip { margin-top: 0; }
 

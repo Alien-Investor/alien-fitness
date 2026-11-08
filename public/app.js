@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.8.1';
+const APP_VERSION = '2.9.0';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
@@ -82,12 +82,18 @@ lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
 // Hintergrund brechen ab, Tab pendelt zwischen den Knöpfen. Text NUR per textContent
 // (Plan-Namen sind Nutzer-/Importdaten). Jeder Aufrufer ist async und prüft nach dem await
 // seinen Zustand neu (Einheit noch aktiv? Detail noch offen? Draft noch derselbe?).
-let dlgResolve = null, dlgPrev = null;
+let dlgResolve = null, dlgPrev = null, dlgOpenedAt = 0;
+// Echte Tipps auf „OK“/Hintergrund in den ersten 400 ms zählen nicht (Audit run-2 R2-1): der Dialog öffnet
+// sofort beim ersten Tipp, der zweite Tipp eines Doppeltipps landete sonst auf dem roten „Verwerfen“ an derselben
+// Stelle. Programmatische Klicks (isTrusted=false, Tests) und Tastatur (Enter/Escape) sind nicht betroffen.
+const DLG_ARM_MS = 400;
+const dlgTooEarly = e => e && e.isTrusted && performance.now() - dlgOpenedAt < DLG_ARM_MS;
 function ask(msg, opt) {
   opt = opt || {};
   if (dlgResolve) return Promise.resolve(false);
   return new Promise(res => {
     dlgResolve = res;
+    dlgOpenedAt = performance.now();
     dlgPrev = document.activeElement;
     document.getElementById('dlg-msg').textContent = msg;
     const ok = document.getElementById('dlg-ok');
@@ -127,9 +133,9 @@ function dialogKey(e) {
   }
   return false;
 }
-document.getElementById('dlg-ok').addEventListener('click', () => dialogClose(true));
+document.getElementById('dlg-ok').addEventListener('click', e => { if (!dlgTooEarly(e)) dialogClose(true); });
 document.getElementById('dlg-cancel').addEventListener('click', () => dialogClose(false));
-document.getElementById('dlg').addEventListener('click', e => { if (e.target.id === 'dlg') dialogClose(false); });
+document.getElementById('dlg').addEventListener('click', e => { if (e.target.id === 'dlg' && !dlgTooEarly(e)) dialogClose(false); });
 
 document.addEventListener('keydown', e => {
   if (dialogKey(e)) { e.preventDefault(); return; }   // offener Dialog: Escape bricht ab, Tab pendelt
@@ -145,6 +151,7 @@ document.addEventListener('keydown', e => {
     if (editor) editor.classList.remove('open');
     const sess = document.getElementById('session-overlay');
     if (sess) sess.classList.remove('open');
+    if (pendingHold) closeHoldModal();
   }
 });
 
@@ -339,8 +346,15 @@ async function loadDashboard() {
     const rc = document.getElementById('resume-card');
     if (draft && !activeSession) {
       const when = new Date(draft.startedAt).toLocaleString(I18N.locale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      // Plan-Name in der aktuellen Sprache (Draft kann in der anderen gestartet sein, v2.9)
+      let name = draft.title || I18N.t('dyn.freeTraining');
+      if (draft.adhoc || draft.planId == null) name = I18N.t('dyn.freeTraining');
+      else if (draft.lang !== I18N.lang) {
+        const p = await api('plans/' + draft.planId).catch(() => null);
+        if (p) name = p.name;
+      }
       document.getElementById('resume-body').textContent =
-        I18N.t('resume.body', { name: draft.title || I18N.t('dyn.freeTraining'), n: draft.sets.length, time: when });
+        I18N.t('resume.body', { name, n: draft.sets.length, time: when });
       rc.style.display = 'block';
     } else rc.style.display = 'none';
 
@@ -405,7 +419,8 @@ async function loadWorkoutSelect() {
       del.addEventListener('click', async () => {
         if (!(await ask(I18N.t('plan.deleteConfirm', { name: p.name }), { ok: 'dlg.deletePlan', danger: true }))) return;
         if (!document.contains(del)) return;   // Liste wurde während der Frage neu gebaut (Sprachwechsel, Import)
-        await LocalData.deletePlan(p.id);
+        try { await LocalData.deletePlan(p.id); }
+        catch (e) { console.error(e); await ask(I18N.t('err.saveFailed'), { alert: true }); return; }   // run-2 R2-7
         loadWorkoutSelect();
         loadDashboard();
       });
@@ -423,10 +438,15 @@ let lastSetsCache = {};   // exercise_id -> { date, sets } | null („Letztes Ma
 // (Musik-App, Display aus, Anruf) — ohne Draft wäre die halbe Stunde Training verloren.
 // Nach jedem Satz gespeichert, beim Start bietet das Dashboard das Fortsetzen an.
 const DRAFT_KEY = 'fit-active-workout';
-function saveDraft() {
+// keepSavedAt (Audit run-2 C5): Umbenennen nach Sprachwechsel/Fortsetzen ist kein neuer Satz — savedAt
+// bleibt, sonst bekäme „So speichern“ die Fortsetzen-Zeit als Ende (Dauer über die ganze Unterbrechung).
+function saveDraft(keepSavedAt) {
   try {
-    if (activeSession) localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...activeSession, savedAt: new Date().toISOString() }));
-    else localStorage.removeItem(DRAFT_KEY);
+    if (activeSession) {
+      const prev = keepSavedAt ? readDraft() : null;
+      const savedAt = (prev && prev.startedAt === activeSession.startedAt && prev.savedAt) || new Date().toISOString();
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...activeSession, savedAt }));
+    } else localStorage.removeItem(DRAFT_KEY);
   } catch (e) {}
 }
 function readDraft() {
@@ -456,6 +476,29 @@ function timedSeconds(ex) {
   const m = String(ex.reps || '').match(/^\s*(\d+)\s*(s|sek|sec|sekunden|seconds?)\b/i);
   return m ? Number(m[1]) : null;
 }
+// Halteübungen (v2.9): Haltezeit vor jedem Satz wählbar (Chips, eigene Zeit, „Max“ als Stoppuhr),
+// dann Vorlauf und Halte-Timer. Hängt an der ÜBUNG, nicht am Plan-Text — Plank in einem eigenen Plan
+// mit „max“ oder „8-12“ bekommt die Auswahl genauso. Ausnahme: HIT-Plan mit fester Zeitangabe
+// („20 Sek“) bleibt das Tabata-Intervall mit Kette.
+const HOLD_IDS = new Set([24]);                 // Plank
+const HOLD_CHOICES = [30, 45, 60, 90, 120, 180];
+const HOLD_PREP = 5;                            // Vorlauf „Bereit machen“ (Sekunden)
+const HOLD_MAX_CAP = 600;                       // Obergrenze für eigene Zeit und Stoppuhr
+const HOLD_KEY = 'fit-hold-target';             // zuletzt gewählte Haltezeit je Übung (Komfort, nicht im Backup)
+function isHoldSet(ex) {
+  if (!HOLD_IDS.has(Number(ex.exercise_id))) return false;
+  return !(activeSession && activeSession.planType === 'hit' && timedSeconds(ex));
+}
+// Zähler ab einer Minute als m:ss („1:30“ statt „90“)
+function fmtClock(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  return sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` : String(sec);
+}
+// Plan-Angabe für die Anzeige: „60 Sek“ heißt auf Englisch „60 sec“ (der Plan-Text selbst bleibt deutsch)
+function fmtReps(reps) {
+  const s = String(reps ?? '');
+  return I18N.lang === 'en' ? s.replace(/(\d+)\s*(Sekunden|Sek)\b/gi, '$1 sec') : s;
+}
 // Geloggte Sätze werden nach ZEILE (row = Index in activeSession.exercises) geführt,
 // nicht nach exercise_id — sonst überschreiben sich zwei Zeilen mit derselben Übung
 // gegenseitig (dieselbe Übung als Aufwärmen und Finisher ist ein normaler Plan).
@@ -469,7 +512,9 @@ function setRow(s) {
 }
 function fmtSet(s) {
   if (s.duration_seconds) return `${s.duration_seconds}${I18N.t('dyn.sec')}`;
-  return s.weight_kg > 0 ? `${s.reps}×${s.weight_kg}kg` : `${s.reps} ${I18N.t('dyn.reps')}`;
+  // Kilo mit Dezimalkomma im Deutschen („22,5kg“), Punkt im Englischen (v2.9)
+  const kg = () => Number(s.weight_kg).toLocaleString(I18N.locale(), { maximumFractionDigits: 2 });
+  return s.weight_kg > 0 ? `${s.reps}×${kg()}kg` : `${s.reps} ${I18N.t('dyn.reps')}`;
 }
 
 function showWorkoutScreen(title, adhoc) {
@@ -488,12 +533,39 @@ function showWorkoutScreen(title, adhoc) {
   acquireWakeLock();
 }
 
+// Laufendes oder unterbrochenes Training nicht still verwerfen (Audit run-2 C2): Plan-Karte auf dem
+// Dashboard, Plan-Knopf oder „Freies Training“ überschrieben bisher activeSession und den Draft.
+// Liefert true, wenn neu gestartet werden darf. Zustand nach jedem await neu prüfen (Dauerregel ask()).
+async function mayReplaceWorkout() {
+  const s = activeSession;
+  if (s && !s.finished && s.sets.length) {
+    const ok = await ask(I18N.t('workout.replaceConfirm', { name: s.title, n: s.sets.length }),
+      { ok: 'dlg.discard', cancel: 'dlg.keepGoing', danger: true });
+    if (activeSession !== s || s.finished) return false;   // während der Frage gespeichert/abgebrochen
+    if (!ok) { showWorkoutScreen(s.title, s.adhoc); return false; }   // zurück zum laufenden Training
+    return true;
+  }
+  if (!s || s.finished) {
+    const d = readDraft();
+    if (d && d.sets.length) {
+      const ok = await ask(I18N.t('resume.dropConfirm', { n: d.sets.length }), { ok: 'dlg.discard', danger: true });
+      const now = readDraft();
+      if (!ok || activeSession !== s || (now && now.startedAt !== d.startedAt)) return false;
+    }
+  }
+  return true;
+}
+
 async function startWorkout(planId) {
+  if (!(await mayReplaceWorkout())) return;
+  cancelTimer();
   const plan = await api('plans/' + planId);
   showWorkoutScreen(plan.name, false);
 
   activeSession = {
     planId: plan.id,
+    planType: plan.type || 'strength',   // v2.9: HIT-Pläne behalten feste Intervalle (isHoldSet)
+    lang: I18N.lang,                     // v2.9: Sprache der kopierten Namen (relabelActiveSession)
     title: plan.name,
     startedAt: new Date().toISOString(),
     exercises: plan.exercises,
@@ -508,10 +580,13 @@ async function startWorkout(planId) {
 }
 
 // ── Freies Training (ohne Plan): Übungen unterwegs hinzufügen ────────────────
-function startFreeWorkout() {
+async function startFreeWorkout() {
+  if (!(await mayReplaceWorkout())) return;
+  cancelTimer();
   activeSession = {
     planId: null,
     adhoc: true,
+    lang: I18N.lang,
     title: I18N.t('dyn.freeTraining'),
     startedAt: new Date().toISOString(),
     exercises: [],
@@ -530,6 +605,8 @@ document.getElementById('btn-free-workout').addEventListener('click', startFreeW
 function resumeWorkout(draft) {
   activeSession = {
     planId: draft.planId != null ? draft.planId : null,
+    planType: draft.planType || null,
+    lang: draft.lang || null,
     adhoc: !!draft.adhoc,
     title: draft.title || I18N.t('dyn.freeTraining'),
     startedAt: draft.startedAt,
@@ -542,10 +619,49 @@ function resumeWorkout(draft) {
   renderExercises(activeSession.exercises);
   applyLoggedSets();
   updateProgress();
+  // In einer anderen Sprache unterbrochen (oder Alt-Draft ohne lang): Namen nachziehen
+  if (activeSession.lang !== I18N.lang) relabelActiveSession();
+}
+
+// Sprachwechsel bei laufendem Training (v2.9): startWorkout kopiert Namen und Beschreibungen in die
+// Einheit (und den Draft) — ohne das hier blieben sie in der Startsprache. Per Übungs-ID neu holen
+// und die Liste neu zeichnen; Sätze, Timer und offene Fenster bleiben (sie halten dieselben
+// ex-Objekte, die Satz-Knöpfe behalten ihre IDs).
+async function relabelActiveSession() {
+  const s = activeSession;
+  if (!s) return;
+  const lang = I18N.lang;
+  const exs = await api('exercises');
+  const plan = (!s.adhoc && s.planId != null) ? await api('plans/' + s.planId).catch(() => null) : null;
+  if (activeSession !== s || I18N.lang !== lang) return;   // inzwischen gewechselt oder beendet
+  const byId = new Map(exs.map(e => [e.id, e]));
+  s.exercises.forEach(ex => {
+    const e = byId.get(Number(ex.exercise_id));
+    if (e) { ex.name = e.name; ex.description = e.description; }
+  });
+  if (s.adhoc || s.planId == null) s.title = I18N.t('dyn.freeTraining');
+  else if (plan) s.title = plan.name;
+  if (plan && !s.planType) s.planType = plan.type || 'strength';   // Draft aus v2.8 (HIT-Plan mit Plank bleibt Intervall)
+  s.lang = lang;
+  document.getElementById('workout-plan-name').textContent = s.title;
+  const y = window.scrollY;
+  renderExercises(s.exercises);
+  applyLoggedSets();
+  updateProgress();
+  window.scrollTo(0, y);
+  if (!s.finished) saveDraft(true);
 }
 
 // Draft ohne Umweg über den Trainingsbildschirm als Einheit speichern („So speichern“)
+let resumeSaveBusy = false;   // Doppeltipp auf „So speichern“ legte sonst zwei Einheiten an (run-2)
 async function saveDraftAsSession(draft) {
+  if (resumeSaveBusy) return;
+  resumeSaveBusy = true;
+  try { await saveDraftAsSessionOnce(draft); } finally { resumeSaveBusy = false; }
+}
+async function saveDraftAsSessionOnce(draft) {
+  const now = readDraft();
+  if (!now || now.startedAt !== draft.startedAt) { loadDashboard(); return; }   // schon gespeichert/verworfen
   if (draft.sets.length) {
     try {
       await api('sessions', { method: 'POST', body: JSON.stringify({
@@ -670,13 +786,14 @@ function renderExercises(exercises) {
     header.appendChild(img);
 
     const timed = timedSeconds(ex);
+    const hold = isHoldSet(ex);
     const info = document.createElement('div');
     info.className = 'ex-info';
     // ALLE eingesetzten Felder escapen — bei eigenen/importierten Plänen sind reps,
     // sets und rest_seconds Nutzer- bzw. Fremddaten (Freitext bzw. aus Backup-JSON).
     info.innerHTML = `
       <div class="ex-name">${esc(ex.name)}</div>
-      <div class="ex-meta">${esc(ex.sets)} ${I18N.t('dyn.sets')} × ${esc(ex.reps)} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
+      <div class="ex-meta">${esc(ex.sets)} ${I18N.t('dyn.sets')} × ${esc(fmtReps(ex.reps))} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
     header.appendChild(info);
     card.appendChild(header);
 
@@ -687,6 +804,12 @@ function renderExercises(exercises) {
       card.appendChild(desc);
     }
 
+    // „Letztes Mal“ (v2.9), füllt fillLastLines() nach — ohne Vorgeschichte bleibt die Zeile weg
+    const lastLine = document.createElement('div');
+    lastLine.className = 'ex-last hidden';
+    lastLine.id = 'ex-last-' + ei;
+    card.appendChild(lastLine);
+
     const setsRow = document.createElement('div');
     setsRow.className = 'sets-row';
     setsRow.id = 'sets-row-' + ei;
@@ -695,8 +818,9 @@ function renderExercises(exercises) {
       const btn = document.createElement('button');
       btn.className = 'set-btn';
       btn.id = `set-${ei}-${s}`;
-      btn.innerHTML = `<span class="set-num">${s}</span><span class="set-val">${timed ? '▶' : '–'}</span>`;
-      btn.addEventListener('click', () => timed ? startTimedSet(ei, s, ex) : openSetModal(ei, s, ex));
+      btn.innerHTML = `<span class="set-num">${s}</span><span class="set-val">${(timed || hold) ? '▶' : '–'}</span>`;
+      btn.addEventListener('click', () =>
+        hold ? openHoldModal(ei, s, ex) : timed ? startTimedSet(ei, s, ex) : openSetModal(ei, s, ex));
       setsRow.appendChild(btn);
     });
 
@@ -713,6 +837,30 @@ function renderExercises(exercises) {
     card.appendChild(setsRow);
     el.appendChild(card);
   });
+  fillLastLines(exercises);
+}
+
+// „Letztes Mal“ direkt auf der Übungskarte (v2.9): die Sätze aus der jüngsten früheren Einheit
+// (Wdh × kg bzw. Sekunden), sichtbar bevor man antippt — auch bei HIT-Intervallen, die kein
+// Fenster öffnen. Ein Lesezugriff für alle Übungen, Ergebnis im selben Cache wie das Satz-Fenster.
+async function fillLastLines(exercises) {
+  const s = activeSession;
+  if (!s || !exercises.length) return;
+  const cache = lastSetsCache;   // Cache DIESER Einheit (startWorkout legt für die nächste einen neuen an)
+  const missing = [...new Set(exercises.map(e => e.exercise_id))].filter(id => !(id in cache));
+  if (missing.length) {
+    let got = {};
+    try { got = await LocalData.getLastSetsMany(missing); } catch (e) { console.error(e); }
+    missing.forEach(id => { if (!(id in cache)) cache[id] = got[id] || null; });
+  }
+  if (activeSession !== s) return;   // inzwischen beendet oder neue Einheit
+  exercises.forEach((ex, ei) => {
+    const el = document.getElementById('ex-last-' + ei);
+    const last = cache[ex.exercise_id];
+    if (!el || !last || !last.sets.length) return;
+    renderLastLine(el, last);
+    el.classList.remove('hidden');
+  });
 }
 
 // ── Set Modal ─────────────────────────────────────────────────────────────────
@@ -724,6 +872,18 @@ async function lastSetsFor(exId) {
     catch (e) { lastSetsCache[exId] = null; }
   }
   return lastSetsCache[exId];
+}
+
+// Zeile „Letztes Mal (5. Nov.): …“ im Satz- und im Haltezeit-Fenster
+function renderLastLine(el, last) {
+  if (last && last.sets.length) {
+    const d = new Date(last.date).toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short' });
+    // höchstens 10 Sätze (run-2 B1): ein fremdes Backup mit Hunderten Sätzen blähte sonst jede Karte auf
+    const shown = last.sets.slice(0, 10).map(fmtSet).join(' · ') + (last.sets.length > 10 ? ' · …' : '');
+    el.innerHTML = `${esc(I18N.t('set.lastTime', { date: d }))} <b>${esc(shown)}</b>`;
+  } else {
+    el.textContent = I18N.t('set.noLast');
+  }
 }
 
 async function openSetModal(exIdx, setNum, ex) {
@@ -738,13 +898,7 @@ async function openSetModal(exIdx, setNum, ex) {
   // „Letztes Mal“: Sätze dieser Übung aus der jüngsten früheren Einheit
   const last = await lastSetsFor(ex.exercise_id);
   if (pendingSet == null || pendingSet.ex !== ex || pendingSet.setNum !== setNum) return; // inzwischen geschlossen
-  const lastEl = document.getElementById('set-last');
-  if (last && last.sets.length) {
-    const d = new Date(last.date).toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short' });
-    lastEl.innerHTML = `${esc(I18N.t('set.lastTime', { date: d }))} <b>${esc(last.sets.map(fmtSet).join(' · '))}</b>`;
-  } else {
-    lastEl.textContent = I18N.t('set.noLast');
-  }
+  renderLastLine(document.getElementById('set-last'), last);
 
   // Vorbelegung: eigener Satz (Korrektur) > voriger Satz dieser Einheit >
   // gleicher Satz vom letzten Mal > letzter Satz vom letzten Mal
@@ -861,6 +1015,126 @@ function startTimedSet(exIdx, setNum, ex) {
   } });
 }
 
+// ── Halteübungen (v2.9): Haltezeit wählen → Vorlauf → Halte-Timer → Satz mit Dauer → Pause
+let pendingHold = null;   // { exIdx, setNum, ex, value: Sekunden | 'max' | null (ungültige Eingabe) }
+
+function clampHold(n) {
+  n = Math.round(Number(n));
+  return Number.isFinite(n) && n > 0 ? Math.min(HOLD_MAX_CAP, n) : null;
+}
+function readHoldTargets() {
+  try {
+    const m = JSON.parse(localStorage.getItem(HOLD_KEY) || '{}');
+    return m && typeof m === 'object' && !Array.isArray(m) ? m : {};
+  } catch (e) { return {}; }
+}
+function rememberHoldTarget(exId, v) {
+  try { const m = readHoldTargets(); m[exId] = v; localStorage.setItem(HOLD_KEY, JSON.stringify(m)); } catch (e) {}
+}
+
+// Chips einmal bauen; „Max“ trägt data-i18n und wird von applyStatic übersetzt
+(function buildHoldChips() {
+  const box = document.getElementById('hold-chips');
+  [...HOLD_CHOICES, 'max'].forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hold-chip';
+    b.dataset.value = v;
+    if (v === 'max') { b.dataset.i18n = 'hold.max'; b.textContent = 'Max'; }
+    else b.textContent = `${v} s`;
+    b.addEventListener('click', () => setHoldValue(v, true));
+    box.appendChild(b);
+  });
+})();
+
+// Auswahl anzeigen: Chip markieren, Eingabefeld, Stoppuhr-Hinweis, „Ohne Timer“ nur mit fester Zeit.
+// writeInput=false beim Tippen ins Feld (sonst springt der Cursor bzw. „4“ würde zu „5“).
+function setHoldValue(v, writeInput) {
+  if (!pendingHold) return;
+  pendingHold.value = v;
+  document.querySelectorAll('#hold-chips .hold-chip').forEach(b => b.classList.toggle('on', b.dataset.value === String(v)));
+  const inp = document.getElementById('input-hold');
+  if (writeInput) inp.value = (v && v !== 'max') ? v : '';
+  inp.placeholder = v === 'max' ? '—' : '';
+  document.getElementById('hold-max-hint').classList.toggle('hidden', v !== 'max');
+  document.getElementById('btn-hold-log').disabled = !v || v === 'max';
+  document.getElementById('btn-hold-start').disabled = !v;
+}
+
+async function openHoldModal(exIdx, setNum, ex) {
+  pendingHold = { exIdx, setNum, ex, value: null };
+  document.getElementById('hold-modal-title').textContent = `${I18N.t('dyn.setN')} ${setNum} — ${ex.name}`;
+  // Vorbelegung: eigener Satz (Korrektur) > zuletzt gewählte Haltezeit dieser Übung > Plan-Angabe > 60 s
+  const own = activeSession.sets.find(s => setRow(s) === exIdx && s.set_number === setNum && s.duration_seconds);
+  const saved = readHoldTargets()[ex.exercise_id];
+  const pre = (own && clampHold(own.duration_seconds))
+    || (saved === 'max' ? 'max' : clampHold(saved))
+    || clampHold(timedSeconds(ex)) || 60;
+  setHoldValue(pre, true);
+  const lastEl = document.getElementById('hold-last');
+  lastEl.textContent = '';
+  document.getElementById('hold-modal-overlay').classList.add('open');
+  const last = await lastSetsFor(ex.exercise_id);
+  if (!pendingHold || pendingHold.ex !== ex || pendingHold.setNum !== setNum) return;   // inzwischen geschlossen
+  renderLastLine(lastEl, last);
+}
+
+function closeHoldModal() {
+  document.getElementById('hold-modal-overlay').classList.remove('open');
+  pendingHold = null;
+}
+
+function holdSub(ex, setNum) { return `${ex.name} · ${I18N.t('dyn.setN')} ${setNum}/${ex.sets}`; }
+
+function startHold() {
+  if (!pendingHold || !pendingHold.value) return;
+  const { exIdx, setNum, ex, value } = pendingHold;
+  rememberHoldTarget(ex.exercise_id, value);
+  closeHoldModal();
+  const sub = holdSub(ex, setNum);
+  // Vorlauf: Zeit, um vom Handy in die Position zu kommen. „Los →“ startet sofort, „■ Stopp“ bricht ohne Eintrag ab.
+  startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () => {
+    const up = value === 'max';   // Stoppuhr zählt hoch, „Fertig →“ speichert die gehaltene Zeit
+    startTimer(up ? HOLD_MAX_CAP : value, { kind: 'work', label: 'timer.hold', up, chain: true, sub,
+      onDone: elapsed => logHold(exIdx, setNum, ex, elapsed) });
+  } });
+}
+
+// Satz mit Dauer speichern (Korrektur ersetzt), danach die Pause wie nach einem normalen Satz
+function logHold(exIdx, setNum, ex, secs) {
+  const r = commitSet(exIdx, setNum, ex, {
+    exercise_id: ex.exercise_id, set_number: setNum,
+    reps: null, weight_kg: 0, duration_seconds: secs, completed: 1,
+  });
+  if (r.workoutDone) return;
+  const next = setNum + 1;
+  const nextEx = activeSession.exercises[exIdx + 1];
+  const moreSets = next <= ex.sets && !isLogged(exIdx, next);
+  startTimer(ex.rest_seconds || 60, {
+    sub: moreSets ? holdSub(ex, next)
+                  : (nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest')),
+  });
+}
+
+function logHoldWithoutTimer() {
+  if (!pendingHold || !pendingHold.value || pendingHold.value === 'max') return;
+  const { exIdx, setNum, ex, value } = pendingHold;
+  closeHoldModal();
+  logHold(exIdx, setNum, ex, value);
+}
+
+document.getElementById('input-hold').addEventListener('input', e => setHoldValue(clampHold(e.target.value), false));
+document.getElementById('input-hold').addEventListener('change', e => {
+  const n = clampHold(e.target.value);
+  if (n && String(n) !== e.target.value) e.target.value = n;   // z.B. 900 → 600
+});
+document.getElementById('btn-hold-start').addEventListener('click', startHold);
+document.getElementById('btn-hold-log').addEventListener('click', logHoldWithoutTimer);
+document.getElementById('btn-hold-cancel').addEventListener('click', closeHoldModal);
+document.getElementById('hold-modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeHoldModal();
+});
+
 function updateProgress() {
   const total = activeSession.exercises.reduce((a, e) => a + e.sets, 0);
   const done = activeSession.sets.filter(s => s.completed).length;
@@ -875,8 +1149,15 @@ function checkWorkoutDone() {
   return false;
 }
 
+let finishBusy = false;   // Doppeltipp auf „Beenden“ legte sonst zwei Einheiten an (run-2)
 async function finishWorkout() {
+  if (finishBusy) return;
+  finishBusy = true;
+  try { await finishWorkoutOnce(); } finally { finishBusy = false; }
+}
+async function finishWorkoutOnce() {
   const s = activeSession;   // Einheit festhalten: während des Speicherns kann eine Abbruch-Antwort activeSession leeren (Review v2.8)
+  if (!s || s.finished) return;
   try {
     await api('sessions', {
       method: 'POST',
@@ -937,41 +1218,61 @@ document.getElementById('btn-done-ok').addEventListener('click', () => {
 
 // ── TIMER (Pause + Intervall-Arbeit) ──────────────────────────────────────────
 let timerInterval = null;
-let timerState = null;   // { kind: 'rest'|'work', chain, start, end, seconds, onDone }
+let timerState = null;   // { kind: 'rest'|'work'|'prep', chain, up, start, end, seconds, onDone }
+const TIMER_LABEL = { rest: 'timer.label', work: 'timer.work', prep: 'timer.prep' };
+const TIMER_SKIP  = { rest: 'timer.skip',  work: 'timer.done', prep: 'timer.go' };
 
-// opts: kind ('rest' default | 'work'), chain (Stopp-Taste zeigen, Intervall-Kette),
-//       sub (Zeile unter dem Zähler), onDone(elapsedSeconds, skipped)
+// opts: kind ('rest' default | 'work' | 'prep' = Vorlauf), chain (Stopp-Taste zeigen: Intervall-Kette,
+//       Vorlauf, Halten), label (i18n-Schlüssel statt Vorgabe je kind), up (Stoppuhr: zählt hoch,
+//       seconds ist dann die Obergrenze), sub (Zeile unter dem Zähler), onDone(elapsedSeconds, skipped)
 function startTimer(seconds, opts = {}) {
   stopTicking();
   // Endzeitpunkt statt Tick-Zählung: Android drosselt Intervalle bei gedimmtem
   // Display — mit Zeitstempel stimmt die Restzeit trotzdem
   const start = Date.now();
-  timerState = { kind: opts.kind || 'rest', chain: !!opts.chain, start, end: start + seconds * 1000,
+  const kind = TIMER_LABEL[opts.kind] ? opts.kind : 'rest';
+  timerState = { kind, chain: !!opts.chain, up: !!opts.up, start, end: start + seconds * 1000,
                  seconds, onDone: opts.onDone || null };
 
   const overlay = document.getElementById('timer-overlay');
   const count = document.getElementById('timer-count');
-  overlay.classList.toggle('work', timerState.kind === 'work');
+  overlay.classList.toggle('work', kind === 'work');
+  overlay.classList.toggle('prep', kind === 'prep');
   overlay.classList.toggle('chain', timerState.chain);
-  document.getElementById('timer-label').textContent = I18N.t(timerState.kind === 'work' ? 'timer.work' : 'timer.label');
-  document.getElementById('timer-skip').textContent = I18N.t(timerState.kind === 'work' ? 'timer.done' : 'timer.skip');
+  document.getElementById('timer-label').textContent = I18N.t(opts.label || TIMER_LABEL[kind]);
+  document.getElementById('timer-skip').textContent = I18N.t(TIMER_SKIP[kind]);
   document.getElementById('timer-exercise').textContent = opts.sub || '';
-  count.textContent = seconds;
+  setTimerCount(timerState.up ? 0 : seconds);
   count.classList.remove('urgent');
   overlay.classList.add('open');
 
-  const urgentAt = timerState.kind === 'work' ? 3 : 5;
+  const urgentAt = kind === 'rest' ? 5 : 3;
   timerInterval = setInterval(() => {
     if (!timerState) { stopTicking(); return; }
-    const remaining = Math.max(0, Math.ceil((timerState.end - Date.now()) / 1000));
-    count.textContent = remaining;
+    const now = Date.now();
+    if (timerState.up) {
+      setTimerCount((Math.min(now, timerState.end) - timerState.start) / 1000);
+      // Obergrenze erreicht (Audit run-2 C4): NICHT selbst eintragen — die echte Haltezeit ist unbekannt.
+      // Anhalten, melden, auf „Fertig →“ (speichert die Obergrenze) oder „■ Stopp“ warten.
+      if (now >= timerState.end) { stopTicking(); playBeep(); vibrate(); }
+      return;
+    }
+    const remaining = Math.max(0, Math.ceil((timerState.end - now) / 1000));
+    setTimerCount(remaining);
     if (remaining <= urgentAt) count.classList.add('urgent');
     if (remaining <= 0) endTimer(false);
   }, 250);
 }
+// Ab einer Minute m:ss; lange Anzeigen („10:00“) bekommen eine kleinere Schrift (360-px-Handys)
+function setTimerCount(sec) {
+  const count = document.getElementById('timer-count');
+  const txt = fmtClock(sec);
+  count.textContent = txt;
+  count.classList.toggle('long', txt.length >= 4);
+}
 function stopTicking() { if (timerInterval) clearInterval(timerInterval); timerInterval = null; }
 function closeTimerOverlay() {
-  document.getElementById('timer-overlay').classList.remove('open', 'work', 'chain');
+  document.getElementById('timer-overlay').classList.remove('open', 'work', 'prep', 'chain');
 }
 // Regulär abgelaufen (Beep + Vibration) oder per Taste beendet (skipped) → onDone
 function endTimer(skipped) {
@@ -981,7 +1282,9 @@ function endTimer(skipped) {
   timerState = null;
   closeTimerOverlay();
   if (!skipped) { playBeep(); vibrate(); }
-  const elapsed = Math.max(1, Math.round((Math.min(Date.now(), st.end) - st.start) / 1000));
+  const ms = Math.min(Date.now(), st.end) - st.start;
+  // Stoppuhr: abrunden wie die Anzeige (zeigt „47“, speichert 47)
+  const elapsed = Math.max(1, st.up ? Math.floor(ms / 1000) : Math.round(ms / 1000));
   if (st.onDone) st.onDone(skipped ? elapsed : st.seconds, skipped);
 }
 // Abbrechen ohne onDone: Intervall-Kette stoppen, laufender Arbeits-Satz wird NICHT geloggt
@@ -991,7 +1294,15 @@ function cancelTimer() {
   closeTimerOverlay();
 }
 
-document.getElementById('timer-skip').addEventListener('click', () => endTimer(true));
+// Wächter (Audit run-2 C3): „Los →“ / „Überspringen →“ und „Fertig →“ sind derselbe Knopf an derselben
+// Stelle. Ein Doppeltipp (oder ein Tipp kurz nach dem Ende des Vorlaufs/der Pause) traf sonst das gerade
+// gestartete Halten bzw. Intervall und speicherte 1 s — beim letzten Satz samt Abschluss der Einheit.
+// Niemand beendet ein Halten oder Intervall in unter einer Sekunde.
+const SKIP_ARM_MS = 1000;
+document.getElementById('timer-skip').addEventListener('click', () => {
+  if (timerState && timerState.kind === 'work' && Date.now() - timerState.start < SKIP_ARM_MS) return;
+  endTimer(true);
+});
 document.getElementById('timer-stop').addEventListener('click', cancelTimer);
 
 function vibrate() {
@@ -1013,6 +1324,9 @@ function playBeep() {
       osc.start(ctx.currentTime + offset);
       osc.stop(ctx.currentTime + offset + 0.2);
     });
+    // Kontext nach dem Ton schließen (v2.9): jeder Beep legt einen neuen an, offene Kontexte halten
+    // Audio-Ressourcen — mit Vorlauf-Ton bei Halteübungen kommen pro Training einige Dutzend zusammen
+    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 800);
   } catch(e) {}
 }
 
@@ -1042,21 +1356,23 @@ document.getElementById('progress-exercise-select').addEventListener('change', a
   document.getElementById('chart-type-row').style.display = 'flex';
 });
 
+// Knöpfe unter dem Chart zeigen, was der Chart gerade zeigt (nicht zwingend progressMode, s.u.)
+function markChartButtons(mode) {
+  const w = document.getElementById('chart-btn-weight');
+  const r = document.getElementById('chart-btn-reps');
+  w.classList.toggle('active-btn', mode === 'weight'); w.classList.toggle('ghost', mode !== 'weight');
+  r.classList.toggle('active-btn', mode !== 'weight'); r.classList.toggle('ghost', mode === 'weight');
+}
+
 document.getElementById('chart-btn-weight').addEventListener('click', async () => {
   progressMode = 'weight';
-  document.getElementById('chart-btn-weight').classList.add('active-btn');
-  document.getElementById('chart-btn-reps').classList.remove('active-btn');
-  document.getElementById('chart-btn-weight').classList.remove('ghost');
-  document.getElementById('chart-btn-reps').classList.add('ghost');
+  markChartButtons(progressMode);
   if (currentProgressExId) await renderProgressChart(currentProgressExId, progressMode);
 });
 
 document.getElementById('chart-btn-reps').addEventListener('click', async () => {
   progressMode = 'reps';
-  document.getElementById('chart-btn-reps').classList.add('active-btn');
-  document.getElementById('chart-btn-weight').classList.remove('active-btn');
-  document.getElementById('chart-btn-reps').classList.remove('ghost');
-  document.getElementById('chart-btn-weight').classList.add('ghost');
+  markChartButtons(progressMode);
   if (currentProgressExId) await renderProgressChart(currentProgressExId, progressMode);
 });
 
@@ -1076,6 +1392,10 @@ async function renderProgressChart(exId, mode) {
   canvas.style.display = 'block';
 
   const labels = data.map(r => r.date);
+  // Übung ohne Gewicht (Klimmzüge, Plank): die Gewichtskurve wäre eine Null-Linie → Wiederholungen
+  // bzw. Sekunden zeigen. progressMode (Wahl des Nutzers) bleibt für die nächste Übung erhalten.
+  if (mode === 'weight' && data.every(r => !r.max_weight)) mode = 'reps';
+  markChartButtons(mode);
   // Intervall-Sätze (HIT) haben keine Wiederholungen, nur Sekunden → im Reps-Modus die Dauer zeigen
   const timed = mode !== 'weight' && data.some(r => r.max_duration > 0);
   const values = mode === 'weight'
@@ -1187,12 +1507,19 @@ async function savePlanFromEditor() {
     sort_order: i,
   })).filter(e => e.exercise_id);
   if (!exercises.length) { await ask(I18N.t('plan.needEx'), { alert: true }); return; }
-  await LocalData.savePlan({
-    id: editorPlanId,
-    name,
-    type: document.getElementById('editor-type').value,
-    exercises,
-  });
+  try {
+    await LocalData.savePlan({
+      id: editorPlanId,
+      name,
+      type: document.getElementById('editor-type').value,
+      exercises,
+    });
+  } catch (e) {
+    // Speichern gescheitert (z.B. Speicher voll, run-2 C1): Editor bleibt offen, Eingaben bleiben erhalten
+    console.error(e);
+    await ask(I18N.t('err.saveFailed'), { alert: true });
+    return;
+  }
   document.getElementById('editor-overlay').classList.remove('open');
   loadWorkoutSelect();
   loadDashboard();
@@ -1337,7 +1664,8 @@ document.getElementById('session-overlay').addEventListener('click', e => {
 document.getElementById('session-save-notes').addEventListener('click', async () => {
   if (detailSessionId == null) return;
   const notes = document.getElementById('session-notes').value.trim() || null;
-  await LocalData.updateSession(detailSessionId, { notes });
+  try { await LocalData.updateSession(detailSessionId, { notes }); }
+  catch (e) { console.error(e); document.getElementById('session-msg').textContent = I18N.t('err.saveFailed'); return; }
   document.getElementById('session-msg').textContent = I18N.t('session.notesSaved');
   loadHistory();
 });
@@ -1347,7 +1675,8 @@ document.getElementById('session-delete').addEventListener('click', async () => 
   const meta = document.getElementById('session-meta').textContent.split(' · ')[0];
   if (!(await ask(I18N.t('session.deleteConfirm', { date: meta }), { ok: 'dlg.deleteForever', danger: true }))) return;
   if (detailSessionId !== id) return;   // Detail wurde während der Frage geschlossen oder gewechselt
-  await LocalData.deleteSession(id);
+  try { await LocalData.deleteSession(id); }
+  catch (e) { console.error(e); document.getElementById('session-msg').textContent = I18N.t('err.saveFailed'); return; }   // run-2 R2-7
   closeSessionDetail();
   loadHistory();
   loadDashboard();
@@ -1355,13 +1684,44 @@ document.getElementById('session-delete').addEventListener('click', async () => 
 
 // ── Backup (Export / Import) ────────────────────────────────────────────────────
 // Da die Daten nur auf dem Gerät liegen: JSON-Backup zum Sichern / Umziehen.
-function downloadJSON(obj, filename) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+//
+// Datei speichern (v2.9): Die Capacitor-WebView führt <a download> mit Blob-URL nicht aus (kein
+// DownloadListener) — bis v2.8 entstand in der APK gar keine Datei, nur das Textfeld. Nativ deshalb
+// über die Plugins Filesystem + Share (Muster Ausgaben-Tracker, gleiche Versionen 6.0.4):
+//   1) nach „Documents“ (Dokumente) schreiben (bleibt als Datei liegen; Android 11+ ohne Speicher-Berechtigung),
+//      danach Teilen-Dialog (Syncthing, Mail, Dateien …) — Abbrechen dort ist kein Fehler;
+//   2) klappt das nicht (Android ≤ 10 ohne Berechtigung): in den App-Cache schreiben und nur teilen;
+//   3) klappt auch das nicht: Rückgabe 'none' → der Aufrufer zeigt das JSON im Textfeld zum Kopieren.
+// Im Browser (Testserver) bleibt der Blob-Download. Rückgabe: 'documents' | 'shared' | 'canceled' | 'download' | 'none'.
+function capPlugins() {
+  const C = window.Capacitor;
+  return C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() ? (C.Plugins || {}) : null;
+}
+async function saveBackupFile(name, text) {
+  const P = capPlugins();
+  if (!P) {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return 'download';
+  }
+  const FS = P.Filesystem, SH = P.Share;
+  const share = async uri => { try { if (SH) await SH.share({ title: name, url: uri }); } catch (e) { /* Teilen abgebrochen */ } };
+  if (!FS) return 'none';
+  try {
+    const w = await FS.writeFile({ path: name, data: text, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
+    await share(w.uri);
+    return 'documents';
+  } catch (e) { console.error(e); }
+  if (!SH) return 'none';
+  let w;
+  try { w = await FS.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8', recursive: true }); }
+  catch (e) { console.error(e); return 'none'; }
+  try { await SH.share({ title: name, url: w.uri }); return 'shared'; }
+  catch (e) { return 'canceled'; }   // Teilen abgebrochen: die Cache-Datei allein nützt niemandem
 }
 
 async function applyImport(text) {
@@ -1386,18 +1746,44 @@ async function applyImport(text) {
       + (r.skipped ? I18N.t('backup.skipped', { k: r.skipped }) : '');
     loadHistory(); loadDashboard();
   } catch (err) {
-    if (msg) msg.textContent = I18N.t('backup.error', { msg: err.message });
+    // QuotaExceededError aus dem Commit hat eine leere message (run-2 R2-6)
+    const why = err.message || (err.name === 'QuotaExceededError' ? I18N.t('err.saveFailed') : err.name || '?');
+    if (msg) msg.textContent = I18N.t('backup.error', { msg: why });
   }
 }
 
 const _exportBtn = document.getElementById('backup-export');
+let exportBusy = false;   // Doppeltipp: zweiter Export öffnete sonst einen zweiten Teilen-Dialog
 if (_exportBtn) _exportBtn.addEventListener('click', async () => {
-  const data = await LocalData.exportAll();
-  downloadJSON(data, `alien-fitness-backup-${new Date().toISOString().slice(0, 10)}.json`);
-  const ta = document.getElementById('backup-json');
-  if (ta) { ta.value = JSON.stringify(data, null, 2); ta.style.display = 'block'; }
+  if (exportBusy) return;
+  exportBusy = true;
   const msg = document.getElementById('backup-msg');
-  if (msg) msg.textContent = I18N.t('backup.exported', { s: data.sessions.length, n: data.sets.length });
+  const ta = document.getElementById('backup-json');
+  try {
+    const data = await LocalData.exportAll();
+    const text = JSON.stringify(data, null, 2);
+    // Lokales Datum (toISOString wäre UTC: kurz nach Mitternacht stünde der Vortag im Namen)
+    const d = new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    // mit Uhrzeit (Audit run-2): ein zweiter Export am selben Tag überschrieb sonst den ersten — nach einem
+    // versehentlichen „Alles ersetzen“ auch ein gutes Backup vom Morgen durch ein leeres
+    const name = `alien-fitness-backup-${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}.json`;
+    const how = await saveBackupFile(name, text);
+    let line = I18N.t('backup.exported', { s: data.sessions.length, n: data.sets.length });
+    if (how === 'documents') line += ' ' + I18N.t('backup.savedDocs', { name });
+    else if (how === 'shared') line += ' ' + I18N.t('backup.sharedOnly');
+    else if (how === 'canceled') line += ' ' + I18N.t('backup.shareCanceled');
+    else if (how === 'none') line += ' ' + I18N.t('backup.saveFailed');
+    // Textfeld nur als Rückfall (keine Datei, Teilen abgebrochen); sonst unangetastet lassen — es ist zugleich
+    // das Einfügefeld für den Import (run-2: ein erfolgreicher Export löschte eingefügtes JSON)
+    if (ta && (how === 'none' || how === 'canceled')) ta.value = text;
+    if (msg) msg.textContent = line;
+  } catch (e) {
+    console.error(e);
+    if (msg) msg.textContent = I18N.t('backup.error', { msg: e.message });
+  } finally {
+    exportBusy = false;
+  }
 });
 
 const _importInput = document.getElementById('backup-import-file');
@@ -1449,6 +1835,7 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
   // in der Bibliotheks-Ansicht geleert)
   allExercises = [];
   rerenderCurrentView();
+  if (activeSession) relabelActiveSession();   // laufendes Training: Namen in der neuen Sprache (v2.9)
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────

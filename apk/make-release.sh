@@ -59,6 +59,9 @@ NOTES_FILE="${1:-}"
 AAPT="$HOME/Android/sdk/build-tools/34.0.0/aapt2"
 APK_VER="$("$AAPT" dump badging "$APK" 2>/dev/null | sed -nE "s/.*versionName='([^']*)'.*/\1/p")"
 [ "$APK_VER" = "$NAME" ] || { echo "FEHLER: APK hat versionName '$APK_VER', VERSION sagt '$NAME'"; exit 1; }
+# Berechtigungen an der APK selbst gegen die Positivliste (Audit run-2): eine APK aus einem anderen Build-Weg
+# (Gradle von Hand, Android Studio) liefe sonst ungeprüft raus. --check-apk löscht sie bei Verstoß.
+node apk/patch-hardening.mjs --check-apk "$APK" || exit 1
 source ~/Apps/android-build/env.sh
 "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "$APK" | grep -q "certificate SHA-256 digest: $FP_HEX" \
   || { echo "FEHLER: APK nicht mit dem Release-Zertifikat $FP_HEX signiert"; exit 1; }

@@ -2,7 +2,7 @@
   "name": "alien-fitness-apk",
   "version": "1.0.0",
   "private": true,
-  "description": "Capacitor-Wrapper für die Alien Fitness Web-App (gebündeltes Frontend, native HTTP).",
+  "description": "Capacitor-Wrapper für Alien Fitness (gebündeltes Frontend, offline, ohne INTERNET-Berechtigung).",
   "scripts": {
     "build": "./build-www.sh && npx cap sync android"
   },
@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@capacitor/android": "^6.2.2",
-    "@capacitor/core": "^6.2.2"
+    "@capacitor/core": "^6.2.2",
+    "@capacitor/filesystem": "6.0.4",
+    "@capacitor/share": "6.0.4"
   }
 }
