@@ -20,10 +20,10 @@ has been retired.
 - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
 - Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
 - Live session logging with automatic rest timer, corrections supported
-- "Last time" on the exercise cards and pre-filled for every set — progressive overload at a glance
+- "Last time" on the exercise cards and in every set dialog, sets come pre-filled: progressive overload at a glance
 - HIT intervals: timed sets ("20 sec") let you pick the work time (20–180 s or custom), then a 5 s get-ready countdown, work timer, rest and auto-chained next round
 - Hold exercises (plank): pick the hold time per set (30–180 s, custom, or "Max" as a stopwatch), 5 s get-ready countdown
-- Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds (German, or simple English words in English mode); bundled audio files, turn it off with one tap
+- Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds before each automatic start (German, or simple English words in English mode); bundled audio files, turn it off with one tap
 - Technique tips for every exercise and safety warnings where it matters, from Kerstin (German and English)
 - Interrupted workouts survive an app kill and can be resumed, saved or discarded
 - Session details with every set, a free-text note and delete
@@ -112,7 +112,8 @@ node patch-hardening.mjs --check-apk android/app/build/outputs/apk/release/app-r
 
 `patch-hardening.mjs` must run after every `npm ci` / `cap sync` and before Gradle. Version (`apk/VERSION`) and app icon are
 set by private helper scripts; a self-build without them gets Capacitor's defaults. `--check-apk` verifies the
-finished APK (permission allowlist, Share plugin without receiver in the bytecode, live-update path disabled).
+finished APK (permission allowlist, Share plugin without receiver in the bytecode, live-update path disabled, FileProvider
+limited to the backup in "Documents" and the app cache).
 
 The frontend lives in `public/` and is bundled into the APK by `build-www.sh`. All data is
 kept in on-device storage; the only files the app loads are its own bundled assets
@@ -123,8 +124,9 @@ End-to-end tests (Brave via playwright-core): `node apk/serve-test.mjs &` then `
 ## Credits
 
 - Voice announcements are pre-generated offline with [Piper](https://github.com/rhasspy/piper) and bundled as audio files
-  (`apk/make-voice.sh`, texts in `apk/voice/cues.json`). Voice: "Thorsten"
-  ([Thorsten-Voice](https://github.com/thorstenMueller/Thorsten-Voice), CC0).
+  (`apk/make-voice.sh`, texts in `apk/voice/cues.json`). Voice: "Thorsten" (Piper voice `de_DE-thorsten-high` from
+  [piper-voices](https://huggingface.co/rhasspy/piper-voices), MIT, trained on the
+  [Thorsten-Voice](https://github.com/thorstenMueller/Thorsten-Voice) dataset, CC0).
 - Kerstin's portrait and the app icon are our own artwork.
 
 ## License

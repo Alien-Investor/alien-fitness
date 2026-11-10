@@ -77,7 +77,8 @@ window.LocalData = (function () {
   }
 
   const ready = (async () => {
-    await Promise.all([loadSeed(), loadKerstin()]);
+    // kerstin.json ist Beiwerk: höchstens 1,5 s warten, sonst ohne Tipps starten (Audit v2.10 c4, eine hängende Antwort blockierte den Start)
+    await Promise.all([loadSeed(), Promise.race([loadKerstin(), new Promise(r => setTimeout(r, 1500))])]);
     if (window.I18N) await window.I18N.ready;   // EN-Inhalte bereit, bevor gerendert wird
     idb = await openIDB();
     await refreshCustomCache();

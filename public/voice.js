@@ -30,6 +30,8 @@ window.Voice = (() => {
   // Läuft gerade ein suspend() (Release-Durchsicht v2.10), meldet der Kontext noch 'running' — ein Start in diesem Fenster
   // bliebe nach dem Einschlafen stumm. Deshalb nach dessen Ende wecken.
   function audioCtx() {
+    // Geschlossen (z. B. vom System): neu anlegen, die AudioBuffer gelten in jedem Kontext weiter (Audit c5)
+    if (ctx && ctx.state === 'closed') { ctx = null; suspending = null; playing = null; }
     if (!ctx) {
       try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; }
     }
@@ -99,8 +101,9 @@ window.Voice = (() => {
     const n = Math.min(9, Number(manifest && manifest[l] && manifest[l][cue]) || 0);
     if (!n) return false;
     const buf = buffers.get(`${get()}/${l}/${cue}-${1 + Math.floor(Math.random() * n)}`);
+    if (!buf) return false;              // erst prüfen, dann wecken: ein Fehlversuch ließ den Kontext sonst dauerhaft laufen (Audit c2)
     const c = audioCtx();
-    if (!buf || !c) return false;
+    if (!c) return false;
     try {
       stop();
       const src = c.createBufferSource();
@@ -110,7 +113,7 @@ window.Voice = (() => {
       src.start();
       playing = src;
       return true;
-    } catch (e) { return false; }
+    } catch (e) { idle(); return false; }
   }
 
   // Umschalten Thorsten ↔ Aus; eingeschaltet meldet er sich kurz („Hier ist Thorsten.“)

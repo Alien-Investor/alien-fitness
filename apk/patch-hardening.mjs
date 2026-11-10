@@ -41,6 +41,108 @@ if (process.argv[2] === '--check') {
   assertManifest(readFileSync(process.argv[3], 'utf8'), process.argv[3]);
   process.exit(0);
 }
+// 2) Kein externer Verweis im gebündelten Frontend. Kommentare in CSS/JS/HTML zählen nicht, JSON wird nicht „entkommentiert“
+//    (dort ist /* … */ Text). Erkannt werden Schema-Adressen (http, https, ws, wss, ftp) UND protokoll-relative //host.tld
+//    (Release-Audit v2.10 a3), in allen Textdateien des Bundles. Den Schutz im Betrieb liefern weiter die fehlende
+//    INTERNET-Berechtigung und connect-src 'self'; diese Prüfung hält das Versprechen schon im Build.
+const TEXT_EXT = ['.css', '.js', '.mjs', '.html', '.htm', '.json', '.svg', '.xml', '.webmanifest', '.txt'];
+const URL_RE = /(?:\b(?:https?|wss?|ftp):)?\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])/i;
+function scanDir(root) {
+  const offenders = [];
+  (function walk(dir) {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) { walk(p); continue; }
+      const ext = extname(p).toLowerCase();
+      if (!TEXT_EXT.includes(ext)) continue;
+      if (name === 'chart.umd.min.js') continue; // Chart.js enthält nur Lizenz-/Doku-URLs, lädt nichts nach
+      let src = readFileSync(p, 'utf8');
+      if (ext !== '.json' && ext !== '.txt') {
+        src = src.replace(/\/\*[\s\S]*?\*\//g, '')       // CSS/JS-Blockkommentare
+                 .replace(/^\s*\/\/.*$/gm, '')               // JS-Zeilenkommentare (ganze Zeile)
+                 .replace(/<!--[\s\S]*?-->/g, '');           // HTML-/SVG-Kommentare
+      }
+      const hit = src.match(URL_RE);
+      if (hit) offenders.push(`${p}: ${hit[0]}`);
+    }
+  })(root);
+  return offenders;
+}
+// --scan <ordner>: nur diese Prüfung (Tests; Exit 0 = keine externe Adresse)
+if (process.argv[2] === '--scan') {
+  const o = scanDir(process.argv[3]);
+  console.log(o.length ? 'FEHLER: externe Adresse\n  ' + o.join('\n  ') : 'keine externen Adressen');
+  process.exit(o.length ? 1 : 0);
+}
+
+// FileProvider der fertigen APK (v2.10, Release-Audit a1): Die erste Fassung las nur path-Werte per Regex aus xml/file_paths
+// und ließ so durch: ein Element ohne path (gibt die ganze Wurzel frei), eine zweite Fassung res/xml-v24/, einen Provider, der
+// auf eine andere Datei zeigt. Jetzt als Baum: genau EIN androidx-FileProvider, dessen FILE_PROVIDER_PATHS-Verweis aufgelöst,
+// genau EINE Fassung "()" dieser Ressource, darin genau zwei Einträge mit genau den Attributen name + path (ohne Namensraum):
+// external-path "Documents/" und cache-path ".". Gibt eine Liste von Problemen zurück (leer = eng gefasst); Werkzeugfehler werfen.
+function aaptTree(out) {
+  const root = { tag: '#root', attrs: {}, children: [], indent: -1 };
+  const stack = [root];
+  for (const line of out.split('\n')) {
+    const m = line.match(/^(\s*)([ENA]): (.*)$/);
+    if (!m) continue;
+    const indent = m[1].length, kind = m[2], rest = m[3];
+    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+    const parent = stack[stack.length - 1];
+    if (kind === 'E') {
+      const node = { tag: rest.split(' ')[0], attrs: {}, children: [], indent };
+      parent.children.push(node);
+      stack.push(node);
+    } else if (kind === 'A') {
+      const eq = rest.indexOf('=');
+      const key = rest.slice(0, eq), raw = rest.slice(eq + 1);
+      const q = raw.match(/^"([^"]*)"/);
+      parent.attrs[key] = q ? q[1] : raw.split(' ')[0];
+    }
+  }
+  return root;
+}
+function walkTree(node, fn) { fn(node); node.children.forEach(c => walkTree(c, fn)); }
+const ANDROID = 'http://schemas.android.com/apk/res/android:';
+const aAttr = (node, name) => Object.entries(node.attrs).find(([k]) => k.startsWith(ANDROID + name + '('))?.[1];
+function fileProviderProblems(apk, aapt2) {
+  const run = args => execFileSync(aapt2, args, { encoding: 'utf8', maxBuffer: 1 << 30 });
+  const problems = [];
+  const providers = [];
+  walkTree(aaptTree(run(['dump', 'xmltree', '--file', 'AndroidManifest.xml', apk])), n => {
+    if (n.tag === 'provider' && aAttr(n, 'name') === 'androidx.core.content.FileProvider') providers.push(n);
+  });
+  if (providers.length !== 1) return [`${providers.length} FileProvider im Manifest (erwartet genau einer)`];
+  const metas = providers[0].children.filter(c => c.tag === 'meta-data' && aAttr(c, 'name') === 'android.support.FILE_PROVIDER_PATHS');
+  const resId = metas.length === 1 ? aAttr(metas[0], 'resource') : null;
+  if (!resId || !/^@0x[0-9a-f]{8}$/.test(resId)) return ['FILE_PROVIDER_PATHS-Verweis fehlt oder ist mehrdeutig'];
+  const res = run(['dump', 'resources', apk]).split('\n');
+  const at = res.findIndex(l => new RegExp(`^\\s+resource ${resId.slice(1)} `).test(l));
+  if (at < 0) return [`Ressource ${resId} nicht gefunden`];
+  const configs = [];
+  for (let i = at + 1; i < res.length && !/^\s+resource /.test(res[i]) && !/^\s*type /.test(res[i]); i++) {
+    const c = res[i].match(/^\s+\(([^)]*)\) \(file\) (\S+)/);
+    if (c) configs.push(c);
+  }
+  if (configs.length !== 1 || configs[0][1] !== '') return [`FileProvider-Pfade in ${configs.length} Fassungen (${configs.map(c => '(' + c[1] + ')').join(' ')}), erwartet genau "()"`];
+  const paths = [];
+  walkTree(aaptTree(run(['dump', 'xmltree', '--file', configs[0][2], apk])), n => { if (n.tag === 'paths') paths.push(n); });
+  if (paths.length !== 1) return ['file_paths ohne genau ein <paths>'];
+  const got = paths[0].children.map(c => {
+    const keys = Object.keys(c.attrs).sort().join(',');
+    return keys === 'name,path' ? `${c.tag}:${c.attrs.path}` : `${c.tag}[${keys || 'ohne Attribute'}]`;
+  }).sort();
+  if (got.join(' ') !== 'cache-path:. external-path:Documents/') problems.push(`FileProvider-Pfade nicht eng gefasst (${got.join(' ') || 'leer'})`);
+  return problems;
+}
+// --check-fileprovider <apk>: nur diese Prüfung (Tests mit präparierten APKs; Exit 0 = eng gefasst)
+if (process.argv[2] === '--check-fileprovider') {
+  const bt = `${process.env.ANDROID_HOME || process.env.HOME + '/Android/sdk'}/build-tools/34.0.0`;
+  const p = fileProviderProblems(process.argv[3], `${bt}/aapt2`);
+  console.log(p.length ? 'FEHLER: ' + p.join('; ') : 'FileProvider eng gefasst (Documents/ + Cache).');
+  process.exit(p.length ? 1 : 0);
+}
+
 // --check-apk <apk>: Prüfungen an der FERTIGEN APK, nicht an Zwischendateien (Audit run-2). Laufen in build-apk.sh
 // UND in make-release.sh — eine APK aus einem anderen Build-Weg (Gradle von Hand, Android Studio, nach `npm ci`
 // ungepatcht) kommt so nicht raus. Bei einem Verstoß wird die APK gelöscht; jeder Werkzeugfehler bricht ab.
@@ -48,7 +150,7 @@ if (process.argv[2] === '--check') {
 //   b) Share-Plugin im Bytecode (dexdump, alle Klassen unter com/capacitorjs/plugins/share/): kein Receiver
 //      (Oberklasse, Registrierungs-Signatur auch über D8-Outlines), kein Rückruf, keine CHOSEN_COMPONENT-Aktion.
 //   c) DisableDeploy=true in der kompilierten config.xml der APK (Pfad über die Ressourcentabelle, AGP kürzt ihn).
-//   d) FileProvider-Pfade der APK (xml/file_paths): genau Documents/ und der App-Cache (v2.10).
+//   d) FileProvider der APK als Baum (fileProviderProblems): ein Provider, eine Fassung, genau Documents/ + App-Cache (v2.10).
 if (process.argv[2] === '--check-apk') {
   const apk = process.argv[3];
   const bt = `${process.env.ANDROID_HOME || process.env.HOME + '/Android/sdk'}/build-tools/34.0.0`;
@@ -82,10 +184,7 @@ if (process.argv[2] === '--check-apk') {
     const tree = cfg ? run(`${bt}/aapt2`, ['dump', 'xmltree', '--file', cfg, apk]) : '';
     if (!/A: name="DisableDeploy"[^\n]*\n\s+A: value="?true/.test(tree)) problems.push('DisableDeploy=true fehlt in der config.xml der APK');
 
-    const fp = (run(`${bt}/aapt2`, ['dump', 'resources', apk]).match(/ xml\/file_paths\n\s+\(\) \(file\) (\S+)/) || [])[1];
-    const fpTree = fp ? run(`${bt}/aapt2`, ['dump', 'xmltree', '--file', fp, apk]) : '';
-    const roots = [...fpTree.matchAll(/E: ([\w-]+-path)[\s\S]*?A: [^\n]*?path[^\n]*?="([^"]*)"/g)].map(x => `${x[1]}:${x[2]}`).sort();
-    if (roots.join(' ') !== 'cache-path:. external-path:Documents/') problems.push(`FileProvider-Pfade nicht eng gefasst (${roots.join(' ') || 'nicht gefunden'})`);
+    problems.push(...fileProviderProblems(apk, `${bt}/aapt2`));
   } catch (e) {
     console.error(`FEHLER: APK-Prüfung nicht durchführbar (${e.message.split('\n')[0]}) — abgebrochen.`);
     process.exit(1);
@@ -199,25 +298,10 @@ const PATHS_XML = `<?xml version="1.0" encoding="utf-8"?>
 if (readFileSync(PATHS, 'utf8') !== PATHS_XML) { writeFileSync(PATHS, PATHS_XML); console.log('FileProvider-Pfade eng gefasst (Documents/ + Cache).'); }
 else console.log('FileProvider-Pfade bereits eng gefasst.');
 
-// 2) Kein externer Verweis im gebündelten Frontend (CSS/JS/HTML). Kommentare zählen nicht.
-const offenders = [];
-function walk(dir) {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) { walk(p); continue; }
-    if (!['.css', '.js', '.html', '.json'].includes(extname(p))) continue;
-    const src = readFileSync(p, 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')       // CSS/JS-Blockkommentare
-      .replace(/^\s*\/\/.*$/gm, '')           // JS-Zeilenkommentare
-      .replace(/<!--[\s\S]*?-->/g, '');       // HTML-Kommentare
-    if (name === 'chart.umd.min.js') continue; // Chart.js enthält nur Lizenz-/Doku-URLs, lädt nichts nach
-    const hit = src.match(/https?:\/\/[^\s'")<>]+/);
-    if (hit) offenders.push(`${p}: ${hit[0]}`);
-  }
-}
-walk('www');
+// 2) Kein externer Verweis im gebündelten Frontend (Prüffunktion scanDir oben).
+const offenders = scanDir('www');
 if (offenders.length) {
   console.error('FEHLER: externe URL im gebündelten Frontend — Build abgebrochen!\n  ' + offenders.join('\n  '));
   process.exit(1);
 }
-console.log('www/: keine externen URLs in CSS/JS/HTML/JSON.');
+console.log('www/: keine externen Adressen (http/https/ws/wss/ftp, //host) in den Textdateien.');

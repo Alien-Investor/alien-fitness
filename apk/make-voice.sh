@@ -29,6 +29,13 @@ done
 for t in jq ffmpeg; do command -v "$t" >/dev/null || { echo "$t fehlt" >&2; exit 1; }; done
 [[ -x "$PIPER_DIR/piper" ]] || { echo "Piper nicht gefunden: $PIPER_DIR/piper" >&2; exit 1; }
 [[ -f "$CUES" ]] || { echo "Textdatei fehlt: $CUES" >&2; exit 1; }
+# Schlüssel (Stimmen, Sprachen, Ansagen) werden zu Pfaden und Dateinamen, Modellnamen zu Piper-Pfaden: nur einfache Namen
+# zulassen (Release-Audit v2.10 a2: "../x" als Stimme löschte per rm -rf außerhalb von public/audio).
+jq -e '([.voices | keys[]] + [del(.voices, ._info) | keys[]] + [del(.voices, ._info)[] | keys[]]
+        | all(test("^[a-z][a-z0-9_-]{0,31}$")))
+       and ([.voices[].model] | all(type == "string" and test("^[A-Za-z0-9_-]{1,64}$")))
+       and ([del(.voices, ._info)[][][]] | all(type == "string"))' "$CUES" >/dev/null \
+  || { echo "Ungültige Textdatei $CUES: Schlüssel nur a-z, 0-9, _ und -; Modellname ohne Pfad; Texte als Liste von Strings" >&2; exit 1; }
 
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 mkdir -p "$CACHE"
@@ -56,20 +63,20 @@ to_opus() {  # quelle.wav ziel.ogg — ohne Metadaten, reproduzierbar
 cue_lines() {  # sprache stimme
   local name
   name=$(jq -r --arg v "$2" '.voices[$v].name // ($v | (.[:1] | ascii_upcase) + .[1:])' "$CUES")
-  jq -r --arg name "$name" ".\"$1\" | to_entries[] | .key as \$k | .value | to_entries[]
-         | [\$k, (.key+1|tostring), (.value | gsub(\"\\\\{name\\\\}\"; \$name))] | @tsv" "$CUES"
+  jq -r --arg name "$name" --arg l "$1" '.[$l] | to_entries[] | .key as $k | .value | to_entries[]
+         | [$k, (.key+1|tostring), (.value | gsub("\\{name\\}"; $name))] | @tsv' "$CUES"
 }
 
-LANGS=$(jq -r 'del(.voices, ._info) | keys[]' "$CUES")
-VOICES=$(jq -r '.voices | keys[]' "$CUES")
+mapfile -t LANGS < <(jq -r 'del(.voices, ._info) | keys[]' "$CUES")
+mapfile -t VOICES < <(jq -r '.voices | keys[]' "$CUES")
+vget() { jq -r --arg v "$1" ".voices[\$v].$2 // empty" "$CUES"; }   # stimme feld
 
 if [[ -n "$PROBE" ]]; then
   mkdir -p "$PROBE"
   ffmpeg -nostdin -v error -y -f lavfi -i anullsrc=r=48000:cl=mono -t 0.8 "$TMP/gap.wav"
-  for v in $VOICES; do
-    model=$(jq -r ".voices.\"$v\".model" "$CUES"); ls_=$(jq -r ".voices.\"$v\".length_scale" "$CUES")
-    ns=$(jq -r ".voices.\"$v\".noise_scale // empty" "$CUES")
-    for l in $LANGS; do
+  for v in "${VOICES[@]}"; do
+    model=$(vget "$v" model); ls_=$(vget "$v" length_scale); ns=$(vget "$v" noise_scale)
+    for l in "${LANGS[@]}"; do
       list="$TMP/list.txt"; : > "$list"; legend="$PROBE/$v-$l-reihenfolge.txt"; : > "$legend"; i=0
       while IFS=$'\t' read -r cue n text; do
         i=$((i + 1)); f="$PROBE/$v-$l-$cue-$n.wav"
@@ -85,11 +92,10 @@ if [[ -n "$PROBE" ]]; then
 fi
 
 OUT="$ROOT/public/audio"
-for v in $VOICES; do
-  model=$(jq -r ".voices.\"$v\".model" "$CUES"); ls_=$(jq -r ".voices.\"$v\".length_scale" "$CUES")
-    ns=$(jq -r ".voices.\"$v\".noise_scale // empty" "$CUES")
+for v in "${VOICES[@]}"; do
+  model=$(vget "$v" model); ls_=$(vget "$v" length_scale); ns=$(vget "$v" noise_scale)
   rm -rf "${OUT:?}/$v"
-  for l in $LANGS; do
+  for l in "${LANGS[@]}"; do
     mkdir -p "$OUT/$v/$l"
     while IFS=$'\t' read -r cue n text; do
       render "$text" "$model" "$ls_" "$TMP/clip.wav" "$ns"

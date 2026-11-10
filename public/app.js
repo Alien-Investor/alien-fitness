@@ -984,7 +984,7 @@ function saveSet() {
   // Korrektur statt Duplikat: erneutes Eintragen desselben Satzes ersetzt den
   // Eintrag — sonst zählt die Fertig-Logik doppelt und schließt die Übung
   // (oder das ganze Workout) zu früh ab
-  commitSet(exIdx, setNum, ex, {
+  const r = commitSet(exIdx, setNum, ex, {
     exercise_id: ex.exercise_id,
     set_number: setNum,
     reps,
@@ -992,6 +992,9 @@ function saveSet() {
     completed: 1,
   });
   closeSetModal();
+  // Letzter Satz (v2.10, Release-Faktencheck B): keine Pause mehr über dem Abschluss-Banner — wie bei Intervall und Halten.
+  // Mit Stimme sagte Thorsten sonst nach „Geschafft“ noch „Pause“ und am Ende „Weiter geht's“.
+  if (r.workoutDone) return;
 
   // Start rest timer
   const rest = activeSession.exercises[exIdx].rest_seconds || 90;
@@ -1026,6 +1029,10 @@ function startTimedSet(exIdx, setNum, ex, secs) {
 // ── Zeitwahl (v2.9 Halteübungen, seit v2.10 auch Intervalle): Zeit wählen → Vorlauf → Timer → Satz mit Dauer → Pause.
 // mode 'hold' = einzelner Satz (Plank), 'interval' = Kette (Tabata), Vorlauf nur vor der ersten Runde.
 let pendingHold = null;   // { exIdx, setNum, ex, mode, value: Sekunden | 'max' | null (ungültige Eingabe) }
+// Release-Audit v2.10 c3: Der zweite Tipp eines Doppeltipps auf einen Zeitsatz traf das gerade geöffnete Fenster („Ohne Timer
+// eintragen“ beim letzten Satz = Einheit gespeichert). Echte Tipps zählen erst nach DLG_ARM_MS, wie beim Rückfrage-Dialog.
+let holdOpenedAt = 0;
+const holdTooEarly = e => e && e.isTrusted && performance.now() - holdOpenedAt < DLG_ARM_MS;
 
 function clampHold(n) {
   n = Math.round(Number(n));
@@ -1052,7 +1059,7 @@ function buildHoldChips(mode) {
     b.dataset.value = v;
     if (v === 'max') { b.dataset.i18n = 'hold.max'; b.textContent = I18N.t('hold.max'); }
     else b.textContent = `${v} s`;
-    b.addEventListener('click', () => setHoldValue(v, true));
+    b.addEventListener('click', e => { if (!holdTooEarly(e)) setHoldValue(v, true); });
     box.appendChild(b);
   });
 }
@@ -1074,6 +1081,7 @@ function setHoldValue(v, writeInput) {
 async function openHoldModal(exIdx, setNum, ex) {
   const mode = isHoldSet(ex) ? 'hold' : 'interval';
   pendingHold = { exIdx, setNum, ex, mode, value: null };
+  holdOpenedAt = performance.now();
   buildHoldChips(mode);
   document.getElementById('hold-modal-title').textContent = `${I18N.t('dyn.setN')} ${setNum} — ${ex.name}`;
   const label = document.getElementById('hold-label');
@@ -1082,7 +1090,7 @@ async function openHoldModal(exIdx, setNum, ex) {
   // Intervall: die Wahl gilt für die folgenden Runden der Kette (Hinweis nur, wenn noch Runden folgen)
   const chainHint = document.getElementById('hold-chain-hint');
   chainHint.textContent = I18N.t('hold.chainHint', { rest: ex.rest_seconds || 10 });
-  chainHint.classList.toggle('hidden', mode !== 'interval' || setNum >= ex.sets);
+  chainHint.classList.toggle('hidden', mode !== 'interval' || setNum >= ex.sets || isLogged(exIdx, setNum + 1));   // Kette stoppt an eingetragener Runde (Audit b4)
   // Vorbelegung: eigener Satz (Korrektur) > zuletzt gewählte Zeit dieser Übung > Plan-Angabe > 60 s (Halten) bzw. 20 s
   const own = activeSession.sets.find(s => setRow(s) === exIdx && s.set_number === setNum && s.duration_seconds);
   const saved = readHoldTargets()[ex.exercise_id];
@@ -1152,11 +1160,11 @@ document.getElementById('input-hold').addEventListener('change', e => {
   const n = clampHold(e.target.value);
   if (n && String(n) !== e.target.value) e.target.value = n;   // z.B. 900 → 600
 });
-document.getElementById('btn-hold-start').addEventListener('click', startHold);
-document.getElementById('btn-hold-log').addEventListener('click', logHoldWithoutTimer);
-document.getElementById('btn-hold-cancel').addEventListener('click', closeHoldModal);
+document.getElementById('btn-hold-start').addEventListener('click', e => { if (!holdTooEarly(e)) startHold(); });
+document.getElementById('btn-hold-log').addEventListener('click', e => { if (!holdTooEarly(e)) logHoldWithoutTimer(); });
+document.getElementById('btn-hold-cancel').addEventListener('click', e => { if (!holdTooEarly(e)) closeHoldModal(); });
 document.getElementById('hold-modal-overlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeHoldModal();
+  if (e.target === e.currentTarget && !holdTooEarly(e)) closeHoldModal();
 });
 
 function updateProgress() {
@@ -1207,7 +1215,8 @@ async function finishWorkoutOnce() {
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
   document.getElementById('workout-done-banner').style.display = 'block';
-  Voice.say('done');
+  // Mit Stimme hat endTimer den Piepton für „Geschafft“ zurückgehalten; fehlt die Datei, piept es hier (Audit b3/c1)
+  if (!Voice.say('done') && Voice.on()) playBeep();
 }
 
 // Manuell beenden: speichert auch Teil-Workouts (Plan) und Freies Training
@@ -1321,12 +1330,14 @@ function endTimer(skipped) {
   timerState = null;
   closeTimerOverlay();
   if (!skipped) vibrate();
+  // Audit b2: Ein „Fertig →“, das kurz nach dem regulären Ende ankommt, trifft sonst „Überspringen →“ der neuen Pause
+  if (!skipped && st.kind === 'work') lastSkipAt = Date.now();
   const ms = Math.min(Date.now(), st.end) - st.start;
   // Stoppuhr: abrunden wie die Anzeige (zeigt „47“, speichert 47)
   const elapsed = Math.max(1, st.up ? Math.floor(ms / 1000) : Math.round(ms / 1000));
   announced = false;
   if (st.onDone) st.onDone(skipped ? elapsed : st.seconds, skipped);
-  // Regulär abgelaufen (v2.10): Mit Stimme sagt sich die nächste Phase selbst an („Los!“, „Pause.“), eine Pause
+  // Regulär abgelaufen (v2.10): Mit Stimme sagt sich die nächste Phase selbst an („Los geht's.“, „Pause.“), eine Pause
   // ohne Kette endet mit „Weiter geht's.“, nach dem letzten Satz folgt „Geschafft“ (finishWorkout). Ohne Stimme
   // oder bei fehlender Datei piept es wie bisher.
   if (!skipped && !announced && !(Voice.on() && finishBusy)
@@ -1337,7 +1348,7 @@ function cancelTimer() {
   stopTicking();
   timerState = null;
   closeTimerOverlay();
-  Voice.stop();            // ein laufendes „Drei, zwei …“ nicht nach dem Stopp weitersprechen lassen
+  Voice.stop();            // eine laufende Ansage nicht nach dem Stopp weitersprechen lassen
 }
 
 // Wächter (Audit run-2 C3): „Los →“ / „Überspringen →“ und „Fertig →“ sind derselbe Knopf an derselben

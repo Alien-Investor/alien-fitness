@@ -24,10 +24,10 @@ description: |
   - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
   - Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
   - Live session logging with automatic rest timer, corrections supported
-  - "Last time" on the exercise cards and pre-filled for every set — progressive overload at a glance
+  - "Last time" on the exercise cards and in every set dialog, sets come pre-filled: progressive overload at a glance
   - HIT intervals: pick the work time (20–180 s or custom), then a 5 s get-ready countdown, work timer, rest and auto-chained next round
   - Hold exercises (plank): pick the hold time per set (30–180 s, custom, or "Max" as a stopwatch), 5 s get-ready countdown
-  - Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds; bundled audio files, can be turned off
+  - Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds before each automatic start; bundled audio files, can be turned off
   - Technique tips for every exercise and safety warnings where it matters, from Kerstin (German and English)
   - Interrupted workouts survive an app kill — resume, save or discard
   - Session details with every set, a free-text note and delete

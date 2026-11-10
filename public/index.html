@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Content-Security-Policy (v2.7): die App lädt ausschließlich eigene, gebündelte Dateien.
-       connect-src 'self' deckt die beiden fetch()-Aufrufe ab (seed.json, i18n-content.json),
+       connect-src 'self' deckt die fetch()-Aufrufe ab (seed.json, i18n-content.json, seit v2.10 kerstin.json,
+       audio/manifest.json und die Ansagen audio/…/*.ogg; Web Audio braucht kein media-src),
        style-src die <style>-Blöcke und die style="…"-Attribute, die app.js setzt. Bewusst
        KEINE externe URL — apk/patch-hardening.mjs bricht den Build sonst ab. frame-ancestors
        fehlt absichtlich: per <meta> ausgeliefert ignorieren Browser die Direktive und warnen.
@@ -86,6 +87,7 @@
     #backup-mode-combo{flex:1;}
     #backup-mode-combo .combo-btn{background:#03110e;border:1px solid rgba(0,255,204,.25);border-radius:8px;color:#c8ffe8;font-family:'Share Tech Mono',monospace;font-size:0.72rem;padding:8px;}
     .about-line{margin-top:22px;padding-top:16px;border-top:1px solid rgba(0,255,204,.12);text-align:center;font-family:'Share Tech Mono',monospace;font-size:0.66rem;color:#7a8a86;letter-spacing:0.5px;}
+    .about-line.about-site{margin-top:4px;padding-top:0;border-top:0;}
   </style>
 </head>
 <body>
@@ -325,15 +327,15 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.start.t">Training starten</div>
-        <p data-i18n="help.start.b">Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Abgeschlossene Sätze leuchten grün. Nach dem letzten Satz einer Übung scrollt die App automatisch zur nächsten.</p>
+        <p data-i18n="help.start.b">Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Das Modal zeigt, was du beim letzten Mal bei dieser Übung geschafft hast, und ist vorbelegt (mit dem vorigen Satz, beim ersten Satz mit dem letzten Mal); dieselbe Zeile „Letztes Mal“ steht schon vorher auf den Übungskarten. Abgeschlossene Sätze leuchten grün; erneut antippen korrigiert. Wird die App mittendrin geschlossen, bietet das Dashboard beim nächsten Start an, das Training fortzusetzen.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.timer.t">Pause-Timer</div>
-        <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz, hält das Display wach und meldet sich am Ende mit Vibration und einer Ansage (bei ausgeschalteter Stimme mit einem Beep). Mit „Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
+        <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz, hält das Display wach und meldet sich am Ende mit Vibration und einer Ansage (bei ausgeschalteter Stimme mit einem Beep). Mit „Überspringen →“ kannst du die Pause jederzeit vorzeitig beenden.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.hit.t">HIT-Intervalle</div>
-        <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek") laufen als Intervall: Satz antippen öffnet die Zeitwahl (20 bis 180 Sekunden oder eine eigene Zeit, vorbelegt mit der zuletzt gestarteten Zeit, sonst der Angabe im Plan). Nach „▶ Start" bleiben 5 Sekunden zum Bereitmachen, dann läuft der Arbeits-Timer, danach die Pause, und die nächste Runde derselben Übung startet von selbst mit derselben Zeit. „■ Stopp" unterbricht die Kette, „Fertig →" beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
+        <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek“) laufen als Intervall: Satz antippen öffnet die Zeitwahl (20 bis 180 Sekunden oder eine eigene Zeit, vorbelegt mit der zuletzt gestarteten Zeit, sonst der Angabe im Plan). Nach „▶ Start“ bleiben 5 Sekunden zum Bereitmachen, dann läuft der Arbeits-Timer, danach die Pause, und die nächste Runde derselben Übung startet von selbst mit derselben Zeit. „■ Stopp“ unterbricht die Kette, „Fertig →“ beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.hold.t">Halteübungen (Plank)</div>
@@ -379,9 +381,11 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.privacy.t">Privatsphäre</div>
-        <p data-i18n="help.privacy.b">Die App hat keine Internet-Berechtigung. Alle Daten bleiben auf dem Gerät, nichts wird gesendet — auch keine Schriftarten oder Bibliotheken nachgeladen.</p>
+        <p data-i18n="help.privacy.b">Die App hat keine Internet-Berechtigung und sendet nichts — auch keine Schriftarten oder Bibliotheken werden nachgeladen. Deine Daten verlassen das Gerät nur, wenn du selbst ein Backup exportierst oder teilst, oder über die Android-Systemsicherung bzw. eine Übertragung auf ein neues Handy.</p>
       </div>
       <p id="about-line" class="about-line"></p>
+      <!-- v2.10: Webseite nur als Text, kein Link — die App bleibt offline (patch-hardening.mjs bricht bei http(s):// ab) -->
+      <p id="about-site" class="about-line about-site">alien-investor.org</p>
     </div>
   </div>
 </div>
