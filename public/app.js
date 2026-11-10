@@ -87,7 +87,14 @@ let dlgResolve = null, dlgPrev = null, dlgOpenedAt = 0;
 // sofort beim ersten Tipp, der zweite Tipp eines Doppeltipps landete sonst auf dem roten „Verwerfen“ an derselben
 // Stelle. Programmatische Klicks (isTrusted=false, Tests) und Tastatur (Enter/Escape) sind nicht betroffen.
 const DLG_ARM_MS = 400;
-const dlgTooEarly = e => e && e.isTrusted && performance.now() - dlgOpenedAt < DLG_ARM_MS;
+// Zeitpunkt des Tipps (Release-Audit v2.10 Runde 3): e.timeStamp statt „jetzt“ — hängt der Hauptthread nach dem Öffnen, kam ein
+// früher Tipp sonst erst nach Ablauf der Sperre an. Nur plausible Werte (gleiche Uhr wie performance.now()), sonst „jetzt“.
+const evtTime = e => (e && e.timeStamp > 0 && e.timeStamp <= performance.now() + 50) ? e.timeStamp : performance.now();
+const dlgTooEarly = e => e && e.isTrusted && evtTime(e) - dlgOpenedAt < DLG_ARM_MS;
+// Nachlauf-Sperre (Runde 3, Befund 1): Schließt ein Tipp ein Fenster (Satz, Zeitwahl, Übungsauswahl), traf der zweite Tipp eines
+// Doppeltipps „✓ Beenden & speichern“ darunter und schloss die Einheit vorzeitig ab. overlayClosedAt merkt das Schließen.
+let overlayClosedAt = 0;
+const tooSoonAfterClose = e => e && e.isTrusted && evtTime(e) - overlayClosedAt < DLG_ARM_MS;
 function ask(msg, opt) {
   opt = opt || {};
   if (dlgResolve) return Promise.resolve(false);
@@ -726,10 +733,17 @@ function reRenderAdhoc() {
 }
 
 document.getElementById('btn-add-exercise').addEventListener('click', openExercisePicker);
-document.getElementById('picker-close').addEventListener('click', () =>
-  document.getElementById('picker-overlay').classList.remove('open'));
+// Übungsauswahl (Release-Audit v2.10 Runde 3): echte Tipps erst nach DLG_ARM_MS — der zweite Tipp eines Doppeltipps auf
+// „＋ Übung hinzufügen“ fügte sonst eine zufällige Übung hinzu (im Freien Training nicht entfernbar).
+let pickerOpenedAt = 0;
+const pickerTooEarly = e => e && e.isTrusted && evtTime(e) - pickerOpenedAt < DLG_ARM_MS;
+function closePicker() {
+  overlayClosedAt = performance.now();
+  document.getElementById('picker-overlay').classList.remove('open');
+}
+document.getElementById('picker-close').addEventListener('click', e => { if (!pickerTooEarly(e)) closePicker(); });
 document.getElementById('picker-overlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  if (e.target === e.currentTarget && !pickerTooEarly(e)) closePicker();
 });
 
 async function openExercisePicker() {
@@ -748,12 +762,13 @@ async function openExercisePicker() {
         const nm = document.createElement('span'); nm.textContent = e.name;
         const mg = document.createElement('span'); mg.className = 'pi-muscle'; mg.textContent = I18N.muscle(e.muscle_group);
         b.appendChild(nm); b.appendChild(mg);
-        b.addEventListener('click', () => {
+        b.addEventListener('click', ev => {
+          if (pickerTooEarly(ev)) return;
           activeSession.exercises.push({
             exercise_id: e.id, name: e.name, muscle_group: e.muscle_group, equipment: e.equipment,
             description: e.description, type: e.type, sets: 3, reps: '–', rest_seconds: 90,
           });
-          document.getElementById('picker-overlay').classList.remove('open');
+          closePicker();
           reRenderAdhoc();
         });
         box.appendChild(b);
@@ -762,6 +777,7 @@ async function openExercisePicker() {
   search.value = '';
   search.oninput = render;
   render();
+  pickerOpenedAt = performance.now();
   document.getElementById('picker-overlay').classList.add('open');
   setTimeout(() => search.focus(), 100);
 }
@@ -896,7 +912,7 @@ function renderLastLine(el, last) {
 // Audit v2.10 R2-1: Der zweite Tipp eines Doppeltipps auf einen Satz-Knopf traf das gerade geöffnete Satz-Fenster („Speichern“
 // beim letzten Satz = Einheit gespeichert, sonst Hintergrund = Fenster zu). Echte Tipps zählen erst nach DLG_ARM_MS, wie bei #dlg.
 let setOpenedAt = 0;
-const setTooEarly = e => e && e.isTrusted && performance.now() - setOpenedAt < DLG_ARM_MS;
+const setTooEarly = e => e && e.isTrusted && evtTime(e) - setOpenedAt < DLG_ARM_MS;
 
 async function openSetModal(exIdx, setNum, ex) {
   pendingSet = { exIdx, setNum, ex };
@@ -937,6 +953,7 @@ document.getElementById('set-modal-overlay').addEventListener('click', e => {
 });
 
 function closeSetModal() {
+  overlayClosedAt = performance.now();
   document.getElementById('set-modal-overlay').classList.remove('open');
   pendingSet = null;
 }
@@ -1038,7 +1055,7 @@ let pendingHold = null;   // { exIdx, setNum, ex, mode, value: Sekunden | 'max' 
 // Release-Audit v2.10 c3: Der zweite Tipp eines Doppeltipps auf einen Zeitsatz traf das gerade geöffnete Fenster („Ohne Timer
 // eintragen“ beim letzten Satz = Einheit gespeichert). Echte Tipps zählen erst nach DLG_ARM_MS, wie beim Rückfrage-Dialog.
 let holdOpenedAt = 0;
-const holdTooEarly = e => e && e.isTrusted && performance.now() - holdOpenedAt < DLG_ARM_MS;
+const holdTooEarly = e => e && e.isTrusted && evtTime(e) - holdOpenedAt < DLG_ARM_MS;
 
 function clampHold(n) {
   n = Math.round(Number(n));
@@ -1113,6 +1130,7 @@ async function openHoldModal(exIdx, setNum, ex) {
 }
 
 function closeHoldModal() {
+  overlayClosedAt = performance.now();
   document.getElementById('hold-modal-overlay').classList.remove('open');
   pendingHold = null;
 }
@@ -1227,7 +1245,8 @@ async function finishWorkoutOnce() {
 }
 
 // Manuell beenden: speichert auch Teil-Workouts (Plan) und Freies Training
-document.getElementById('btn-finish').addEventListener('click', () => {
+document.getElementById('btn-finish').addEventListener('click', e => {
+  if (tooSoonAfterClose(e)) return;   // zweiter Tipp eines Doppeltipps auf „Abbrechen“ eines Fensters (Runde 3)
   if (!activeSession || !activeSession.sets.length) return;
   cancelTimer();
   finishWorkout();
@@ -1871,7 +1890,15 @@ async function saveBackupFile(name, text) {
   catch (e) { return 'canceled'; }   // Teilen abgebrochen: die Cache-Datei allein nützt niemandem
 }
 
+// Release-Audit v2.10 Runde 3: Ein Doppeltipp auf „Import“ startete zwei Läufe — eigene Pläne wurden doppelt angelegt
+// (Einheiten nicht, die gleicht „Zusammenführen“ ab). Wie exportBusy beim Export.
+let importBusy = false;
 async function applyImport(text) {
+  if (importBusy) return;
+  importBusy = true;
+  try { await applyImportOnce(text); } finally { importBusy = false; }
+}
+async function applyImportOnce(text) {
   const msg = document.getElementById('backup-msg');
   try {
     const obj = JSON.parse(text);
