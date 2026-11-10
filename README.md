@@ -20,16 +20,18 @@ has been retired.
 - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
 - Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
 - Live session logging with automatic rest timer, corrections supported
-- "Last time" on every exercise card and pre-filled for every set — progressive overload at a glance
-- HIT intervals: timed sets ("20 sec") run with a work timer, rest and auto-chained next set
+- "Last time" on the exercise cards and pre-filled for every set — progressive overload at a glance
+- HIT intervals: timed sets ("20 sec") let you pick the work time (20–180 s or custom), then a 5 s get-ready countdown, work timer, rest and auto-chained next round
 - Hold exercises (plank): pick the hold time per set (30–180 s, custom, or "Max" as a stopwatch), 5 s get-ready countdown
+- Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds (German, or simple English words in English mode); bundled audio files, turn it off with one tap
+- Technique tips for every exercise and safety warnings where it matters, from Kerstin (German and English)
 - Interrupted workouts survive an app kill and can be resumed, saved or discarded
 - Session details with every set, a free-text note and delete
 - Progress charts per exercise (max weight / reps or seconds over time)
 - Exercise library with images, muscle groups and equipment
 - JSON backup: export saves a file to "Documents" and opens the share sheet (Android 11+; older versions: share sheet only); import with merge (duplicate detection) or replace
 - German and English interface, switchable in-app
-- Dark neon UI, mobile-first; screen stays awake during a workout, timer ends with beep and vibration
+- Dark neon UI, mobile-first; screen stays awake during a workout, timer ends with vibration and an announcement (or a beep with the voice off)
 
 Built-in plans use bodyweight, a pull-up bar, dumbbells and a bench — no gym required.
 
@@ -117,6 +119,13 @@ kept in on-device storage; the only files the app loads are its own bundled asse
 (exercise seed, fonts, Chart.js). No network calls — and no permission to make any.
 
 End-to-end tests (Brave via playwright-core): `node apk/serve-test.mjs &` then `node apk/e2e-test.mjs`.
+
+## Credits
+
+- Voice announcements are pre-generated offline with [Piper](https://github.com/rhasspy/piper) and bundled as audio files
+  (`apk/make-voice.sh`, texts in `apk/voice/cues.json`). Voice: "Thorsten"
+  ([Thorsten-Voice](https://github.com/thorstenMueller/Thorsten-Voice), CC0).
+- Kerstin's portrait and the app icon are our own artwork.
 
 ## License
 

@@ -6,7 +6,8 @@
 //      nachweisbar nicht funken, egal was im WebView passiert.
 //   2) www/: Sicherung, dass kein Frontend-Asset auf http(s):// verweist (z.B. ein
 //      versehentlich wieder eingebauter Google-Fonts-Import).
-//   3) Share-Plugin ohne exportierten Receiver (Audit run-2 A1), 4) VIBRATE eintragen (v2.9).
+//   3) Share-Plugin ohne exportierten Receiver (Audit run-2 A1), 4) VIBRATE eintragen (v2.9),
+//   5) FileProvider eng fassen (v2.10, Hinweis aus Audit run-2).
 //   --check <manifest> / --check-apk <apk>: Prüfmodi für den Build und make-release.sh.
 //
 // allowBackup bleibt absichtlich auf true: der Trainingsverlauf ist nicht geheim, und ein
@@ -47,6 +48,7 @@ if (process.argv[2] === '--check') {
 //   b) Share-Plugin im Bytecode (dexdump, alle Klassen unter com/capacitorjs/plugins/share/): kein Receiver
 //      (Oberklasse, Registrierungs-Signatur auch über D8-Outlines), kein Rückruf, keine CHOSEN_COMPONENT-Aktion.
 //   c) DisableDeploy=true in der kompilierten config.xml der APK (Pfad über die Ressourcentabelle, AGP kürzt ihn).
+//   d) FileProvider-Pfade der APK (xml/file_paths): genau Documents/ und der App-Cache (v2.10).
 if (process.argv[2] === '--check-apk') {
   const apk = process.argv[3];
   const bt = `${process.env.ANDROID_HOME || process.env.HOME + '/Android/sdk'}/build-tools/34.0.0`;
@@ -79,6 +81,11 @@ if (process.argv[2] === '--check-apk') {
     const cfg = (run(`${bt}/aapt2`, ['dump', 'resources', apk]).match(/ xml\/config\n\s+\(\) \(file\) (\S+)/) || [])[1];
     const tree = cfg ? run(`${bt}/aapt2`, ['dump', 'xmltree', '--file', cfg, apk]) : '';
     if (!/A: name="DisableDeploy"[^\n]*\n\s+A: value="?true/.test(tree)) problems.push('DisableDeploy=true fehlt in der config.xml der APK');
+
+    const fp = (run(`${bt}/aapt2`, ['dump', 'resources', apk]).match(/ xml\/file_paths\n\s+\(\) \(file\) (\S+)/) || [])[1];
+    const fpTree = fp ? run(`${bt}/aapt2`, ['dump', 'xmltree', '--file', fp, apk]) : '';
+    const roots = [...fpTree.matchAll(/E: ([\w-]+-path)[\s\S]*?A: [^\n]*?path[^\n]*?="([^"]*)"/g)].map(x => `${x[1]}:${x[2]}`).sort();
+    if (roots.join(' ') !== 'cache-path:. external-path:Documents/') problems.push(`FileProvider-Pfade nicht eng gefasst (${roots.join(' ') || 'nicht gefunden'})`);
   } catch (e) {
     console.error(`FEHLER: APK-Prüfung nicht durchführbar (${e.message.split('\n')[0]}) — abgebrochen.`);
     process.exit(1);
@@ -88,7 +95,7 @@ if (process.argv[2] === '--check-apk') {
     try { unlinkSync(apk); } catch (e) {}
     process.exit(1);
   }
-  console.log(`APK geprüft (${apk}): Berechtigungen ${perms.join(', ')}; Share ohne Receiver/Rückruf; DisableDeploy gesetzt.`);
+  console.log(`APK geprüft (${apk}): Berechtigungen ${perms.join(', ')}; Share ohne Receiver/Rückruf; DisableDeploy gesetzt; FileProvider nur Documents/ + Cache.`);
   process.exit(0);
 }
 
@@ -175,6 +182,22 @@ if (/\bregisterReceiver|RECEIVER_EXPORTED|PendingIntent\.getBroadcast|getIntentS
   console.error('FEHLER: Share-Plugin enthält nach dem Patch noch Receiver/Rückruf — Build abgebrochen!');
   process.exit(1);
 }
+
+// 5) FileProvider eng fassen (v2.10, Hinweis aus Audit run-2): Das Capacitor-Template gibt den GANZEN externen
+//    Speicher (external-path ".") und den ganzen Cache frei. Geteilt wird nur das Backup, und zwar aus „Documents“
+//    (Filesystem DOCUMENTS = Environment.DIRECTORY_DOCUMENTS) oder aus dem App-Cache (Rückfall, saveBackupFile).
+//    Die Kamera-Aufnahme der WebView (BridgeWebChromeClient, getExternalFilesDir) braucht die App nicht: das
+//    einzige <input type="file"> (Backup-Import) hat kein capture. Datei wird bei jedem Build vollständig geschrieben.
+const PATHS = 'android/app/src/main/res/xml/file_paths.xml';
+const PATHS_XML = `<?xml version="1.0" encoding="utf-8"?>
+<!-- alien-fitness: eng gefasst (patch-hardening.mjs, v2.10): nur das Backup in Documents/ und der App-Cache -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-path name="documents" path="Documents/" />
+    <cache-path name="cache" path="." />
+</paths>
+`;
+if (readFileSync(PATHS, 'utf8') !== PATHS_XML) { writeFileSync(PATHS, PATHS_XML); console.log('FileProvider-Pfade eng gefasst (Documents/ + Cache).'); }
+else console.log('FileProvider-Pfade bereits eng gefasst.');
 
 // 2) Kein externer Verweis im gebündelten Frontend (CSS/JS/HTML). Kommentare zählen nicht.
 const offenders = [];

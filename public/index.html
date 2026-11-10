@@ -151,6 +151,8 @@
       <div id="workout-header">
         <button class="btn btn-sm ghost" id="btn-abort" data-i18n="workout.abort">← Abbrechen</button>
         <span id="workout-plan-name"></span>
+        <!-- v2.10: Ansage-Stimme Thorsten an/aus (app.js renderVoiceBtns, Name per textContent) -->
+        <button type="button" class="voice-btn" id="voice-btn-workout"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z"/><path class="waves" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg><span class="voice-name">Thorsten</span></button>
       </div>
       <div id="workout-progress-bar" style="height:3px;background:var(--card2);border-radius:2px;margin-bottom:16px;">
         <div id="workout-progress-fill" style="height:100%;background:var(--neon);border-radius:2px;width:0%;transition:width 0.3s;"></div>
@@ -259,14 +261,15 @@
   </div>
 </div>
 
-<!-- Haltezeit (v2.9): Halteübungen wie Plank — Dauer wählen, dann Vorlauf und Halte-Timer.
-     Chips baut app.js (HOLD_CHOICES), Text nur per textContent. -->
+<!-- Zeitwahl (v2.9 Halteübungen wie Plank, seit v2.10 auch Intervalle wie Tabata) — Dauer wählen,
+     dann Vorlauf und Timer. Chips baut app.js je Öffnen (HOLD_CHOICES bzw. INTERVAL_CHOICES), Text nur per textContent. -->
 <div id="hold-modal-overlay">
   <div id="hold-modal">
     <h3 id="hold-modal-title"></h3>
     <div id="hold-last" class="set-last"></div>
-    <div class="hold-label" data-i18n="hold.title">Haltezeit</div>
+    <div class="hold-label" id="hold-label" data-i18n="hold.title">Haltezeit</div>
     <div id="hold-chips" class="hold-chips"></div>
+    <div id="hold-chain-hint" class="hold-hint chain hidden"></div>
     <div class="input-row">
       <div class="input-group">
         <label for="input-hold" data-i18n="hold.custom">Eigene Zeit (Sekunden)</label>
@@ -284,6 +287,7 @@
 
 <!-- Rest Timer overlay -->
 <div id="timer-overlay">
+  <button type="button" class="voice-btn" id="voice-btn-timer"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z"/><path class="waves" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg><span class="voice-name">Thorsten</span></button>
   <div id="timer-label" data-i18n="timer.label">PAUSE</div>
   <div id="timer-count">90</div>
   <div id="timer-exercise"></div>
@@ -325,15 +329,19 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.timer.t">Pause-Timer</div>
-        <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz. Am Ende ertönt ein Beep-Signal. Mit "Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
+        <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz, hält das Display wach und meldet sich am Ende mit Vibration und einer Ansage (bei ausgeschalteter Stimme mit einem Beep). Mit „Überspringen →" kannst du die Pause jederzeit vorzeitig beenden.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.hit.t">HIT-Intervalle</div>
-        <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek") laufen als Intervall: Satz antippen startet den Arbeits-Timer, danach folgt die Pause und der nächste Satz derselben Übung startet von selbst. „■ Stopp" unterbricht die Kette, „Fertig →" beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
+        <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek") laufen als Intervall: Satz antippen öffnet die Zeitwahl (20 bis 180 Sekunden oder eine eigene Zeit, vorbelegt mit der zuletzt gestarteten Zeit, sonst der Angabe im Plan). Nach „▶ Start" bleiben 5 Sekunden zum Bereitmachen, dann läuft der Arbeits-Timer, danach die Pause, und die nächste Runde derselben Übung startet von selbst mit derselben Zeit. „■ Stopp" unterbricht die Kette, „Fertig →" beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.hold.t">Halteübungen (Plank)</div>
         <p data-i18n="help.hold.b">Bei Plank wählst du vor jedem Satz die Haltezeit: 30 bis 180 Sekunden, eine eigene Zeit oder „Max“ als Stoppuhr. Vorbelegt ist die zuletzt gewählte Zeit. Nach „▶ Start“ bleiben 5 Sekunden, um in Position zu kommen, dann läuft der Halte-Timer. „Fertig →“ beendet früher und speichert die gehaltene Zeit, „■ Stopp“ bricht ohne Eintrag ab. „Ohne Timer eintragen“ speichert die gewählte Zeit direkt, etwa zum Korrigieren.</p>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title" data-i18n="help.kerstin.t">Kerstins Tipps und Thorstens Ansagen</div>
+        <p data-i18n="help.kerstin.b">Kerstin, die Bord-KI, gibt zu jeder Übung einen Technik-Tipp und bei manchen eine Warnung: im Training unter der Beschreibung zum Aufklappen, in der Übungsbibliothek immer sichtbar. Ihre Hinweise sind allgemein und ersetzen keine Beratung durch Arzt oder Trainer; bei Schmerzen die Übung abbrechen. Im Training sagt Thorsten an, was als Nächstes kommt („Mach dich bereit“, „Los geht’s“, „Pause“), drei kurze Töne zählen die letzten Sekunden bis zum Start. Der Lautsprecher-Knopf oben im Training und im Timer schaltet die Ansagen ein und aus. Sie sind fertige Tondateien in der App, nichts wird aus dem Netz geladen.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.progress.t">Fortschritt</div>
@@ -434,6 +442,7 @@
 
 <script src="i18n.js"></script>
 <script src="local-db.js"></script>
+<script src="voice.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

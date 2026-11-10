@@ -332,6 +332,29 @@ h3 {
 .ex-last { font-family: var(--font-b); font-size: 0.7rem; color: var(--muted); padding: 0 16px 12px; line-height: 1.5; }
 .ex-last b { color: var(--neon); font-weight: 400; }
 
+/* ── Kerstin (v2.10): Tipp/Warnung je Übung, wie die Kerstin-Blöcke der Bücher im Neon-Look ── */
+.kerstin { padding: 0 16px 12px; }
+.ex-lib-body .kerstin { padding: 10px 0 0; }
+.kerstin-toggle {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 4px;
+  background: transparent; border: 1px solid var(--border); border-radius: 18px; color: var(--neon);
+  font-family: var(--font-b); font-size: 0.72rem; letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+}
+.kerstin-mini, .kerstin-avatar { border-radius: 50%; border: 1px solid var(--neon-mid); object-fit: cover; flex-shrink: 0; }
+.kerstin-mini { width: 26px; height: 26px; }
+.kerstin-avatar { width: 30px; height: 30px; box-shadow: 0 0 8px rgba(0,255,204,0.3); }
+.kerstin-flag { color: var(--yellow); }
+.kerstin-chev { color: var(--muted); transition: transform 0.2s; }
+.kerstin.open .kerstin-chev { transform: rotate(180deg); }
+.kerstin-toggle + .kerstin-block { margin-top: 10px; }
+.kerstin-part { border-left: 2px solid var(--neon); background: var(--neon-dim); padding: 10px 12px; border-radius: 0 var(--radius) var(--radius) 0; }
+.kerstin-part + .kerstin-part { margin-top: 8px; }
+.kerstin-warn { border-left-color: var(--yellow); background: rgba(255,204,68,0.08); }
+.kerstin-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.kerstin-label { font-family: var(--font-h); font-size: 0.62rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--neon); }
+.kerstin-warn .kerstin-label { color: var(--yellow); }
+.kerstin-text { font-family: var(--font-r); font-size: 0.82rem; line-height: 1.55; color: var(--text); }
+
 .sets-row {
   display: flex;
   gap: 8px;
@@ -386,7 +409,7 @@ h3 {
 }
 #set-modal h3, #hold-modal h3 { margin-bottom: 18px; color: var(--neon); font-size: 0.78rem; }
 
-/* ── Haltezeit (v2.9, Plank) ─────────────────────────────────────────────────── */
+/* ── Zeitwahl (v2.9 Plank, seit v2.10 auch Intervalle) ────────────────────────  */
 .hold-label {
   font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--muted); margin-bottom: 8px; font-family: var(--font-b);
@@ -399,6 +422,7 @@ h3 {
 .hold-chip.on { border-color: var(--neon); background: var(--neon-dim); color: var(--neon); box-shadow: 0 0 10px rgba(0,255,204,0.25); }
 .hold-chip[data-value="max"] { font-family: var(--font-h); font-size: 0.68rem; letter-spacing: 1px; }
 .hold-hint { font-family: var(--font-b); font-size: 0.7rem; color: var(--yellow); margin: -6px 0 14px; }
+.hold-hint.chain { color: var(--muted); }   /* v2.10: Intervall-Hinweis „gilt auch für die folgenden Runden“ */
 .hold-btns { display: flex; gap: 8px; margin-top: 4px; }
 .hold-btns .btn { flex: 1; min-width: 0; }
 .btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
@@ -474,6 +498,25 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 #timer-overlay.prep #timer-count:not(.urgent) { color: var(--yellow); text-shadow: 0 0 40px var(--yellow), 0 0 80px rgba(255,204,68,0.3); }
 #timer-exercise { font-size: 0.9rem; color: var(--muted); margin-bottom: 36px; font-family: var(--font-r); }
 #timer-skip { margin-top: 0; }
+
+/* ── Ansage-Stimme (v2.10): Umschalter Kerstin → Thorsten → Aus ─────────────── */
+.voice-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px;
+  background: transparent; border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--neon); font-family: var(--font-b); font-size: 0.75rem; letter-spacing: 0.5px; cursor: pointer;
+  white-space: nowrap;
+}
+.voice-btn svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+.voice-btn .spk { fill: currentColor; }
+.voice-btn.off { color: var(--muted); }
+.voice-btn.off .waves, .voice-btn:not(.off) .mute { display: none; }
+/* Kopfzeile im Training: Abbrechen links, Stimme rechts, Planname darunter über die volle Breite
+   (neben dem Knopf brach der Name bei 360 px auf sieben Zeilen um) */
+#workout-header { flex-wrap: wrap; row-gap: 12px; }
+#workout-header .voice-btn { margin-left: auto; flex-shrink: 0; }
+#workout-header #workout-plan-name { order: 3; flex-basis: 100%; }
+#voice-btn-timer { position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; }
 
 /* ── Progress Charts ─────────────────────────────────────────────────────────── */
 /* Das Auswahlfeld ist seit v2.7 ein Kombifeld — das Aussehen steckt in .combo-btn. */

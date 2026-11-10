@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
@@ -482,6 +482,8 @@ function timedSeconds(ex) {
 // („20 Sek“) bleibt das Tabata-Intervall mit Kette.
 const HOLD_IDS = new Set([24]);                 // Plank
 const HOLD_CHOICES = [30, 45, 60, 90, 120, 180];
+// Intervalle (v2.10): gleiche Auswahl vor dem Start, aber ohne „Max“ (eine Stoppuhr passt nicht in eine Kette)
+const INTERVAL_CHOICES = [20, 30, 45, 60, 90, 120, 180];
 const HOLD_PREP = 5;                            // Vorlauf „Bereit machen“ (Sekunden)
 const HOLD_MAX_CAP = 600;                       // Obergrenze für eigene Zeit und Stoppuhr
 const HOLD_KEY = 'fit-hold-target';             // zuletzt gewählte Haltezeit je Übung (Komfort, nicht im Backup)
@@ -804,6 +806,10 @@ function renderExercises(exercises) {
       card.appendChild(desc);
     }
 
+    // Kerstin (v2.10): Tipp/Warnung eingeklappt unter der Beschreibung
+    const kerstin = kerstinEl(ex.exercise_id, true);
+    if (kerstin) card.appendChild(kerstin);
+
     // „Letztes Mal“ (v2.9), füllt fillLastLines() nach — ohne Vorgeschichte bleibt die Zeile weg
     const lastLine = document.createElement('div');
     lastLine.className = 'ex-last hidden';
@@ -819,8 +825,9 @@ function renderExercises(exercises) {
       btn.className = 'set-btn';
       btn.id = `set-${ei}-${s}`;
       btn.innerHTML = `<span class="set-num">${s}</span><span class="set-val">${(timed || hold) ? '▶' : '–'}</span>`;
+      // Zeitsätze (Halten wie Intervall) öffnen seit v2.10 erst die Zeitwahl, dann Vorlauf und Timer
       btn.addEventListener('click', () =>
-        hold ? openHoldModal(ei, s, ex) : timed ? startTimedSet(ei, s, ex) : openSetModal(ei, s, ex));
+        (hold || timed) ? openHoldModal(ei, s, ex) : openSetModal(ei, s, ex));
       setsRow.appendChild(btn);
     });
 
@@ -992,11 +999,12 @@ function saveSet() {
   startTimer(rest, { sub: nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest') });
 }
 
-// ── Intervall-Sätze (HIT): Arbeits-Timer → Satz mit Dauer loggen → Pause → nächster Satz
-function startTimedSet(exIdx, setNum, ex) {
-  const secs = timedSeconds(ex) || 20;
+// ── Intervall-Sätze (HIT): Arbeits-Timer → Satz mit Dauer loggen → Pause → nächster Satz.
+// secs = in der Zeitwahl gewählte Dauer (v2.10), gilt für die ganze Kette dieser Übung.
+function startTimedSet(exIdx, setNum, ex, secs) {
+  secs = clampHold(secs) || timedSeconds(ex) || 20;
   const sub = `${ex.name} · ${I18N.t('dyn.setN')} ${setNum}/${ex.sets}`;
-  startTimer(secs, { kind: 'work', chain: true, sub, onDone: (elapsed) => {
+  startTimer(secs, { kind: 'work', chain: true, sub, cue: ex.sets > 1 && setNum >= ex.sets ? 'last' : 'go', onDone: (elapsed) => {
     const r = commitSet(exIdx, setNum, ex, {
       exercise_id: ex.exercise_id, set_number: setNum,
       reps: null, weight_kg: 0, duration_seconds: elapsed, completed: 1,
@@ -1010,13 +1018,14 @@ function startTimedSet(exIdx, setNum, ex) {
       chain: chainNext,
       sub: chainNext ? `${ex.name} · ${I18N.t('dyn.setN')} ${next}/${ex.sets}`
                      : (nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest')),
-      onDone: chainNext ? () => startTimedSet(exIdx, next, ex) : null,
+      onDone: chainNext ? () => startTimedSet(exIdx, next, ex, secs) : null,
     });
   } });
 }
 
-// ── Halteübungen (v2.9): Haltezeit wählen → Vorlauf → Halte-Timer → Satz mit Dauer → Pause
-let pendingHold = null;   // { exIdx, setNum, ex, value: Sekunden | 'max' | null (ungültige Eingabe) }
+// ── Zeitwahl (v2.9 Halteübungen, seit v2.10 auch Intervalle): Zeit wählen → Vorlauf → Timer → Satz mit Dauer → Pause.
+// mode 'hold' = einzelner Satz (Plank), 'interval' = Kette (Tabata), Vorlauf nur vor der ersten Runde.
+let pendingHold = null;   // { exIdx, setNum, ex, mode, value: Sekunden | 'max' | null (ungültige Eingabe) }
 
 function clampHold(n) {
   n = Math.round(Number(n));
@@ -1032,20 +1041,21 @@ function rememberHoldTarget(exId, v) {
   try { const m = readHoldTargets(); m[exId] = v; localStorage.setItem(HOLD_KEY, JSON.stringify(m)); } catch (e) {}
 }
 
-// Chips einmal bauen; „Max“ trägt data-i18n und wird von applyStatic übersetzt
-(function buildHoldChips() {
+// Chips je Öffnen bauen (Halten mit „Max“, Intervall ohne); „Max“ trägt data-i18n für applyStatic
+function buildHoldChips(mode) {
   const box = document.getElementById('hold-chips');
-  [...HOLD_CHOICES, 'max'].forEach(v => {
+  box.textContent = '';
+  (mode === 'hold' ? [...HOLD_CHOICES, 'max'] : INTERVAL_CHOICES).forEach(v => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'hold-chip';
     b.dataset.value = v;
-    if (v === 'max') { b.dataset.i18n = 'hold.max'; b.textContent = 'Max'; }
+    if (v === 'max') { b.dataset.i18n = 'hold.max'; b.textContent = I18N.t('hold.max'); }
     else b.textContent = `${v} s`;
     b.addEventListener('click', () => setHoldValue(v, true));
     box.appendChild(b);
   });
-})();
+}
 
 // Auswahl anzeigen: Chip markieren, Eingabefeld, Stoppuhr-Hinweis, „Ohne Timer“ nur mit fester Zeit.
 // writeInput=false beim Tippen ins Feld (sonst springt der Cursor bzw. „4“ würde zu „5“).
@@ -1062,14 +1072,23 @@ function setHoldValue(v, writeInput) {
 }
 
 async function openHoldModal(exIdx, setNum, ex) {
-  pendingHold = { exIdx, setNum, ex, value: null };
+  const mode = isHoldSet(ex) ? 'hold' : 'interval';
+  pendingHold = { exIdx, setNum, ex, mode, value: null };
+  buildHoldChips(mode);
   document.getElementById('hold-modal-title').textContent = `${I18N.t('dyn.setN')} ${setNum} — ${ex.name}`;
-  // Vorbelegung: eigener Satz (Korrektur) > zuletzt gewählte Haltezeit dieser Übung > Plan-Angabe > 60 s
+  const label = document.getElementById('hold-label');
+  label.dataset.i18n = mode === 'hold' ? 'hold.title' : 'hold.titleInterval';
+  label.textContent = I18N.t(label.dataset.i18n);
+  // Intervall: die Wahl gilt für die folgenden Runden der Kette (Hinweis nur, wenn noch Runden folgen)
+  const chainHint = document.getElementById('hold-chain-hint');
+  chainHint.textContent = I18N.t('hold.chainHint', { rest: ex.rest_seconds || 10 });
+  chainHint.classList.toggle('hidden', mode !== 'interval' || setNum >= ex.sets);
+  // Vorbelegung: eigener Satz (Korrektur) > zuletzt gewählte Zeit dieser Übung > Plan-Angabe > 60 s (Halten) bzw. 20 s
   const own = activeSession.sets.find(s => setRow(s) === exIdx && s.set_number === setNum && s.duration_seconds);
   const saved = readHoldTargets()[ex.exercise_id];
   const pre = (own && clampHold(own.duration_seconds))
-    || (saved === 'max' ? 'max' : clampHold(saved))
-    || clampHold(timedSeconds(ex)) || 60;
+    || (saved === 'max' ? (mode === 'hold' ? 'max' : null) : clampHold(saved))
+    || clampHold(timedSeconds(ex)) || (mode === 'hold' ? 60 : 20);
   setHoldValue(pre, true);
   const lastEl = document.getElementById('hold-last');
   lastEl.textContent = '';
@@ -1088,14 +1107,19 @@ function holdSub(ex, setNum) { return `${ex.name} · ${I18N.t('dyn.setN')} ${set
 
 function startHold() {
   if (!pendingHold || !pendingHold.value) return;
-  const { exIdx, setNum, ex, value } = pendingHold;
+  const { exIdx, setNum, ex, value, mode } = pendingHold;
   rememberHoldTarget(ex.exercise_id, value);
   closeHoldModal();
   const sub = holdSub(ex, setNum);
+  if (mode === 'interval') {
+    // Vorlauf nur vor der ersten Runde; danach bereitet die Pause der Kette vor (Tabata bleibt 20/10)
+    startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () => startTimedSet(exIdx, setNum, ex, value) });
+    return;
+  }
   // Vorlauf: Zeit, um vom Handy in die Position zu kommen. „Los →“ startet sofort, „■ Stopp“ bricht ohne Eintrag ab.
   startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () => {
     const up = value === 'max';   // Stoppuhr zählt hoch, „Fertig →“ speichert die gehaltene Zeit
-    startTimer(up ? HOLD_MAX_CAP : value, { kind: 'work', label: 'timer.hold', up, chain: true, sub,
+    startTimer(up ? HOLD_MAX_CAP : value, { kind: 'work', label: 'timer.hold', up, chain: true, sub, cue: 'hold',
       onDone: elapsed => logHold(exIdx, setNum, ex, elapsed) });
   } });
 }
@@ -1183,6 +1207,7 @@ async function finishWorkoutOnce() {
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
   document.getElementById('workout-done-banner').style.display = 'block';
+  Voice.say('done');
 }
 
 // Manuell beenden: speichert auch Teil-Workouts (Plan) und Freies Training
@@ -1221,6 +1246,18 @@ let timerInterval = null;
 let timerState = null;   // { kind: 'rest'|'work'|'prep', chain, up, start, end, seconds, onDone }
 const TIMER_LABEL = { rest: 'timer.label', work: 'timer.work', prep: 'timer.prep' };
 const TIMER_SKIP  = { rest: 'timer.skip',  work: 'timer.done', prep: 'timer.go' };
+// Ansagen (v2.10, voice.js): jede Phase sagt sich beim Start an; opts.cue überschreibt (z.B. 'last', 'hold'), null = still
+const TIMER_CUE   = { rest: 'rest', work: 'go', prep: 'prep' };
+let announced = false;   // hat sich die Phase nach einem abgelaufenen Timer angesagt? Dann kein Piepton (endTimer)
+function announce(cue) { if (cue && Voice.say(cue)) announced = true; }
+// Während des Zählens: „Noch zehn Sekunden“ in Pausen und Arbeit ab 30 s; vor dem automatischen Start (Vorlauf, Pause
+// einer Kette) zählen drei kurze Töne, dann sagt Thorsten „Los geht's“. Gesprochene Zahlen klangen abgehackt bzw. auf
+// Englisch unverständlich (Hörprobe 10.11.2026, Wahl Nutzer: Ton + „Los“ in beiden Sprachen). Die Stoppuhr sagt nichts.
+function cueTick(st, rem) {
+  if (st.up || !Voice.on()) return;
+  if (rem === 10 && st.seconds >= 30 && st.kind !== 'prep') Voice.say('ten');
+  else if (rem >= 1 && rem <= 3 && (st.kind === 'prep' || (st.kind === 'rest' && st.chain))) playTick();
+}
 
 // opts: kind ('rest' default | 'work' | 'prep' = Vorlauf), chain (Stopp-Taste zeigen: Intervall-Kette,
 //       Vorlauf, Halten), label (i18n-Schlüssel statt Vorgabe je kind), up (Stoppuhr: zählt hoch,
@@ -1232,7 +1269,7 @@ function startTimer(seconds, opts = {}) {
   const start = Date.now();
   const kind = TIMER_LABEL[opts.kind] ? opts.kind : 'rest';
   timerState = { kind, chain: !!opts.chain, up: !!opts.up, start, end: start + seconds * 1000,
-                 seconds, onDone: opts.onDone || null };
+                 seconds, onDone: opts.onDone || null, lastSec: seconds };
 
   const overlay = document.getElementById('timer-overlay');
   const count = document.getElementById('timer-count');
@@ -1245,6 +1282,7 @@ function startTimer(seconds, opts = {}) {
   setTimerCount(timerState.up ? 0 : seconds);
   count.classList.remove('urgent');
   overlay.classList.add('open');
+  announce(opts.cue !== undefined ? opts.cue : TIMER_CUE[kind]);
 
   const urgentAt = kind === 'rest' ? 5 : 3;
   timerInterval = setInterval(() => {
@@ -1259,6 +1297,7 @@ function startTimer(seconds, opts = {}) {
     }
     const remaining = Math.max(0, Math.ceil((timerState.end - now) / 1000));
     setTimerCount(remaining);
+    if (remaining !== timerState.lastSec) { timerState.lastSec = remaining; cueTick(timerState, remaining); }
     if (remaining <= urgentAt) count.classList.add('urgent');
     if (remaining <= 0) endTimer(false);
   }, 250);
@@ -1281,17 +1320,24 @@ function endTimer(skipped) {
   stopTicking();
   timerState = null;
   closeTimerOverlay();
-  if (!skipped) { playBeep(); vibrate(); }
+  if (!skipped) vibrate();
   const ms = Math.min(Date.now(), st.end) - st.start;
   // Stoppuhr: abrunden wie die Anzeige (zeigt „47“, speichert 47)
   const elapsed = Math.max(1, st.up ? Math.floor(ms / 1000) : Math.round(ms / 1000));
+  announced = false;
   if (st.onDone) st.onDone(skipped ? elapsed : st.seconds, skipped);
+  // Regulär abgelaufen (v2.10): Mit Stimme sagt sich die nächste Phase selbst an („Los!“, „Pause.“), eine Pause
+  // ohne Kette endet mit „Weiter geht's.“, nach dem letzten Satz folgt „Geschafft“ (finishWorkout). Ohne Stimme
+  // oder bei fehlender Datei piept es wie bisher.
+  if (!skipped && !announced && !(Voice.on() && finishBusy)
+      && !(st.kind === 'rest' && !st.chain && Voice.say('next'))) playBeep();
 }
 // Abbrechen ohne onDone: Intervall-Kette stoppen, laufender Arbeits-Satz wird NICHT geloggt
 function cancelTimer() {
   stopTicking();
   timerState = null;
   closeTimerOverlay();
+  Voice.stop();            // ein laufendes „Drei, zwei …“ nicht nach dem Stopp weitersprechen lassen
 }
 
 // Wächter (Audit run-2 C3): „Los →“ / „Überspringen →“ und „Fertig →“ sind derselbe Knopf an derselben
@@ -1299,8 +1345,15 @@ function cancelTimer() {
 // gestartete Halten bzw. Intervall und speicherte 1 s — beim letzten Satz samt Abschluss der Einheit.
 // Niemand beendet ein Halten oder Intervall in unter einer Sekunde.
 const SKIP_ARM_MS = 1000;
+// R2-5 (v2.10): Der zweite Tipp eines Doppeltipps auf „Fertig →“ traf die gerade gestartete Pause
+// („Überspringen →“) und übersprang sie. Ein angenommener Tipp sperrt den Knopf deshalb kurz.
+const SKIP_DOUBLE_MS = 500;
+let lastSkipAt = 0;
 document.getElementById('timer-skip').addEventListener('click', () => {
-  if (timerState && timerState.kind === 'work' && Date.now() - timerState.start < SKIP_ARM_MS) return;
+  const now = Date.now();
+  if (timerState && timerState.kind === 'work' && now - timerState.start < SKIP_ARM_MS) return;
+  if (now - lastSkipAt < SKIP_DOUBLE_MS) return;
+  lastSkipAt = now;
   endTimer(true);
 });
 document.getElementById('timer-stop').addEventListener('click', cancelTimer);
@@ -1309,9 +1362,30 @@ function vibrate() {
   try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
 }
 
+// Ein kurzer Zählton (Countdown ohne Zahlen-Ansage), leiser und kürzer als der Dreifach-Piepton am Ende
+function playTick() {
+  try {
+    const ctx = Voice.audioCtx();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 1320;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+    Voice.idle();
+  } catch (e) {}
+}
+
 function playBeep() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // v2.10: ein gemeinsamer Kontext für Piepton und Ansagen (voice.js) statt eines neuen je Ton
+    const ctx = Voice.audioCtx();
+    if (!ctx) return;
     [0, 0.15, 0.3].forEach(offset => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1324,9 +1398,7 @@ function playBeep() {
       osc.start(ctx.currentTime + offset);
       osc.stop(ctx.currentTime + offset + 0.2);
     });
-    // Kontext nach dem Ton schließen (v2.9): jeder Beep legt einen neuen an, offene Kontexte halten
-    // Audio-Ressourcen — mit Vorlauf-Ton bei Halteübungen kommen pro Training einige Dutzend zusammen
-    setTimeout(() => { try { ctx.close(); } catch (e) {} }, 800);
+    Voice.idle();            // Kontext nach dem Ton wieder anhalten (Akku), siehe voice.js
   } catch(e) {}
 }
 
@@ -1577,9 +1649,66 @@ function renderLibrary(filter) {
         ${ex.type === 'hit' ? '<span class="tag hit">HIT</span>' : ''}
       </div>
       <div class="ex-lib-desc">${esc(ex.description || '')}</div>`;
+    const kerstin = kerstinEl(ex.id, false);   // v2.10: in der Bibliothek immer offen
+    if (kerstin) body.appendChild(kerstin);
     card.appendChild(body);
     el.appendChild(card);
   });
+}
+
+// ── Kerstin (v2.10): Technik-Tipp und ggf. Warnung je Übung ─────────────────────
+// Text aus kerstin.json (LocalData.kerstinFor, aktuelle Sprache), gesetzt nur per textContent.
+// collapsed = Übungskarte im Training (Knopf klappt auf), sonst offen (Bibliothek).
+function kerstinEl(exId, collapsed) {
+  const k = LocalData.kerstinFor(exId);
+  if (!k) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'kerstin';
+  const block = document.createElement('div');
+  block.className = 'kerstin-block';
+  const avatar = () => { const i = document.createElement('img'); i.src = 'images/kerstin.jpg'; i.alt = ''; return i; };
+  const part = (cls, labelKey, text, withAvatar) => {
+    const p = document.createElement('div');
+    p.className = 'kerstin-part ' + cls;
+    const head = document.createElement('div');
+    head.className = 'kerstin-head';
+    if (withAvatar) { const a = avatar(); a.className = 'kerstin-avatar'; head.appendChild(a); }
+    const label = document.createElement('span');
+    label.className = 'kerstin-label';
+    label.textContent = I18N.t(labelKey);
+    head.appendChild(label);
+    const t = document.createElement('div');
+    t.className = 'kerstin-text';
+    t.textContent = text;
+    p.append(head, t);
+    block.appendChild(p);
+  };
+  if (k.tip) part('kerstin-tip', 'kerstin.tip', k.tip, true);
+  if (k.warn) part('kerstin-warn', 'kerstin.warn', k.warn, !k.tip);
+  if (!collapsed) { wrap.appendChild(block); return wrap; }
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'kerstin-toggle';
+  btn.setAttribute('aria-expanded', 'false');
+  const mini = avatar();
+  mini.className = 'kerstin-mini';
+  const lbl = document.createElement('span');
+  lbl.textContent = I18N.t('kerstin.tip');
+  btn.append(mini, lbl);
+  if (k.warn) { const f = document.createElement('span'); f.className = 'kerstin-flag'; f.textContent = '⚠'; btn.appendChild(f); }
+  const chev = document.createElement('span');
+  chev.className = 'kerstin-chev';
+  chev.textContent = '▾';
+  btn.appendChild(chev);
+  block.classList.add('hidden');
+  btn.addEventListener('click', () => {
+    const open = block.classList.contains('hidden');
+    block.classList.toggle('hidden', !open);
+    wrap.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', String(open));
+  });
+  wrap.append(btn, block);
+  return wrap;
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
@@ -1836,13 +1965,28 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
   allExercises = [];
   rerenderCurrentView();
   if (activeSession) relabelActiveSession();   // laufendes Training: Namen in der neuen Sprache (v2.9)
+  renderVoiceBtns();
+  Voice.preload();                              // Ansagen der neuen Sprache (v2.10)
 });
+
+// ── Stimme (v2.10): Umschalter im Trainings-Schirm und im Timer, Zustand und Abspielen in voice.js ──
+function renderVoiceBtns() {
+  const v = Voice.get();
+  const name = v === 'off' ? I18N.t('voice.off') : v.charAt(0).toUpperCase() + v.slice(1);
+  document.querySelectorAll('.voice-btn').forEach(b => {
+    b.classList.toggle('off', v === 'off');
+    b.querySelector('.voice-name').textContent = name;
+    b.title = I18N.t('voice.title', { name });
+    b.setAttribute('aria-label', b.title);
+  });
+}
+document.querySelectorAll('.voice-btn').forEach(b => b.addEventListener('click', () => { Voice.next(); renderVoiceBtns(); }));
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.documentElement.lang = I18N.lang;
 I18N.applyStatic();
 syncCombos();                                // Knopfbeschriftungen aus den Selects setzen
-I18N.ready.then(() => { I18N.applyStatic(); syncCombos(); });   // Muskel-Filter-Labels nach Content-Load
+I18N.ready.then(() => { I18N.applyStatic(); syncCombos(); renderVoiceBtns(); Voice.preload(); });   // Muskel-Filter-Labels nach Content-Load
 updateLangToggle();
 renderAbout();
 loadDashboard();

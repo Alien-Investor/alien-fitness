@@ -1,0 +1,152 @@
+{
+  "1": {
+    "de": { "tip": "Gesäß und Bauch fest anspannen, damit die Hüfte nicht durchhängt. Je höher die Füße, desto schwerer wird die Übung und desto mehr arbeiten die Schultern mit." },
+    "en": { "tip": "Keep your glutes and abs tight so the hips don't sag. The higher your feet, the harder it gets and the more your shoulders work." }
+  },
+  "2": {
+    "de": { "tip": "Füße fest am Boden, Schulterblätter zurück und nach unten. Nur so tief absenken, wie es die Schulter ohne Ziehen zulässt.",
+            "warn": "Schwere Hanteln nach dem Satz nicht aus gestreckten Armen seitlich fallen lassen, das belastet die Schulter ruckartig. Erst zur Brust führen, dann ablegen." },
+    "en": { "tip": "Feet planted, shoulder blades back and down. Lower only as far as your shoulders allow without strain.",
+            "warn": "Don't drop heavy dumbbells out to the side from straight arms after the set, it jerks the shoulder. Bring them to your chest first, then put them down." }
+  },
+  "3": {
+    "de": { "tip": "Gute Vorstufe zum Liegestütz am Boden: Je höher die Hände, desto leichter. Hände etwa unter den Schultern, Körper bleibt eine Linie." },
+    "en": { "tip": "A good step towards floor push-ups: the higher your hands, the easier it gets. Hands roughly under the shoulders, body in one straight line." }
+  },
+  "4": {
+    "de": { "tip": "Bauch und Gesäß anspannen, Rippen unten lassen. Die Hanteln gerade über den Kopf drücken, nicht nach vorn. Im Sitzen mit Lehne fällt das leichter." },
+    "en": { "tip": "Brace your abs and glutes, keep the ribs down. Press the dumbbells straight overhead, not forward. Seated with a backrest makes this easier." }
+  },
+  "5": {
+    "de": { "tip": "Ein leichtes Gewicht reicht völlig. Ellenbogen leicht gebeugt, sie führen die Bewegung. Die Hände kommen nicht höher als die Ellenbogen." },
+    "en": { "tip": "A light weight is plenty. Elbows slightly bent and leading the movement. Your hands don't rise above your elbows." }
+  },
+  "6": {
+    "de": { "tip": "Ohne Schwung aus dem Rücken arbeiten. Wer für die letzten Wiederholungen ausholen muss, nimmt ein leichteres Gewicht." },
+    "en": { "tip": "Work without swinging from your back. If you need momentum for the last reps, go lighter." }
+  },
+  "7": {
+    "de": { "tip": "Gesäß nah an der Bank, die Ellenbogen zeigen nach hinten. Mit gebeugten Beinen ist die Übung leichter.",
+            "warn": "Nur so tief, wie die Schulter ohne Schmerz mitgeht. Tiefe Bank-Dips belasten die Schultervorderseite stark. Bei Schulterbeschwerden lieber eine Trizepsübung wählen, die nicht schmerzt." },
+    "en": { "tip": "Keep your glutes close to the bench, elbows pointing back. Bent legs make it easier.",
+            "warn": "Only go as deep as your shoulders allow without pain. Deep bench dips put a lot of stress on the front of the shoulder. With shoulder problems, choose a triceps exercise that doesn't hurt." }
+  },
+  "8": {
+    "de": { "tip": "Die Oberarme bleiben neben dem Kopf, nur die Unterarme bewegen sich. Auch beim Absenken langsam bleiben.",
+            "warn": "Die Hantel fest umgreifen: Hinter dem Kopf lässt sie sich schlecht abfangen. Lieber mit einem leichteren Gewicht beginnen." },
+    "en": { "tip": "Upper arms stay next to your head, only the forearms move. Stay slow on the way down too.",
+            "warn": "Grip the dumbbell firmly: behind your head it is hard to catch. Start with a lighter weight." }
+  },
+  "9": {
+    "de": { "tip": "Zu schwer? Erst auf den Knien oder mit den Händen auf der Bank üben. Drückt es im Handgelenk, die Hände etwas weiter auseinander setzen." },
+    "en": { "tip": "Too hard? Practise on your knees or with your hands on the bench first. If your wrists complain, place your hands a little wider apart." }
+  },
+  "10": {
+    "de": { "tip": "Aus dem ganzen Hang starten, erst die Schulterblätter nach unten ziehen, dann die Arme beugen. Noch kein Klimmzug? Hochspringen und ganz langsam absenken." },
+    "en": { "tip": "Start from a full hang, pull your shoulder blades down first, then bend the arms. No pull-up yet? Jump up and lower yourself very slowly." }
+  },
+  "11": {
+    "de": { "tip": "Für viele der leichteste Klimmzug und ein guter Einstieg. Oben das Kinn über die Stange, unten die Arme fast ganz strecken." },
+    "en": { "tip": "For many people the easiest pull-up and a good place to start. Chin over the bar at the top, arms almost straight at the bottom." }
+  },
+  "12": {
+    "de": { "tip": "Viele empfinden diesen Griff als angenehm für Ellenbogen und Schultern. Hat die Stange keine Parallelgriffe, einfach den Chin-up nehmen." },
+    "en": { "tip": "Many people find this grip comfortable for elbows and shoulders. If your bar has no parallel handles, just do chin-ups." }
+  },
+  "13": {
+    "de": { "tip": "Rücken gerade wie eine Tischplatte. Die Hantel Richtung Hüfte ziehen, nicht zur Brust, und oben kurz halten." },
+    "en": { "tip": "Back flat like a tabletop. Pull the dumbbell towards your hip, not your chest, and pause briefly at the top." }
+  },
+  "14": {
+    "de": { "tip": "Nur so weit nach hinten, wie es die Schulter angenehm zulässt. Die Ellenbogen bleiben leicht gebeugt.",
+            "warn": "Die Hantel hängt direkt über dem Gesicht. Mit beiden Händen fest umgreifen und lieber ein leichteres Gewicht kontrolliert führen." },
+    "en": { "tip": "Only lower as far back as your shoulders comfortably allow. Keep the elbows slightly bent.",
+            "warn": "The dumbbell hangs right above your face. Grip it firmly with both hands and rather control a lighter weight." }
+  },
+  "15": {
+    "de": { "tip": "Langsam absenken, der Bizeps arbeitet auch auf dem Weg nach unten. Wer mit dem Oberkörper schwingt, nimmt weniger Gewicht." },
+    "en": { "tip": "Lower slowly, your biceps work on the way down too. If your upper body swings, use less weight." }
+  },
+  "16": {
+    "de": { "tip": "Daumen zeigen nach oben, die Handgelenke bleiben gerade. Neben dem Bizeps arbeitet auch der Brachioradialis am Unterarm mit." },
+    "en": { "tip": "Thumbs point up, wrists stay straight. Besides the biceps, the brachioradialis in your forearm works as well." }
+  },
+  "17": {
+    "de": { "tip": "Der Oberarm bleibt am Oberschenkel, nur der Unterarm bewegt sich. Oben kurz halten und bewusst anspannen." },
+    "en": { "tip": "Your upper arm stays against your thigh, only the forearm moves. Pause at the top and squeeze." }
+  },
+  "18": {
+    "de": { "tip": "Nicht schwingen: Becken leicht einrollen, Knie hoch, langsam zurück. Schwung nimmt dem Bauch die Arbeit ab." },
+    "en": { "tip": "Don't swing: tuck your pelvis slightly, knees up, lower slowly. Momentum takes the work away from your abs." }
+  },
+  "19": {
+    "de": { "tip": "Den Abstand so wählen, dass das vordere Knie stabil bleibt. Das meiste Gewicht liegt auf dem vorderen Bein.",
+            "warn": "Erst ohne Hanteln üben, bis du sicher stehst. Wer mit Gewicht kippt, kann sich schlecht abfangen." },
+    "en": { "tip": "Choose a stance that keeps your front knee stable. Most of the weight is on the front leg.",
+            "warn": "Practise without dumbbells until you stand steady. If you tip over with weights, it is hard to catch yourself." }
+  },
+  "20": {
+    "de": { "tip": "Die Hüfte nach hinten schieben, als wolltest du mit dem Gesäß eine Tür schließen. Die Hanteln gleiten nah an den Beinen entlang.",
+            "warn": "Der Rücken bleibt gerade. Sobald er rund wird, ist die Bewegung zu Ende, egal wie tief die Hanteln gerade sind." },
+    "en": { "tip": "Push your hips back as if closing a door with your backside. The dumbbells slide close along your legs.",
+            "warn": "Keep your back straight. As soon as it starts to round, the movement ends there, no matter how low the dumbbells are." }
+  },
+  "21": {
+    "de": { "tip": "Oben das Gesäß fest anspannen, Kinn leicht zur Brust, kein Hohlkreuz. Ein Handtuch unter der Hantel schont die Hüftknochen.",
+            "warn": "Die Bank vorher gegen Wegrutschen sichern, zum Beispiel an eine Wand stellen." },
+    "en": { "tip": "Squeeze your glutes hard at the top, chin slightly tucked, no arched lower back. A towel under the dumbbell protects your hip bones.",
+            "warn": "Secure the bench against sliding first, for example by putting it against a wall." }
+  },
+  "22": {
+    "de": { "tip": "Viele finden den Schritt nach hinten leichter zu kontrollieren als einen Ausfallschritt nach vorn. Oberkörper aufrecht, vorderes Knie stabil über dem Fuß." },
+    "en": { "tip": "Many people find stepping back easier to control than a forward lunge. Upper body upright, front knee stable over the foot." }
+  },
+  "23": {
+    "de": { "tip": "Volle Bewegung: unten die Ferse tief, oben ganz auf die Zehenspitzen. Auf einer Stufe geht es tiefer." },
+    "en": { "tip": "Full range: heel low at the bottom, all the way onto your toes at the top. On a step you can go deeper." }
+  },
+  "24": {
+    "de": { "tip": "Lieber 30 Sekunden sauber als zwei Minuten mit hängender Hüfte. Gesäß anspannen und ruhig weiteratmen." },
+    "en": { "tip": "Better 30 clean seconds than two minutes with sagging hips. Squeeze your glutes and keep breathing calmly." }
+  },
+  "25": {
+    "de": { "tip": "Erst die Technik, dann das Tempo: Hände flach, im Liegestütz bleibt der Körper gerade, beim Sprung weich landen." },
+    "en": { "tip": "Technique first, speed second: hands flat, body straight in the push-up, land softly after the jump." }
+  },
+  "26": {
+    "de": { "tip": "Ziel ist eine leise Landung: über den Vorfuß abrollen und in Hüfte und Knien abfedern.",
+            "warn": "Die Knie beim Landen nicht nach innen knicken lassen. Wird die Landung hart, weil die Kraft nachlässt, lieber normale Kniebeugen machen." },
+    "en": { "tip": "Aim for a quiet landing: roll through the balls of your feet and absorb it in your hips and knees.",
+            "warn": "Don't let your knees cave inwards on landing. When landings get hard because you're tiring, switch to regular squats." }
+  },
+  "27": {
+    "de": { "tip": "Schultern über den Händen, die Hüfte bleibt unten in einer Linie mit dem Rücken. Gleichmäßig schnell ist besser als hektisch." },
+    "en": { "tip": "Shoulders over your hands, hips down in line with your back. Steady and fast beats frantic." }
+  },
+  "28": {
+    "de": { "tip": "Auf dem Vorfuß bleiben und die Arme wie beim Sprinten mitnehmen. Aufrecht bleiben, nicht nach hinten lehnen." },
+    "en": { "tip": "Stay on the balls of your feet and drive your arms like a sprinter. Stay upright, don't lean back." }
+  },
+  "29": {
+    "de": { "tip": "Erst wenn normale Klimmzüge sauber sitzen. Explosiv hoch, kontrolliert und langsam wieder runter.",
+            "warn": "Explosive Klimmzüge und Kipping belasten vor allem die Schultern stark. Nur aufgewärmt, mit sauberer Technik und ohne Schulterschmerzen." },
+    "en": { "tip": "Only once regular pull-ups are clean. Explode up, come down slowly and under control.",
+            "warn": "Explosive and kipping pull-ups put heavy stress on the shoulders in particular. Only when warmed up, with clean technique and without shoulder pain." }
+  },
+  "30": {
+    "de": { "tip": "Vorstufe: explosiv hochdrücken und die Hände nur kurz abheben, ohne zu klatschen.",
+            "warn": "Mit leicht gebeugten Ellenbogen weich landen, nicht auf gestreckte Arme fallen. Bei Beschwerden in Handgelenk oder Schulter weglassen." },
+    "en": { "tip": "Build-up: push up explosively and just lift your hands briefly, without the clap.",
+            "warn": "Land softly with slightly bent elbows, don't drop onto straight arms. Skip it if your wrists or shoulders hurt." }
+  },
+  "31": {
+    "de": { "tip": "Die Höhe ist zweitrangig, die Landung zählt: leise, Knie gebeugt, der ganze Fuß auf der Bank.",
+            "warn": "Nur auf eine stabile Bank springen, die nicht kippt und dein Gewicht sicher trägt. Wenn die Kraft nachlässt, aufhören: Ein verfehlter Sprung kann am Schienbein enden." },
+    "en": { "tip": "Height is secondary, the landing is what counts: quiet, knees bent, whole foot on the bench.",
+            "warn": "Only jump onto a sturdy bench that won't tip and safely carries your weight. Stop when you tire: a missed jump can end at your shin." }
+  },
+  "32": {
+    "de": { "tip": "Erst die Bewegung langsam lernen, dann Tempo machen. Die Arme gegengleich mitnehmen wie beim Sprint." },
+    "en": { "tip": "Learn the movement slowly first, then add speed. Swing your arms opposite to your legs, like when sprinting." }
+  }
+}

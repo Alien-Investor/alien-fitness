@@ -52,13 +52,32 @@ window.LocalData = (function () {
     planById = new Map(seed.plans.map(p => [p.id, p]));
   }
 
+  // v2.10: Kerstins Tipps und Warnungen je Übung (public/kerstin.json, DE/EN). Eigene Datei statt seed.json,
+  // weil seed.json aus der Legacy-DB erzeugt wird. Fehlt die Datei, gibt es einfach keine Tipps.
+  let kerstin = {};
+  async function loadKerstin() {
+    try {
+      const r = await fetch('kerstin.json');
+      if (r.ok) { const j = await r.json(); if (j && typeof j === 'object' && !Array.isArray(j)) kerstin = j; }
+    } catch (e) { console.error('kerstin.json laden fehlgeschlagen', e); }
+  }
+  // { tip, warn } in der aktuellen Sprache (Rückfall DE) oder null; nur Text, die App setzt ihn per textContent
+  function kerstinFor(id) {
+    const e = kerstin[String(id)];
+    if (!e || typeof e !== 'object') return null;
+    const t = (window.I18N && window.I18N.lang === 'en' && e.en) || e.de;
+    if (!t || typeof t !== 'object') return null;
+    const tip = typeof t.tip === 'string' ? t.tip : '', warn = typeof t.warn === 'string' ? t.warn : '';
+    return tip || warn ? { tip, warn } : null;
+  }
+
   async function refreshCustomCache() {
     const rows = await allFrom('custom_plans');
     customById = new Map(rows.map(r => [CUSTOM_OFFSET + r.id, r]));
   }
 
   const ready = (async () => {
-    await loadSeed();
+    await Promise.all([loadSeed(), loadKerstin()]);
     if (window.I18N) await window.I18N.ready;   // EN-Inhalte bereit, bevor gerendert wird
     idb = await openIDB();
     await refreshCustomCache();
@@ -515,6 +534,6 @@ window.LocalData = (function () {
     savePlan, getCustomPlan, deletePlan,
     getSessions, getSession, addSession, deleteSession, updateSession, getLastSets, getLastSetsMany,
     getProgress, getStats, hasData,
-    exportAll, importAll,
+    exportAll, importAll, kerstinFor,
   };
 })();

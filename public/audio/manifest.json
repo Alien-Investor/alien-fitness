@@ -1,0 +1,24 @@
+{
+  "de": {
+    "prep": 1,
+    "go": 2,
+    "hold": 1,
+    "last": 1,
+    "rest": 1,
+    "ten": 1,
+    "next": 1,
+    "done": 1,
+    "hi": 1
+  },
+  "en": {
+    "prep": 1,
+    "go": 2,
+    "hold": 1,
+    "last": 1,
+    "rest": 1,
+    "ten": 1,
+    "next": 1,
+    "done": 1,
+    "hi": 1
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "_info": "Ansagen der App (v2.10), gesprochen von Thorsten (Piper thorsten-high, Tempo 1,0, Wahl Nutzer 10.11.2026). Erzeugen: bash apk/make-voice.sh. Je Cue eine Liste von Varianten (die App wählt zufällig). {name} = Name der Stimme. Regeln wie in den Videos (~/Skripte/piper-aussprache.md): keine Ausrufezeichen, ganze Sätze statt Wortketten. Englisch spricht die deutsche Stimme in Lautschrift (Hörprobe 10.11.2026; „Take a break“ schaffte Thorsten in keiner Schreibweise, deshalb „Rest.“). Kein gesprochener Countdown (Zahlen klangen abgehackt, EN unverständlich): die App zählt die letzten drei Sekunden mit kurzen Tönen (playTick), in DE und EN gleich.",
+  "voices": {
+    "thorsten": {
+      "model": "de_DE-thorsten-high",
+      "length_scale": 1
+    }
+  },
+  "de": {
+    "prep": [
+      "Mach dich bereit."
+    ],
+    "go": [
+      "Los geht's.",
+      "Los, gib alles."
+    ],
+    "hold": [
+      "Halten."
+    ],
+    "last": [
+      "Letzte Runde, gib alles."
+    ],
+    "rest": [
+      "Pause."
+    ],
+    "ten": [
+      "Noch zehn Sekunden."
+    ],
+    "next": [
+      "Weiter geht's."
+    ],
+    "done": [
+      "Geschafft. Starke Einheit."
+    ],
+    "hi": [
+      "Hier ist {name}."
+    ]
+  },
+  "en": {
+    "prep": [
+      "Gätt reddi."
+    ],
+    "go": [
+      "Gou.",
+      "Lets gou."
+    ],
+    "hold": [
+      "Hould."
+    ],
+    "last": [
+      "Laast raund."
+    ],
+    "rest": [
+      "Rest."
+    ],
+    "ten": [
+      "Tenn sekkends left."
+    ],
+    "next": [
+      "Next sett."
+    ],
+    "done": [
+      "Dann. Grejt dschobb."
+    ],
+    "hi": [
+      "Hai, {name} hiar."
+    ]
+  }
+}
