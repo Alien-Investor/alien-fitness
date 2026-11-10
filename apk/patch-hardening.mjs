@@ -147,10 +147,60 @@ function fileProviderProblems(apk, aapt2) {
   if (got.join(' ') !== 'cache-path:. external-path:Documents/') problems.push(`FileProvider-Pfade nicht eng gefasst (${got.join(' ') || 'leer'})`);
   return problems;
 }
+// Prüfwerkzeuge (v2.11, Querfund 10): build-apk.sh/make-release.sh setzen FIT_WZ auf den Ordner der gepinnten Kopien (apk/werkzeuge.sh)
+// und rufen dieses Skript mit `env -i` auf; ohne FIT_WZ (Tests von Hand) gilt das SDK. unzip immer aus /usr/bin (Querfund 11).
+const toolDir = () => process.env.FIT_WZ || `${process.env.ANDROID_HOME || process.env.HOME + '/Android/sdk'}/build-tools/34.0.0`;
+const UNZIP = '/usr/bin/unzip';
+
+// Signing Block der APK (v2.11, Querfund 13 aus Alien Notes run-13 H-1): IDs der Paare in Dateireihenfolge, null = kein Block.
+// Die EOCD muss genau am Ende stehen (kein ZIP-Kommentar), Längen und Ende des Blocks müssen aufgehen — sonst Fehler statt Raten.
+// AGP 8.x legt sonst einen DEPENDENCY_INFO-Block (0x504b4453, mit Googles Schlüssel verschlüsselte Abhängigkeitsliste, ~3 KB) hinein —
+// gemessen in der veröffentlichten APK 2.10.0. Abgeschaltet per dependenciesInfo (unten, Schritt 6).
+function sigBlockIds(apk) {
+  const b = readFileSync(apk);
+  const e = b.length - 22;
+  if (e < 0 || b.readUInt32LE(e) !== 0x06054b50 || b.readUInt16LE(e + 20) !== 0) throw new Error('EOCD nicht am Dateiende');
+  const cd = b.readUInt32LE(e + 16);
+  if (cd > e) throw new Error('Central Directory hinter der EOCD');
+  if (cd < 32 || b.toString('latin1', cd - 16, cd) !== 'APK Sig Block 42') return null;
+  const sz = Number(b.readBigUInt64LE(cd - 24)), st = cd - sz - 8;
+  if (st < 0 || Number(b.readBigUInt64LE(st)) !== sz) throw new Error('Kopf des Signing Blocks');
+  const ids = [];
+  let p = st + 8;
+  while (p < cd - 24) {
+    const len = Number(b.readBigUInt64LE(p));
+    if (len < 4 || p + 8 + len > cd - 24) throw new Error('Paar im Signing Block');
+    ids.push(b.readUInt32LE(p + 8).toString(16).padStart(8, '0'));
+    p += 8 + len;
+  }
+  if (p !== cd - 24) throw new Error('Ende des Signing Blocks');
+  return ids;
+}
+// Signatur der fertigen APK: genau v1 (CERT.SF/CERT.RSA/MANIFEST.MF) + v2, im Signing Block nur v2 (+ Füllung 0x42726577), kein Eintragsname doppelt
+// (unzip entpackt den letzten, Android sähe womöglich den ersten; Notes run-13 H-1/m2)
+function signatureProblems(apk) {
+  const problems = [];
+  const ids = sigBlockIds(apk), got = ids ? ids.join(' ') : 'kein';
+  if (got !== '7109871a' && got !== '7109871a 42726577') problems.push(`Signing Block nicht genau v2 (+ Füllung): ${got}${/504b4453/.test(got) ? ' — DEPENDENCY_INFO (dependenciesInfo nicht abgeschaltet)' : ''}`);
+  const names = execFileSync(UNZIP, ['-Z1', apk], { encoding: 'utf8', maxBuffer: 1 << 30 }).split('\n').filter(Boolean);
+  const seen = new Set(), dup = new Set();
+  for (const n of names) (seen.has(n) ? dup : seen).add(n);
+  if (dup.size) problems.push(`doppelte Eintragsnamen: ${[...dup].slice(0, 3).join(', ')}`);
+  const sig = names.filter(n => /^META-INF\/([^/]+\.(SF|RSA|EC|DSA)|MANIFEST\.MF)$/i.test(n)).sort();
+  if (sig.join(' ') !== 'META-INF/CERT.RSA META-INF/CERT.SF META-INF/MANIFEST.MF') problems.push(`Signaturdateien nicht genau CERT.RSA/CERT.SF/MANIFEST.MF (${sig.join(', ') || 'keine'})`);
+  return problems;
+}
+// --check-sigblock <apk>: nur diese Prüfung (Tests; Exit 0 = nur v2 + Füllung, drei Signaturdateien, keine Dubletten)
+if (process.argv[2] === '--check-sigblock') {
+  let p;
+  try { p = signatureProblems(process.argv[3]); } catch (e) { p = [`APK-Aufbau nicht wie erwartet (${e.message})`]; }
+  console.log(p.length ? 'FEHLER: ' + p.join('; ') : 'Signatur: nur v1 + v2 (Signing Block ohne Zusatzblock), keine doppelten Einträge.');
+  process.exit(p.length ? 1 : 0);
+}
+
 // --check-fileprovider <apk>: nur diese Prüfung (Tests mit präparierten APKs; Exit 0 = eng gefasst)
 if (process.argv[2] === '--check-fileprovider') {
-  const bt = `${process.env.ANDROID_HOME || process.env.HOME + '/Android/sdk'}/build-tools/34.0.0`;
-  const p = fileProviderProblems(process.argv[3], `${bt}/aapt2`);
+  const p = fileProviderProblems(process.argv[3], `${toolDir()}/aapt2`);
   console.log(p.length ? 'FEHLER: ' + p.join('; ') : 'FileProvider eng gefasst (Documents/ + Cache).');
   process.exit(p.length ? 1 : 0);
 }
@@ -165,11 +215,12 @@ if (process.argv[2] === '--check-fileprovider') {
 //   d) FileProvider der APK als Baum (fileProviderProblems): ein Provider, eine Fassung, genau Documents/ + App-Cache (v2.10).
 if (process.argv[2] === '--check-apk') {
   const apk = process.argv[3];
-  const bt = `${process.env.ANDROID_HOME || process.env.HOME + '/Android/sdk'}/build-tools/34.0.0`;
+  const bt = toolDir();
   const run = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 30 });
   const problems = [];
   let perms = [];
   try {
+    problems.push(...signatureProblems(apk));   // v2.11: vor dem ersten aapt2-Aufruf (Dubletten)
     const out = run(`${bt}/aapt2`, ['dump', 'permissions', apk]);
     perms = [...out.matchAll(/^uses-permission(?:-sdk-23)?: name='([^']+)'/gm)].map(x => x[1]);
     const extra = perms.filter(n => !ALLOWED_PERMS.has(n));
@@ -181,7 +232,7 @@ if (process.argv[2] === '--check-apk') {
     const tmp = mkdtempSync(join(tmpdir(), 'fitness-dex-'));
     let shareDex = '';
     try {
-      run('unzip', ['-q', '-o', apk, 'classes*.dex', '-d', tmp]);
+      run(UNZIP, ['-q', '-o', apk, 'classes*.dex', '-d', tmp]);
       for (const f of readdirSync(tmp).filter(f => /^classes\d*\.dex$/.test(f))) {
         for (const block of run(`${bt}/dexdump`, ['-d', join(tmp, f)]).split(/\n(?=Class #\d+)/)) {
           if (/Class descriptor\s*:\s*'Lcom\/capacitorjs\/plugins\/share\//.test(block)) shareDex += block;
@@ -206,7 +257,7 @@ if (process.argv[2] === '--check-apk') {
     try { unlinkSync(apk); } catch (e) {}
     process.exit(1);
   }
-  console.log(`APK geprüft (${apk}): Berechtigungen ${perms.join(', ')}; Share ohne Receiver/Rückruf; DisableDeploy gesetzt; FileProvider nur Documents/ + Cache.`);
+  console.log(`APK geprüft (${apk}): Berechtigungen ${perms.join(', ')}; Share ohne Receiver/Rückruf; DisableDeploy gesetzt; FileProvider nur Documents/ + Cache; Signatur v1 + v2 ohne Zusatzblock.`);
   process.exit(0);
 }
 
@@ -309,6 +360,27 @@ const PATHS_XML = `<?xml version="1.0" encoding="utf-8"?>
 `;
 if (readFileSync(PATHS, 'utf8') !== PATHS_XML) { writeFileSync(PATHS, PATHS_XML); console.log('FileProvider-Pfade eng gefasst (Documents/ + Cache).'); }
 else console.log('FileProvider-Pfade bereits eng gefasst.');
+
+// 6) Keine verschlüsselte Abhängigkeitsliste im Signing Block (v2.11, Querfund 13 aus Alien Notes run-13 H-1): AGP 8.x bettet sonst einen
+//    DEPENDENCY_INFO-Block ein (mit Googles öffentlichem Schlüssel verschlüsselt, nur für Google lesbar; in der APK 2.10.0 gemessen: 3236 Byte) —
+//    Daten in der eigenen APK, die man selbst nicht prüfen kann. Genau einmal und nur in app/build.gradle; --check-apk prüft den Signing Block.
+const GRADLE = 'android/app/build.gradle';
+const DEPINFO = '    dependenciesInfo {\n        // Alien Fitness: keine verschlüsselte Abhängigkeitsliste im Signing Block (patch-hardening.mjs)\n        includeInApk = false\n        includeInBundle = false\n    }\n';
+let g = readFileSync(GRADLE, 'utf8');
+if (!g.includes(DEPINFO)) { g = g.replace(/^android \{\n/m, () => 'android {\n' + DEPINFO); writeFileSync(GRADLE, g); console.log('build.gradle: dependenciesInfo abgeschaltet.'); }
+else console.log('build.gradle: dependenciesInfo bereits abgeschaltet.');
+{
+  const g2 = readFileSync(GRADLE, 'utf8'), TOK = /dependenciesInfo|includeInApk|includeInBundle/g, fremd = [];
+  const lauf = d => { for (const e of readdirSync(d, { withFileTypes: true })) { const f = d + '/' + e.name;
+    if (e.isDirectory()) { if (e.name !== 'build' && e.name !== '.gradle') lauf(f); }
+    else if (/\.gradle(\.kts)?$|\.properties$/.test(e.name) && f !== GRADLE && TOK.test(readFileSync(f, 'utf8'))) fremd.push(f);
+    TOK.lastIndex = 0; } };
+  lauf('android');
+  if (g2.split(DEPINFO).length !== 2 || (g2.match(TOK) || []).length !== 3 || (g2.match(/^android \{$/gm) || []).length !== 1 || fremd.length) {
+    console.error('FEHLER: dependenciesInfo nicht genau einmal abgeschaltet' + (fremd.length ? ' (auch in ' + fremd.join(', ') + ')' : '') + ' — Build abgebrochen!');
+    process.exit(1);
+  }
+}
 
 // 2) Kein externer Verweis im gebündelten Frontend (Prüffunktion scanDir oben).
 const offenders = scanDir('www');

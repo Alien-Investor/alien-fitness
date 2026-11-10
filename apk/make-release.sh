@@ -55,16 +55,25 @@ NOTES_FILE="${1:-}"
 [ -f "$APK" ] || { echo "FEHLER: $APK fehlt — zuerst bash apk/finish-build.sh"; exit 1; }
 [ -z "$NOTES_FILE" ] || [ -f "$NOTES_FILE" ] || { echo "FEHLER: Notizdatei $NOTES_FILE fehlt"; exit 1; }
 
-# APK muss zur VERSION passen (sonst wird eine alte APK unter neuem Tag veröffentlicht) und mit dem Release-Schlüssel signiert sein
-AAPT="$HOME/Android/sdk/build-tools/34.0.0/aapt2"
-APK_VER="$("$AAPT" dump badging "$APK" 2>/dev/null | sed -nE "s/.*versionName='([^']*)'.*/\1/p")"
-[ "$APK_VER" = "$NAME" ] || { echo "FEHLER: APK hat versionName '$APK_VER', VERSION sagt '$NAME'"; exit 1; }
+# APK muss zur VERSION passen (sonst wird eine alte APK unter neuem Tag veröffentlicht) und mit dem Release-Schlüssel signiert sein.
 # Berechtigungen an der APK selbst gegen die Positivliste (Audit run-2): eine APK aus einem anderen Build-Weg
 # (Gradle von Hand, Android Studio) liefe sonst ungeprüft raus. --check-apk löscht sie bei Verstoß.
-node apk/patch-hardening.mjs --check-apk "$APK" || exit 1
-source ~/Apps/android-build/env.sh
-"$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "$APK" | grep -q "certificate SHA-256 digest: $FP_HEX" \
-  || { echo "FEHLER: APK nicht mit dem Release-Zertifikat $FP_HEX signiert"; exit 1; }
+# v2.11 (Querfunde 10/11/14 aus Alien Notes run-13): alle drei Prüfungen mit den gepinnten Kopien aus apk/werkzeuge.sh, in einer Subshell mit
+# hartem PATH und leerer Umgebung je Aufruf — JAVA_TOOL_OPTIONS u. a. konnten apksigner eine falsche Zertifikatszeile ausgeben lassen.
+# Aus env.sh nur ANDROID_HOME/JAVA_HOME, nicht dessen PATH (gh, rsync, ssh unten laufen weiter über den Nutzer-PATH).
+source apk/werkzeuge.sh
+wz_umgebung || exit 1
+WZ_NODE="$(command -v node || true)"   # nvm-node vor dem harten PATH festhalten
+(
+  wz_pfad_hart awk cp cut env find grep head mkdir mktemp realpath rm sed sha256sum sort || exit 1
+  trap wz_aufraeumen EXIT
+  wz_einrichten apk/patch-hardening.mjs || exit 1
+  wz_version "$APK" apk/VERSION || exit 1
+  wz_node --check-apk "$APK" || exit 1
+  CERTS="$(wz_apksigner verify --print-certs "$APK" 2>/dev/null | grep 'certificate SHA-256 digest' || true)"
+  [ "$(grep -c . <<<"$CERTS")" = 1 ] && [ "$(awk '{print $NF}' <<<"$CERTS")" = "$FP_HEX" ] \
+    || { echo "FEHLER: APK nicht (allein) mit dem Release-Zertifikat $FP_HEX signiert (${CERTS:-keins})"; exit 1; }
+) || exit 1
 
 GH_REPO="$OWNER/$REPO"
 gh auth status >/dev/null 2>&1 || { echo "FEHLER: gh nicht angemeldet (gh auth login)"; exit 1; }
