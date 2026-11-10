@@ -95,6 +95,12 @@ const dlgTooEarly = e => e && e.isTrusted && evtTime(e) - dlgOpenedAt < DLG_ARM_
 // Doppeltipps „✓ Beenden & speichern“ darunter und schloss die Einheit vorzeitig ab. overlayClosedAt merkt das Schließen.
 let overlayClosedAt = 0;
 const tooSoonAfterClose = e => e && e.isTrusted && evtTime(e) - overlayClosedAt < DLG_ARM_MS;
+// Release-Audit v2.10 I1–I5 (v2.11): dieselbe Lücke an drei weiteren Stellen — ein Tipp öffnet den Plan-Editor bzw. den
+// Timer oder blendet die Fortsetzen-Karte aus, der zweite Tipp traf darunter „Speichern“/„＋ Übung“/Hintergrund im Editor,
+// „Überspringen“ der Pause (Satz speichern bei offener Tastatur) oder eine Plan-Karte (Start ohne Sätze).
+let editorOpenedAt = 0, timerOpenedAt = 0;
+const editorTooEarly = e => e && e.isTrusted && evtTime(e) - editorOpenedAt < DLG_ARM_MS;
+const timerTooEarly = e => e && e.isTrusted && evtTime(e) - timerOpenedAt < DLG_ARM_MS;
 function ask(msg, opt) {
   opt = opt || {};
   if (dlgResolve) return Promise.resolve(false);
@@ -393,7 +399,7 @@ async function loadDashboard() {
           <div class="plan-meta">${esc(p.day_label || '')}</div>
         </div>
         <span>${p.custom ? `<span class="badge">${I18N.t('badge.custom')}</span> ` : ''}<span class="badge ${p.type === 'hit' ? 'hit' : ''}">${p.type === 'hit' ? I18N.t('badge.hit') : I18N.t('badge.strength')}</span></span>`;
-      div.addEventListener('click', () => startWorkout(p.id));
+      div.addEventListener('click', e => { if (!tooSoonAfterClose(e)) startWorkout(p.id); });
       el.appendChild(div);
     });
   } catch(e) { console.error(e); }
@@ -410,14 +416,14 @@ async function loadWorkoutSelect() {
     const btn = document.createElement('button');
     btn.className = 'btn';
     btn.textContent = p.name;
-    btn.addEventListener('click', () => startWorkout(p.id));
+    btn.addEventListener('click', e => { if (!tooSoonAfterClose(e)) startWorkout(p.id); });
     row.appendChild(btn);
     if (p.custom) {
       const edit = document.createElement('button');
       edit.className = 'btn ghost btn-sm plan-mini';
       edit.textContent = '✎';
       edit.title = I18N.t('plan.edit');
-      edit.addEventListener('click', () => openPlanEditor(p.id));
+      edit.addEventListener('click', e => { if (!tooSoonAfterClose(e)) openPlanEditor(p.id); });
       row.appendChild(edit);
       const del = document.createElement('button');
       del.className = 'btn ghost btn-sm plan-mini';
@@ -482,6 +488,15 @@ document.addEventListener('visibilitychange', () => {
 function timedSeconds(ex) {
   const m = String(ex.reps || '').match(/^\s*(\d+)\s*(s|sek|sec|sekunden|seconds?)\b/i);
   return m ? Number(m[1]) : null;
+}
+// Pause einer Plan-Zeile (v2.11): 0 heißt überall „keine Pause“. Vorher machten `|| 90` (Satz), `|| 10` (Intervall-Kette)
+// und `|| 60` (Halten, „Ohne Timer“) daraus je nach Stelle 90, 10 oder 60 s (Release-Audit v2.10 b-INFO). Fehlt der Wert
+// (Alt-Daten), gilt der bisherige Standard der Stelle.
+function restOf(ex, def) {
+  const v = ex ? ex.rest_seconds : null;
+  if (v === null || v === undefined || v === '') return def;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(600, Math.max(0, Math.round(n))) : def;
 }
 // Halteübungen (v2.9): Haltezeit vor jedem Satz wählbar (Chips, eigene Zeit, „Max“ als Stoppuhr),
 // dann Vorlauf und Halte-Timer. Hängt an der ÜBUNG, nicht am Plan-Text — Plank in einem eigenen Plan
@@ -608,7 +623,7 @@ async function startFreeWorkout() {
   updateProgress();
   saveDraft();
 }
-document.getElementById('btn-free-workout').addEventListener('click', startFreeWorkout);
+document.getElementById('btn-free-workout').addEventListener('click', e => { if (!tooSoonAfterClose(e)) startFreeWorkout(); });
 
 // Unterbrochene Einheit aus dem Draft wieder aufnehmen
 function resumeWorkout(draft) {
@@ -687,6 +702,7 @@ async function saveDraftAsSessionOnce(draft) {
     }
   }
   clearDraft();
+  overlayClosedAt = performance.now();   // wie „Verwerfen“: Karte weg, Plan-Karten darunter erst nach DLG_ARM_MS
   loadDashboard();
 }
 
@@ -700,6 +716,7 @@ document.getElementById('resume-drop').addEventListener('click', async () => {
   const now = readDraft();
   if (d && now && now.startedAt !== d.startedAt) { loadDashboard(); return; }
   clearDraft();
+  overlayClosedAt = performance.now();   // I1–I5: Karte verschwindet unter dem Finger, der 2. Tipp startete die Plan-Karte darunter
   loadDashboard();
 });
 
@@ -1019,8 +1036,9 @@ function saveSet() {
   // Mit Stimme sagte Thorsten sonst nach „Geschafft“ noch „Pause“ und am Ende „Weiter geht's“.
   if (r.workoutDone) return;
 
-  // Start rest timer
-  const rest = activeSession.exercises[exIdx].rest_seconds || 90;
+  // Start rest timer (Pause 0 = keine)
+  const rest = restOf(activeSession.exercises[exIdx], 90);
+  if (!rest) return;
   const nextEx = activeSession.exercises[exIdx + 1];
   startTimer(rest, { sub: nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest') });
 }
@@ -1036,10 +1054,11 @@ function startTimedSet(exIdx, setNum, ex, secs) {
       reps: null, weight_kg: 0, duration_seconds: elapsed, completed: 1,
     });
     if (r.workoutDone) return;
-    const rest = ex.rest_seconds || 10;
+    const rest = restOf(ex, 10);
     const next = setNum + 1;
     const chainNext = next <= ex.sets && !isLogged(exIdx, next);
     const nextEx = activeSession.exercises[exIdx + 1];
+    if (!rest) { if (chainNext) startTimedSet(exIdx, next, ex, secs); return; }   // Pause 0: nächste Runde sofort
     startTimer(rest, {
       chain: chainNext,
       sub: chainNext ? `${ex.name} · ${I18N.t('dyn.setN')} ${next}/${ex.sets}`
@@ -1112,7 +1131,8 @@ async function openHoldModal(exIdx, setNum, ex) {
   label.textContent = I18N.t(label.dataset.i18n);
   // Intervall: die Wahl gilt für die folgenden Runden der Kette (Hinweis nur, wenn noch Runden folgen)
   const chainHint = document.getElementById('hold-chain-hint');
-  chainHint.textContent = I18N.t('hold.chainHint', { rest: ex.rest_seconds || 10 });
+  const chainRest = restOf(ex, 10);
+  chainHint.textContent = chainRest ? I18N.t('hold.chainHint', { rest: chainRest }) : I18N.t('hold.chainHintNoRest');
   chainHint.classList.toggle('hidden', mode !== 'interval' || setNum >= ex.sets || isLogged(exIdx, setNum + 1));   // Kette stoppt an eingetragener Runde (Audit b4)
   // Vorbelegung: eigener Satz (Korrektur) > zuletzt gewählte Zeit dieser Übung > Plan-Angabe > 60 s (Halten) bzw. 20 s
   const own = activeSession.sets.find(s => setRow(s) === exIdx && s.set_number === setNum && s.duration_seconds);
@@ -1166,7 +1186,9 @@ function logHold(exIdx, setNum, ex, secs) {
   const next = setNum + 1;
   const nextEx = activeSession.exercises[exIdx + 1];
   const moreSets = next <= ex.sets && !isLogged(exIdx, next);
-  startTimer(ex.rest_seconds || 60, {
+  const rest = restOf(ex, 60);
+  if (!rest) return;
+  startTimer(rest, {
     sub: moreSets ? holdSub(ex, next)
                   : (nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest')),
   });
@@ -1316,6 +1338,7 @@ function startTimer(seconds, opts = {}) {
   document.getElementById('timer-exercise').textContent = opts.sub || '';
   setTimerCount(timerState.up ? 0 : seconds);
   count.classList.remove('urgent');
+  timerOpenedAt = performance.now();   // I1–I5: echte Tipps auf Überspringen/Stopp erst nach DLG_ARM_MS
   overlay.classList.add('open');
   announce(opts.cue !== undefined ? opts.cue : TIMER_CUE[kind]);
 
@@ -1386,14 +1409,15 @@ const SKIP_ARM_MS = 1000;
 // („Überspringen →“) und übersprang sie. Ein angenommener Tipp sperrt den Knopf deshalb kurz.
 const SKIP_DOUBLE_MS = 500;
 let lastSkipAt = 0;
-document.getElementById('timer-skip').addEventListener('click', () => {
+document.getElementById('timer-skip').addEventListener('click', e => {
+  if (timerTooEarly(e)) return;   // 2. Tipp von „Satz speichern“ (offene Tastatur schiebt den Knopf darunter)
   const now = Date.now();
   if (timerState && timerState.kind === 'work' && now - timerState.start < SKIP_ARM_MS) return;
   if (now - lastSkipAt < SKIP_DOUBLE_MS) return;
   lastSkipAt = now;
   endTimer(true);
 });
-document.getElementById('timer-stop').addEventListener('click', cancelTimer);
+document.getElementById('timer-stop').addEventListener('click', e => { if (!timerTooEarly(e)) cancelTimer(); });
 
 function vibrate() {
   try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
@@ -1587,7 +1611,7 @@ function addEditorRow(pe) {
   const rest = mk('er-rest', pe ? pe.rest_seconds : 90, 'number', { min: 0, max: 600, step: 15 });
   const del = document.createElement('button');
   del.className = 'er-del'; del.textContent = '✕';
-  del.addEventListener('click', () => row.remove());
+  del.addEventListener('click', e => { if (!editorTooEarly(e)) row.remove(); });
   row.append(combo, sets, reps, rest, del);
   document.getElementById('editor-rows').appendChild(row);
 }
@@ -1602,17 +1626,29 @@ async function openPlanEditor(planId) {
   syncCombo(document.getElementById('editor-type-combo'));
   document.getElementById('editor-rows').innerHTML = '';
   (data.exercises.length ? data.exercises : [null]).forEach(addEditorRow);
+  editorOpenedAt = performance.now();
   document.getElementById('editor-overlay').classList.add('open');
 }
+// Schließen merkt den Zeitpunkt: der 2. Tipp auf „Abbrechen“/„Speichern“ traf sonst einen Plan-Knopf der Liste darunter
+function closePlanEditor() {
+  overlayClosedAt = performance.now();
+  document.getElementById('editor-overlay').classList.remove('open');
+}
 
-async function savePlanFromEditor() {
+let editorSaveBusy = false;   // Doppeltipp auf „Speichern“ legte einen neuen Plan sonst zweimal an
+async function savePlanFromEditor(e) {
+  if (editorTooEarly(e) || editorSaveBusy) return;
+  editorSaveBusy = true;
+  try { await savePlanFromEditorOnce(); } finally { editorSaveBusy = false; }
+}
+async function savePlanFromEditorOnce() {
   const name = document.getElementById('editor-name').value.trim();
   if (!name) { await ask(I18N.t('plan.needName'), { alert: true }); return; }
   const exercises = [...document.querySelectorAll('#editor-rows .editor-row')].map((r, i) => ({
     exercise_id: Number(r.querySelector('.er-ex').value),
     sets: Math.min(20, Math.max(1, parseInt(r.querySelector('.er-sets').value) || 3)),
     reps: r.querySelector('.er-reps').value.trim() || '8-12',
-    rest_seconds: Math.min(600, Math.max(0, parseInt(r.querySelector('.er-rest').value) || 90)),
+    rest_seconds: restOf({ rest_seconds: parseInt(r.querySelector('.er-rest').value) }, 90),   // 0 bleibt 0 (vorher → 90)
     sort_order: i,
   })).filter(e => e.exercise_id);
   if (!exercises.length) { await ask(I18N.t('plan.needEx'), { alert: true }); return; }
@@ -1629,18 +1665,17 @@ async function savePlanFromEditor() {
     await ask(I18N.t('err.saveFailed'), { alert: true });
     return;
   }
-  document.getElementById('editor-overlay').classList.remove('open');
+  closePlanEditor();
   loadWorkoutSelect();
   loadDashboard();
 }
 
-document.getElementById('btn-new-plan').addEventListener('click', () => openPlanEditor(null));
+document.getElementById('btn-new-plan').addEventListener('click', e => { if (!tooSoonAfterClose(e)) openPlanEditor(null); });
 document.getElementById('editor-save').addEventListener('click', savePlanFromEditor);
-document.getElementById('editor-add-row').addEventListener('click', () => addEditorRow(null));
-document.getElementById('editor-cancel').addEventListener('click', () =>
-  document.getElementById('editor-overlay').classList.remove('open'));
+document.getElementById('editor-add-row').addEventListener('click', e => { if (!editorTooEarly(e)) addEditorRow(null); });
+document.getElementById('editor-cancel').addEventListener('click', e => { if (!editorTooEarly(e)) closePlanEditor(); });
 document.getElementById('editor-overlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  if (e.target === e.currentTarget && !editorTooEarly(e)) closePlanEditor();
 });
 
 // ── LIBRARY ───────────────────────────────────────────────────────────────────

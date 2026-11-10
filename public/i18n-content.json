@@ -2,7 +2,7 @@
   "exercises": {
     "1": {
       "name": "Decline Push-up (Feet on Bench)",
-      "description": "Put your feet on the bench, body angled downward — targets the upper chest. Hands shoulder-width, elbows slightly bent."
+      "description": "Put your feet on the bench, body angled downward. Harder than a regular push-up, with more work for the front shoulders. Hands shoulder-width, elbows slightly bent."
     },
     "2": {
       "name": "Flat Dumbbell Bench Press",
@@ -10,7 +10,7 @@
     },
     "3": {
       "name": "Incline Push-up (Hands on Bench)",
-      "description": "Hands on the bench, body angled — targets the lower chest. Keep your core braced."
+      "description": "Hands on the bench, body angled. An easier variation with less weight on your arms. Keep your core braced."
     },
     "4": {
       "name": "Dumbbell Shoulder Press",
@@ -46,7 +46,7 @@
     },
     "12": {
       "name": "Neutral-Grip Pull-up (Parallel)",
-      "description": "Palms facing each other (if handles are available), easy on the shoulders and very effective for the back."
+      "description": "Palms facing each other (if handles are available). Chin over the handles, lower slowly. Works the back similarly to an overhand pull-up."
     },
     "13": {
       "name": "Single-Arm Dumbbell Row",
@@ -62,7 +62,7 @@
     },
     "16": {
       "name": "Hammer Curl",
-      "description": "Palms facing each other (neutral grip), perform curls. Works the biceps and brachialis."
+      "description": "Palms facing each other (neutral grip), perform curls. Works the biceps, brachialis and brachioradialis."
     },
     "17": {
       "name": "Concentration Curl",
@@ -74,7 +74,7 @@
     },
     "19": {
       "name": "Bulgarian Split Squat (DB)",
-      "description": "Rear foot on the bench, front foot well forward. Lower deep, knee pointing forward. One of the most effective leg exercises."
+      "description": "Rear foot on the bench, front foot well forward. Lower deep, knee pointing forward. Works the thighs and glutes, one leg at a time."
     },
     "20": {
       "name": "Romanian Deadlift (DB)",

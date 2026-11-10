@@ -8,7 +8,7 @@
       "muscle_group": "Brust",
       "equipment": "Bank",
       "type": "strength",
-      "description": "Füße auf die Bank legen, Körper schräg nach unten — betont den oberen Brustbereich. Hände schulterbreit, Ellenbogen leicht anwinkeln."
+      "description": "Füße auf die Bank legen, Körper schräg nach unten. Schwerer als der normale Liegestütz, mehr Arbeit für die vordere Schulter. Hände schulterbreit, Ellenbogen leicht anwinkeln."
     },
     {
       "id": 2,
@@ -24,7 +24,7 @@
       "muscle_group": "Brust",
       "equipment": "Bank",
       "type": "strength",
-      "description": "Hände auf die Bank, Körper schräg — betont den unteren Brustbereich. Rumpf angespannt halten."
+      "description": "Hände auf die Bank, Körper schräg. Leichtere Variante, weniger Gewicht auf den Armen. Rumpf angespannt halten."
     },
     {
       "id": 4,
@@ -96,7 +96,7 @@
       "muscle_group": "Rücken",
       "equipment": "Stange",
       "type": "strength",
-      "description": "Handflächen zueinander (falls Griffe vorhanden), schonend für Schultern und sehr effektiv für den Rücken."
+      "description": "Handflächen zueinander (falls Griffe vorhanden). Kinn über die Griffe, langsam absenken. Trainiert den Rücken ähnlich wie der Klimmzug im Obergriff."
     },
     {
       "id": 13,
@@ -128,7 +128,7 @@
       "muscle_group": "Bizeps",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Handflächen zueinander (neutraler Griff), Curls ausführen. Trainiert Bizeps + Brachialis."
+      "description": "Handflächen zueinander (neutraler Griff), Curls ausführen. Trainiert Bizeps, Brachialis und Brachioradialis."
     },
     {
       "id": 17,
@@ -152,7 +152,7 @@
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Hinteres Bein auf der Bank, vorderes Bein weit vor. Tief absenken, Knie zeigt nach vorne. Eine der effektivsten Beinübungen."
+      "description": "Hinteres Bein auf der Bank, vorderes Bein weit vor. Tief absenken, Knie zeigt nach vorne. Trainiert Oberschenkel und Gesäß, jedes Bein einzeln."
     },
     {
       "id": 20,

@@ -91,6 +91,17 @@ nav button.active {
 @media (min-width: 700px) {
   nav button { font-size: 0.68rem; letter-spacing: 3px; padding: 16px 8px; }
 }
+/* Schmale Schirme (v2.11): fünf Knöpfe mit 2px Sperrung brauchten 434 px (DE) bzw. 420 px (EN), „Historie“ ragte bei
+   360/412 px rechts heraus (overflow-x:hidden versteckte es). Inhaltsbreite + gleicher Anteil am Rest = gleiche Wortabstände. */
+@media (max-width: 439px) {
+  nav button { flex: 1 1 auto; letter-spacing: 1px; padding: 14px 2px; }
+}
+@media (max-width: 379px) {
+  nav button { letter-spacing: 0.5px; font-size: 0.56rem; }
+}
+@media (max-width: 339px) {
+  nav button { padding: 14px 1px; font-size: 0.54rem; }
+}
 
 /* ── Views ───────────────────────────────────────────────────────────────────── */
 main {
