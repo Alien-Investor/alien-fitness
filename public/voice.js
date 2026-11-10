@@ -15,6 +15,7 @@ window.Voice = (() => {
   const loads = new Map();                       // 'thorsten/de' → Promise des Vorladens
   let playing = null;                            // laufende Ansage; eine neue unterbricht sie
   let idleTimer = null;
+  let suspending = null;                         // laufendes suspend(): state ist bis zu dessen Ende noch 'running'
 
   function get() {
     // Unbekannter oder alter Wert (Testbuilds kannten noch 'kerstin') → Thorsten
@@ -26,16 +27,27 @@ window.Voice = (() => {
   // Ein Kontext für Ansagen und Piepton. Zum Abspielen geweckt, nach 3 s Stille angehalten (idle): ein laufender
   // Kontext hält einen Audio-Strom offen und kostet Akku — v2.9 schloss deshalb jeden Piepton-Kontext wieder.
   // Ein Start auf dem angehaltenen Kontext erklingt, sobald resume() greift (wenige Millisekunden).
+  // Läuft gerade ein suspend() (Release-Durchsicht v2.10), meldet der Kontext noch 'running' — ein Start in diesem Fenster
+  // bliebe nach dem Einschlafen stumm. Deshalb nach dessen Ende wecken.
   function audioCtx() {
     if (!ctx) {
       try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; }
     }
-    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    clearTimeout(idleTimer);
+    if (ctx) {
+      if (suspending) suspending.then(() => ctx.resume().catch(() => {}));
+      else if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    }
     return ctx;
   }
   function idle() {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { if (!playing && ctx && ctx.state === 'running') ctx.suspend().catch(() => {}); }, 3000);
+    idleTimer = setTimeout(() => {
+      if (playing || !ctx || ctx.state !== 'running' || suspending) return;
+      const p = ctx.suspend().catch(() => {});
+      suspending = p;
+      p.then(() => { if (suspending === p) suspending = null; });
+    }, 3000);
   }
 
   async function loadManifest() {
