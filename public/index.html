@@ -217,7 +217,7 @@
 
     <div id="backup-panel">
       <h3 data-i18n="backup.title">Backup</h3>
-      <p class="backup-hint" data-i18n="backup.hint">Deine Daten liegen nur auf diesem Gerät. Sichere oder übertrage sie als JSON-Datei.</p>
+      <p class="backup-hint" data-i18n="backup.hint">Deine Daten liegen nur auf diesem Gerät. Sichere oder übertrage sie als JSON-Datei. „Zusammenführen" ergänzt vorhandene Daten und überspringt Doppelte, „Alles ersetzen" löscht vorher alles.</p>
       <div class="backup-mode-row">
         <label for="backup-mode" data-i18n="backup.mode">Import-Modus</label>
         <div class="combo" id="backup-mode-combo">
@@ -339,7 +339,7 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.hold.t">Halteübungen (Plank)</div>
-        <p data-i18n="help.hold.b">Bei Plank wählst du vor jedem Satz die Haltezeit: 30 bis 180 Sekunden, eine eigene Zeit oder „Max“ als Stoppuhr. Vorbelegt ist die zuletzt gewählte Zeit. Nach „▶ Start“ bleiben 5 Sekunden, um in Position zu kommen, dann läuft der Halte-Timer. „Fertig →“ beendet früher und speichert die gehaltene Zeit, „■ Stopp“ bricht ohne Eintrag ab. „Ohne Timer eintragen“ speichert die gewählte Zeit direkt, etwa zum Korrigieren.</p>
+        <p data-i18n="help.hold.b">Bei Plank wählst du vor jedem Satz die Haltezeit: 30 bis 180 Sekunden, eine eigene Zeit oder „Max“ als Stoppuhr. Vorbelegt ist die zuletzt gestartete Zeit, sonst die Angabe im Plan. Nach „▶ Start“ bleiben 5 Sekunden, um in Position zu kommen, dann läuft der Halte-Timer. „Fertig →“ beendet früher und speichert die gehaltene Zeit, „■ Stopp“ bricht ohne Eintrag ab. „Ohne Timer eintragen“ speichert die gewählte Zeit direkt, etwa zum Korrigieren.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.kerstin.t">Kerstins Tipps und Thorstens Ansagen</div>
@@ -355,7 +355,7 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.history.t">Historie</div>
-        <p data-i18n="help.history.b">Alle abgeschlossenen Trainings mit Datum, Plan und Dauer in der Übersicht.</p>
+        <p data-i18n="help.history.b">Alle abgeschlossenen Trainings mit Datum, Plan und Dauer. Antippen zeigt alle Sätze, erlaubt eine Notiz und löscht die Einheit bei Bedarf.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.plans.t">Trainingspläne</div>
@@ -373,7 +373,7 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.backup.t">Backup</div>
-        <p data-i18n="help.backup.b">Unter Historie: Export schreibt alle Einheiten, Sätze und eigenen Pläne in eine JSON-Datei. Import „Zusammenführen" ergänzt vorhandene Daten und überspringt Einheiten, die es schon gibt. „Alles ersetzen" löscht vorher alles auf dem Gerät und fragt vorher nach.</p>
+        <p data-i18n="help.backup.b">Unter Historie: Export speichert alle Einheiten, Sätze und eigenen Pläne als JSON-Datei im Ordner „Documents“ und öffnet danach den Teilen-Dialog, etwa für Syncthing oder Mail. Die Datei bleibt dort, auch wenn du die App löschst; auf Android 10 und älter bleibt nur der Teilen-Dialog. Import „Zusammenführen" ergänzt vorhandene Daten und überspringt Einheiten, die es schon gibt. „Alles ersetzen" löscht vorher alles auf dem Gerät und fragt vorher nach.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.equipment.t">Equipment</div>

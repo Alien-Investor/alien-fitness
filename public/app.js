@@ -893,6 +893,11 @@ function renderLastLine(el, last) {
   }
 }
 
+// Audit v2.10 R2-1: Der zweite Tipp eines Doppeltipps auf einen Satz-Knopf traf das gerade geöffnete Satz-Fenster („Speichern“
+// beim letzten Satz = Einheit gespeichert, sonst Hintergrund = Fenster zu). Echte Tipps zählen erst nach DLG_ARM_MS, wie bei #dlg.
+let setOpenedAt = 0;
+const setTooEarly = e => e && e.isTrusted && performance.now() - setOpenedAt < DLG_ARM_MS;
+
 async function openSetModal(exIdx, setNum, ex) {
   pendingSet = { exIdx, setNum, ex };
 
@@ -920,14 +925,15 @@ async function openSetModal(exIdx, setNum, ex) {
   document.getElementById('input-reps').value = (src && src.reps) || '';
   document.getElementById('input-weight').value = (src && src.weight_kg) || '';
 
+  setOpenedAt = performance.now();
   document.getElementById('set-modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('input-reps').focus(), 100);
 }
 
-document.getElementById('btn-save-set').addEventListener('click', saveSet);
-document.getElementById('btn-cancel-set').addEventListener('click', closeSetModal);
+document.getElementById('btn-save-set').addEventListener('click', e => { if (!setTooEarly(e)) saveSet(); });
+document.getElementById('btn-cancel-set').addEventListener('click', e => { if (!setTooEarly(e)) closeSetModal(); });
 document.getElementById('set-modal-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('set-modal-overlay')) closeSetModal();
+  if (e.target === document.getElementById('set-modal-overlay') && !setTooEarly(e)) closeSetModal();
 });
 
 function closeSetModal() {
@@ -1205,6 +1211,7 @@ async function finishWorkoutOnce() {
     // und die Einheit auf dem Schirm lassen — der Draft bleibt erhalten, damit die
     // geloggten Sätze nicht verloren gehen.
     console.error(e);
+    if (Voice.on()) playBeep();   // endTimer hielt den Piepton für „Geschafft“ zurück (Audit v2.10 Runde 2, INFO 5)
     await ask(I18N.t('workout.saveFailed'), { alert: true });
     return;
   }

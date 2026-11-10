@@ -43,10 +43,15 @@ if (process.argv[2] === '--check') {
 }
 // 2) Kein externer Verweis im gebündelten Frontend. Kommentare in CSS/JS/HTML zählen nicht, JSON wird nicht „entkommentiert“
 //    (dort ist /* … */ Text). Erkannt werden Schema-Adressen (http, https, ws, wss, ftp) UND protokoll-relative //host.tld
-//    (Release-Audit v2.10 a3), in allen Textdateien des Bundles. Den Schutz im Betrieb liefern weiter die fehlende
+//    (Release-Audit v2.10 a3), in allen Dateien außer Binärformaten. Den Schutz im Betrieb liefern weiter die fehlende
 //    INTERNET-Berechtigung und connect-src 'self'; diese Prüfung hält das Versprechen schon im Build.
-const TEXT_EXT = ['.css', '.js', '.mjs', '.html', '.htm', '.json', '.svg', '.xml', '.webmanifest', '.txt'];
-const URL_RE = /(?:\b(?:https?|wss?|ftp):)?\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?![a-z0-9-])/i;
+// Runde 2 (INFO a3): Schema-Adressen werden unabhängig vom Host erkannt (auch IP, localhost, Benutzerteil, escapter Slash
+// "https:\/\/…"); protokoll-relative //host.tld nur direkt nach Anführungszeichen, "(" oder "=" (Attribut, url(), String),
+// damit ein Inline-Kommentar „// siehe ex.name“ keinen Fehlalarm gibt. XML-Namensräume (xmlns="http://www.w3.org/…") sind
+// keine Abrufe und fallen vorher raus. Geprüft wird jede Datei außer bekannten Binärformaten (vorher nur sechs Endungen).
+const BIN_EXT = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.ogg', '.mp3', '.woff', '.woff2', '.ttf', '.otf'];
+const URL_RE = /\b(?:https?|wss?|ftp):\\?\/\\?\/|["'(=]\s*\\?\/\\?\/[a-z0-9-]+(?:\.[a-z0-9-]+)+/i;
+const XMLNS_RE = /\bxmlns(?::[\w-]+)?\s*=\s*(["'])https?:\/\/www\.w3\.org\/[^"']*\1/g;
 function scanDir(root) {
   const offenders = [];
   (function walk(dir) {
@@ -54,14 +59,14 @@ function scanDir(root) {
       const p = join(dir, name);
       if (statSync(p).isDirectory()) { walk(p); continue; }
       const ext = extname(p).toLowerCase();
-      if (!TEXT_EXT.includes(ext)) continue;
+      if (BIN_EXT.includes(ext)) continue;
       if (name === 'chart.umd.min.js') continue; // Chart.js enthält nur Lizenz-/Doku-URLs, lädt nichts nach
-      let src = readFileSync(p, 'utf8');
-      if (ext !== '.json' && ext !== '.txt') {
-        src = src.replace(/\/\*[\s\S]*?\*\//g, '')       // CSS/JS-Blockkommentare
-                 .replace(/^\s*\/\/.*$/gm, '')               // JS-Zeilenkommentare (ganze Zeile)
-                 .replace(/<!--[\s\S]*?-->/g, '');           // HTML-/SVG-Kommentare
+      let src = readFileSync(p, 'utf8').replace(XMLNS_RE, '');
+      if (['.css', '.js', '.mjs', '.cjs', '.html', '.htm', '.svg', '.xml'].includes(ext)) {
+        src = src.replace(/\/\*[\s\S]*?\*\//g, '')          // CSS/JS-Blockkommentare
+                 .replace(/<!--[\s\S]*?-->/g, '');              // HTML-/SVG-Kommentare
       }
+      if (['.js', '.mjs', '.cjs'].includes(ext)) src = src.replace(/^\s*\/\/.*$/gm, '');   // JS-Zeilenkommentare (ganze Zeile)
       const hit = src.match(URL_RE);
       if (hit) offenders.push(`${p}: ${hit[0]}`);
     }
@@ -108,12 +113,17 @@ const aAttr = (node, name) => Object.entries(node.attrs).find(([k]) => k.startsW
 function fileProviderProblems(apk, aapt2) {
   const run = args => execFileSync(aapt2, args, { encoding: 'utf8', maxBuffer: 1 << 30 });
   const problems = [];
+  // Runde 2: Provider über den Pfad-Verweis sammeln, egal welche Klasse (ein Plugin kann eine eigene FileProvider-Unterklasse
+  // mit eigener Pfaddatei mitbringen) — genau einer, und zwar der androidx-FileProvider.
+  const isPathsMeta = c => c.tag === 'meta-data' && aAttr(c, 'name') === 'android.support.FILE_PROVIDER_PATHS';
   const providers = [];
   walkTree(aaptTree(run(['dump', 'xmltree', '--file', 'AndroidManifest.xml', apk])), n => {
-    if (n.tag === 'provider' && aAttr(n, 'name') === 'androidx.core.content.FileProvider') providers.push(n);
+    if (n.tag === 'provider' && n.children.some(isPathsMeta)) providers.push(n);
   });
-  if (providers.length !== 1) return [`${providers.length} FileProvider im Manifest (erwartet genau einer)`];
-  const metas = providers[0].children.filter(c => c.tag === 'meta-data' && aAttr(c, 'name') === 'android.support.FILE_PROVIDER_PATHS');
+  if (providers.length !== 1 || aAttr(providers[0], 'name') !== 'androidx.core.content.FileProvider') {
+    return [`${providers.length} Provider mit FILE_PROVIDER_PATHS (${providers.map(p => aAttr(p, 'name')).join(', ')}), erwartet genau der androidx-FileProvider`];
+  }
+  const metas = providers[0].children.filter(isPathsMeta);
   const resId = metas.length === 1 ? aAttr(metas[0], 'resource') : null;
   if (!resId || !/^@0x[0-9a-f]{8}$/.test(resId)) return ['FILE_PROVIDER_PATHS-Verweis fehlt oder ist mehrdeutig'];
   const res = run(['dump', 'resources', apk]).split('\n');
@@ -125,9 +135,11 @@ function fileProviderProblems(apk, aapt2) {
     if (c) configs.push(c);
   }
   if (configs.length !== 1 || configs[0][1] !== '') return [`FileProvider-Pfade in ${configs.length} Fassungen (${configs.map(c => '(' + c[1] + ')').join(' ')}), erwartet genau "()"`];
-  const paths = [];
-  walkTree(aaptTree(run(['dump', 'xmltree', '--file', configs[0][2], apk])), n => { if (n.tag === 'paths') paths.push(n); });
-  if (paths.length !== 1) return ['file_paths ohne genau ein <paths>'];
+  // Runde 2: FileProvider liest JEDES Element unabhängig von der Tiefe — <paths> muss die Wurzel sein, Einträge ohne Kinder.
+  const doc = aaptTree(run(['dump', 'xmltree', '--file', configs[0][2], apk]));
+  if (doc.children.length !== 1 || doc.children[0].tag !== 'paths') return ['file_paths: Wurzel ist nicht genau ein <paths>'];
+  const paths = [doc.children[0]];
+  if (paths[0].children.some(c => c.children.length)) return ['file_paths: verschachtelte Einträge'];
   const got = paths[0].children.map(c => {
     const keys = Object.keys(c.attrs).sort().join(',');
     return keys === 'name,path' ? `${c.tag}:${c.attrs.path}` : `${c.tag}[${keys || 'ohne Attribute'}]`;

@@ -31,10 +31,13 @@ for t in jq ffmpeg; do command -v "$t" >/dev/null || { echo "$t fehlt" >&2; exit
 [[ -f "$CUES" ]] || { echo "Textdatei fehlt: $CUES" >&2; exit 1; }
 # Schlüssel (Stimmen, Sprachen, Ansagen) werden zu Pfaden und Dateinamen, Modellnamen zu Piper-Pfaden: nur einfache Namen
 # zulassen (Release-Audit v2.10 a2: "../x" als Stimme löschte per rm -rf außerhalb von public/audio).
-jq -e '([.voices | keys[]] + [del(.voices, ._info) | keys[]] + [del(.voices, ._info)[] | keys[]]
-        | all(test("^[a-z][a-z0-9_-]{0,31}$")))
-       and ([.voices[].model] | all(type == "string" and test("^[A-Za-z0-9_-]{1,64}$")))
-       and ([del(.voices, ._info)[][][]] | all(type == "string"))' "$CUES" >/dev/null \
+# Runde 2: \A…\z statt ^…$ (in jq passt $ auch vor einem abschließenden Zeilenumbruch: "thorsten\n" ging durch), Texte nur
+# als nicht leere Liste von Strings (ein Objekt lief durch und brach später still ab).
+jq -e '(.voices | type == "object") and ([del(.voices, ._info)[]] | all(type == "object"))
+       and ([.voices | keys[]] + [del(.voices, ._info) | keys[]] + [del(.voices, ._info)[] | keys[]]
+            | all(test("\\A[a-z][a-z0-9_-]{0,31}\\z")))
+       and ([.voices[].model] | all(type == "string" and test("\\A[A-Za-z0-9_-]{1,64}\\z")))
+       and ([del(.voices, ._info)[][]] | all(type == "array" and length > 0 and all(.[]; type == "string")))' "$CUES" >/dev/null \
   || { echo "Ungültige Textdatei $CUES: Schlüssel nur a-z, 0-9, _ und -; Modellname ohne Pfad; Texte als Liste von Strings" >&2; exit 1; }
 
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
@@ -78,12 +81,13 @@ if [[ -n "$PROBE" ]]; then
     model=$(vget "$v" model); ls_=$(vget "$v" length_scale); ns=$(vget "$v" noise_scale)
     for l in "${LANGS[@]}"; do
       list="$TMP/list.txt"; : > "$list"; legend="$PROBE/$v-$l-reihenfolge.txt"; : > "$legend"; i=0
+      cue_lines "$l" "$v" > "$TMP/lines.tsv" || { echo "Textdatei: jq-Fehler bei $v/$l" >&2; exit 1; }
       while IFS=$'\t' read -r cue n text; do
         i=$((i + 1)); f="$PROBE/$v-$l-$cue-$n.wav"
         render "$text" "$model" "$ls_" "$f" "$ns"
         printf "file '%s'\nfile '%s'\n" "$f" "$TMP/gap.wav" >> "$list"
         printf '%2d  %-6s %s\n' "$i" "$cue" "$text" >> "$legend"
-      done < <(cue_lines "$l" "$v")
+      done < "$TMP/lines.tsv"
       ffmpeg -nostdin -v error -y -f concat -safe 0 -i "$list" -c copy "$PROBE/_alle-$v-$l.wav"
       echo "Hörprobe: $PROBE/_alle-$v-$l.wav (Reihenfolge: $legend)"
     done
@@ -97,10 +101,11 @@ for v in "${VOICES[@]}"; do
   rm -rf "${OUT:?}/$v"
   for l in "${LANGS[@]}"; do
     mkdir -p "$OUT/$v/$l"
+    cue_lines "$l" "$v" > "$TMP/lines.tsv" || { echo "Textdatei: jq-Fehler bei $v/$l" >&2; exit 1; }
     while IFS=$'\t' read -r cue n text; do
       render "$text" "$model" "$ls_" "$TMP/clip.wav" "$ns"
       to_opus "$TMP/clip.wav" "$OUT/$v/$l/$cue-$n.ogg"
-    done < <(cue_lines "$l" "$v")
+    done < "$TMP/lines.tsv"
   done
 done
 # Anzahl der Varianten je Cue und Sprache (die App wählt zufällig eine davon)
