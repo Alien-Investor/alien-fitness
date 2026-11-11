@@ -172,8 +172,14 @@ window.LocalData = (function () {
     return {
       ...pe, sort_order: pe.sort_order != null ? pe.sort_order : idx,
       name: trx ? trx.name : e.name, muscle_group: e.muscle_group, equipment: e.equipment,
-      description: trx ? trx.description : e.description, type: e.type,
+      description: trx ? trx.description : e.description, type: e.type, hold: !!e.hold, sided: !!e.sided,
     };
+  }
+  // v2.11: Halteübung / je Seite / Typ einer Übung aus den Stammdaten (sync). Die App fragt über die ID, nicht über
+  // Felder am Plan- oder Draft-Objekt — Drafts aus v2.10 und importierte Pläne tragen sie nicht.
+  function exFlags(id) {
+    const e = exById && exById.get(Number(id));
+    return e ? { hold: !!e.hold, sided: !!e.sided, type: e.type || 'strength' } : null;
   }
 
   async function getPlans() {
@@ -535,6 +541,6 @@ window.LocalData = (function () {
     savePlan, getCustomPlan, deletePlan,
     getSessions, getSession, addSession, deleteSession, updateSession, getLastSets, getLastSetsMany,
     getProgress, getStats, hasData,
-    exportAll, importAll, kerstinFor,
+    exportAll, importAll, kerstinFor, exFlags,
   };
 })();

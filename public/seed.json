@@ -8,7 +8,9 @@
       "muscle_group": "Brust",
       "equipment": "Bank",
       "type": "strength",
-      "description": "Füße auf die Bank legen, Körper schräg nach unten. Schwerer als der normale Liegestütz, mehr Arbeit für die vordere Schulter. Hände schulterbreit, Ellenbogen leicht anwinkeln."
+      "description": "Füße auf die Bank legen, Körper schräg nach unten. Schwerer als der normale Liegestütz, mehr Arbeit für die vordere Schulter. Hände schulterbreit, Ellenbogen leicht anwinkeln.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 2,
@@ -16,7 +18,9 @@
       "muscle_group": "Brust",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Auf der Bank liegen, Hanteln auf Brusthöhe, explosiv drücken, langsam absenken. Schulterblätter zusammenziehen."
+      "description": "Auf der Bank liegen, Hanteln auf Brusthöhe, explosiv drücken, langsam absenken. Schulterblätter zusammenziehen.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 3,
@@ -24,7 +28,9 @@
       "muscle_group": "Brust",
       "equipment": "Bank",
       "type": "strength",
-      "description": "Hände auf die Bank, Körper schräg. Leichtere Variante, weniger Gewicht auf den Armen. Rumpf angespannt halten."
+      "description": "Hände auf die Bank, Körper schräg. Leichtere Variante, weniger Gewicht auf den Armen. Rumpf angespannt halten.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 4,
@@ -32,7 +38,9 @@
       "muscle_group": "Schultern",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Sitzen oder stehen, Hanteln auf Schulterhöhe, gerade nach oben drücken. Nicht ins Hohlkreuz fallen."
+      "description": "Sitzen oder stehen, Hanteln auf Schulterhöhe, gerade nach oben drücken. Nicht ins Hohlkreuz fallen.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 5,
@@ -40,7 +48,9 @@
       "muscle_group": "Schultern",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Leicht vorgeneigt, Arme seitlich bis Schulterhöhe heben. Kontrollierte Bewegung, kein Schwung."
+      "description": "Leicht vorgeneigt, Arme seitlich bis Schulterhöhe heben. Kontrollierte Bewegung, kein Schwung.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 6,
@@ -48,7 +58,9 @@
       "muscle_group": "Schultern",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Arme abwechselnd oder zusammen nach vorne bis Schulterhöhe heben. Rücken gerade."
+      "description": "Arme abwechselnd oder zusammen nach vorne bis Schulterhöhe heben. Rücken gerade.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 7,
@@ -56,7 +68,9 @@
       "muscle_group": "Trizeps",
       "equipment": "Bank",
       "type": "strength",
-      "description": "Hände auf der Bank hinter dir, Beine gestreckt oder gebeugt. Körper senken bis Oberarme parallel zum Boden, hochdrücken."
+      "description": "Hände auf der Bank hinter dir, Beine gestreckt oder gebeugt. Körper senken bis Oberarme parallel zum Boden, hochdrücken.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 8,
@@ -64,7 +78,9 @@
       "muscle_group": "Trizeps",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Hantel hinter dem Kopf halten (eine oder beide Hände), Ellenbogen fixiert, strecken und beugen."
+      "description": "Hantel hinter dem Kopf halten (eine oder beide Hände), Ellenbogen fixiert, strecken und beugen.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 9,
@@ -72,7 +88,9 @@
       "muscle_group": "Trizeps",
       "equipment": "Körpergewicht",
       "type": "strength",
-      "description": "Hände dicht beieinander (Diamant-Form), Ellenbogen nah am Körper. Betont den Trizeps stark."
+      "description": "Hände dicht beieinander (Diamant-Form), Ellenbogen nah am Körper. Betont den Trizeps stark.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 10,
@@ -80,7 +98,9 @@
       "muscle_group": "Rücken",
       "equipment": "Stange",
       "type": "strength",
-      "description": "Hände weiter als Schulterbreite, Handflächen weg. Brust zur Stange ziehen, langsam absenken. Schulterblätter einziehen."
+      "description": "Hände weiter als Schulterbreite, Handflächen weg. Brust zur Stange ziehen, langsam absenken. Schulterblätter einziehen.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 11,
@@ -88,7 +108,9 @@
       "muscle_group": "Rücken",
       "equipment": "Stange",
       "type": "strength",
-      "description": "Enger Untergriff, Handflächen zu dir. Kinn über die Stange, betont zusätzlich den Bizeps."
+      "description": "Enger Untergriff, Handflächen zu dir. Kinn über die Stange, betont zusätzlich den Bizeps.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 12,
@@ -96,7 +118,9 @@
       "muscle_group": "Rücken",
       "equipment": "Stange",
       "type": "strength",
-      "description": "Handflächen zueinander (falls Griffe vorhanden). Kinn über die Griffe, langsam absenken. Trainiert den Rücken ähnlich wie der Klimmzug im Obergriff."
+      "description": "Handflächen zueinander (falls Griffe vorhanden). Kinn über die Griffe, langsam absenken. Trainiert den Rücken ähnlich wie der Klimmzug im Obergriff.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 13,
@@ -104,7 +128,9 @@
       "muscle_group": "Rücken",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Knie und Hand auf der Bank abstützen, Hantel vom Boden zur Hüfte ziehen. Ellenbogen nah am Körper."
+      "description": "Knie und Hand auf der Bank abstützen, Hantel vom Boden zur Hüfte ziehen. Ellenbogen nah am Körper.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 14,
@@ -112,7 +138,9 @@
       "muscle_group": "Rücken",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Längs oder quer auf der Bank liegen (quer: nur die Schultern aufgelegt), Hantel mit beiden Händen über den Kopf nach hinten absenken und zurückziehen. Dehnt Brustkorb und Rücken."
+      "description": "Längs oder quer auf der Bank liegen (quer: nur die Schultern aufgelegt), Hantel mit beiden Händen über den Kopf nach hinten absenken und zurückziehen. Dehnt Brustkorb und Rücken.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 15,
@@ -120,7 +148,9 @@
       "muscle_group": "Bizeps",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Arme gestreckt, Hanteln beugen bis zur Schulter. Ellenbogen fixiert am Körper, kein Schwung."
+      "description": "Arme gestreckt, Hanteln beugen bis zur Schulter. Ellenbogen fixiert am Körper, kein Schwung.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 16,
@@ -128,7 +158,9 @@
       "muscle_group": "Bizeps",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Handflächen zueinander (neutraler Griff), Curls ausführen. Trainiert Bizeps, Brachialis und Brachioradialis."
+      "description": "Handflächen zueinander (neutraler Griff), Curls ausführen. Trainiert Bizeps, Brachialis und Brachioradialis.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 17,
@@ -136,7 +168,9 @@
       "muscle_group": "Bizeps",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Sitzen, Ellenbogen innen ans Knie stützen, langsam curlen. Maximale Isolation des Bizeps."
+      "description": "Sitzen, Ellenbogen innen ans Knie stützen, langsam curlen. Maximale Isolation des Bizeps.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 18,
@@ -144,7 +178,9 @@
       "muscle_group": "Core",
       "equipment": "Stange",
       "type": "strength",
-      "description": "An der Stange hängen, Knie zur Brust ziehen. Langsam absenken. Variation: gestreckte Beine für mehr Intensität."
+      "description": "An der Stange hängen, Knie zur Brust ziehen. Langsam absenken. Variation: gestreckte Beine für mehr Intensität.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 19,
@@ -152,7 +188,9 @@
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Hinteres Bein auf der Bank, vorderes Bein weit vor. Tief absenken, Knie zeigt nach vorne. Trainiert Oberschenkel und Gesäß, jedes Bein einzeln."
+      "description": "Hinteres Bein auf der Bank, vorderes Bein weit vor. Tief absenken, Knie zeigt nach vorne. Trainiert Oberschenkel und Gesäß, jedes Bein einzeln.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 20,
@@ -160,7 +198,9 @@
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Leicht gebeugte Knie, Hanteln nah am Körper die Beine runter. Spannung in der hinteren Oberschenkelkette halten."
+      "description": "Leicht gebeugte Knie, Hanteln nah am Körper die Beine runter. Spannung in der hinteren Oberschenkelkette halten.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 21,
@@ -168,7 +208,9 @@
       "muscle_group": "Beine",
       "equipment": "Bank",
       "type": "strength",
-      "description": "Schultern auf der Bank, Hüfte senken und explosiv nach oben drücken. Hantel auf Hüfte für mehr Widerstand."
+      "description": "Schultern auf der Bank, Hüfte senken und explosiv nach oben drücken. Hantel auf Hüfte für mehr Widerstand.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 22,
@@ -176,7 +218,9 @@
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
-      "description": "Einen Schritt nach hinten, Knie senkt sich Richtung Boden, zurück zur Startposition. Abwechselnd je Seite."
+      "description": "Einen Schritt nach hinten, Knie senkt sich Richtung Boden, zurück zur Startposition. Abwechselnd je Seite.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 23,
@@ -184,7 +228,9 @@
       "muscle_group": "Beine",
       "equipment": "Stange",
       "type": "strength",
-      "description": "Eine Hand an der Stange für Balance, einbeinig auf Zehenspitzen. Langsam und kontrolliert."
+      "description": "Eine Hand an der Stange für Balance, einbeinig auf Zehenspitzen. Langsam und kontrolliert.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 24,
@@ -192,7 +238,9 @@
       "muscle_group": "Core",
       "equipment": "Körpergewicht",
       "type": "strength",
-      "description": "Unterarme oder Hände, Körper gerade wie ein Brett. Bauch anspannen, Hüfte nicht hängen lassen. Haltezeit steigern."
+      "description": "Unterarme oder Hände, Körper gerade wie ein Brett. Bauch anspannen, Hüfte nicht hängen lassen. Haltezeit steigern.",
+      "hold": 1,
+      "sided": 0
     },
     {
       "id": 25,
@@ -200,7 +248,9 @@
       "muscle_group": "Ganzkörper",
       "equipment": "Körpergewicht",
       "type": "hit",
-      "description": "Aus dem Stand in den Liegestütz, Push-up, zurück, springen mit Armen hoch. Explosiv und ohne Pause."
+      "description": "Aus dem Stand in den Liegestütz, Push-up, zurück, springen mit Armen hoch. Explosiv und ohne Pause.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 26,
@@ -208,7 +258,9 @@
       "muscle_group": "Beine",
       "equipment": "Körpergewicht",
       "type": "hit",
-      "description": "Kniebeuge, dann explosiv hochspringen. Weich landen, direkt in die nächste Wiederholung."
+      "description": "Kniebeuge, dann explosiv hochspringen. Weich landen, direkt in die nächste Wiederholung.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 27,
@@ -216,7 +268,9 @@
       "muscle_group": "Core",
       "equipment": "Körpergewicht",
       "type": "hit",
-      "description": "Plank-Position, Knie abwechselnd schnell zur Brust ziehen. So schnell wie möglich, Hüfte unten lassen."
+      "description": "Plank-Position, Knie abwechselnd schnell zur Brust ziehen. So schnell wie möglich, Hüfte unten lassen.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 28,
@@ -224,7 +278,9 @@
       "muscle_group": "Ganzkörper",
       "equipment": "Körpergewicht",
       "type": "hit",
-      "description": "Auf der Stelle laufen, Knie explosiv bis zur Hüfte ziehen. Arme mitbewegen. Maximales Tempo."
+      "description": "Auf der Stelle laufen, Knie explosiv bis zur Hüfte ziehen. Arme mitbewegen. Maximales Tempo.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 29,
@@ -232,7 +288,9 @@
       "muscle_group": "Rücken",
       "equipment": "Stange",
       "type": "hit",
-      "description": "Explosiv hochziehen, so hoch wie möglich. Kurze Pause oben, kontrolliert absenken. Alternativ: Kipping Pull-ups."
+      "description": "Explosiv hochziehen, so hoch wie möglich. Kurze Pause oben, kontrolliert absenken. Alternativ: Kipping Pull-ups.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 30,
@@ -240,7 +298,9 @@
       "muscle_group": "Brust",
       "equipment": "Körpergewicht",
       "type": "hit",
-      "description": "Normaler Liegestütz, explosiv hochdrücken, Hände klatschen, weich landen. Nur wenn Basis-Liegestütz sicher geht."
+      "description": "Normaler Liegestütz, explosiv hochdrücken, Hände klatschen, weich landen. Nur wenn Basis-Liegestütz sicher geht.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 31,
@@ -248,7 +308,9 @@
       "muscle_group": "Beine",
       "equipment": "Bank",
       "type": "hit",
-      "description": "Aus dem Stand auf die Bank springen, weich landen, absteigen (nicht rückwärts springen). Schrittweise höher."
+      "description": "Aus dem Stand auf die Bank springen, weich landen, absteigen (nicht rückwärts springen). Schrittweise höher.",
+      "hold": 0,
+      "sided": 0
     },
     {
       "id": 32,
@@ -256,7 +318,129 @@
       "muscle_group": "Beine",
       "equipment": "Körpergewicht",
       "type": "hit",
-      "description": "Aus dem Ausfallschritt explosiv das hintere Knie nach vorne oben reißen. Abwechselnd links/rechts, maximales Tempo."
+      "description": "Aus dem Ausfallschritt explosiv das hintere Knie nach vorne oben reißen. Abwechselnd links/rechts, maximales Tempo.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 33,
+      "name": "Hampelmann",
+      "muscle_group": "Ganzkörper",
+      "equipment": "Körpergewicht",
+      "type": "warmup",
+      "description": "Aus dem Stand in die Grätsche springen und die Arme über den Kopf führen, dann zurück. Locker und gleichmäßig, weich auf den Fußballen landen.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 34,
+      "name": "Armkreisen",
+      "muscle_group": "Schultern",
+      "equipment": "Körpergewicht",
+      "type": "warmup",
+      "description": "Aufrecht stehen, Arme seitlich ausstrecken und kreisen lassen. Klein beginnen, dann größer werden, nach der Hälfte die Richtung wechseln.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 35,
+      "name": "Hüftkreisen",
+      "muscle_group": "Core",
+      "equipment": "Körpergewicht",
+      "type": "warmup",
+      "description": "Füße hüftbreit, Hände in die Hüften. Das Becken langsam in großen Kreisen bewegen, nach der Hälfte die Richtung wechseln.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 36,
+      "name": "Kniebeuge ohne Gewicht",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "warmup",
+      "description": "Füße etwa schulterbreit, Hüfte nach hinten unten absenken, als ob du dich auf einen Stuhl setzt. Brust aufrecht, ruhig und kontrolliert zurück nach oben.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 37,
+      "name": "Ausfallschritt mit Rumpfdrehung",
+      "muscle_group": "Ganzkörper",
+      "equipment": "Körpergewicht",
+      "type": "warmup",
+      "description": "Großer Schritt nach vorne, hinteres Knie Richtung Boden senken und den Oberkörper zur Seite des vorderen Beins drehen. Zurück in den Stand, Seite wechseln.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 38,
+      "name": "Brustdehnung an der Stange",
+      "muscle_group": "Brust",
+      "equipment": "Stange",
+      "type": "stretch",
+      "description": "Unterarm auf Schulterhöhe an einen senkrechten Pfosten der Klimmzugstange oder an einen Türrahmen legen, Ellenbogen etwa im rechten Winkel. Den Oberkörper langsam wegdrehen, bis ein Ziehen in der Brust spürbar ist. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 39,
+      "name": "Schulterdehnung (Arm quer)",
+      "muscle_group": "Schultern",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "Einen Arm gestreckt quer vor die Brust führen und mit der anderen Hand oberhalb des Ellenbogens sanft heranziehen. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 40,
+      "name": "Trizepsdehnung über Kopf",
+      "muscle_group": "Trizeps",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "Einen Arm über den Kopf heben und den Ellenbogen beugen, sodass die Hand zwischen die Schulterblätter zeigt. Mit der anderen Hand den Ellenbogen sanft nach hinten drücken. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 41,
+      "name": "Hüftbeuger-Dehnung kniend",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "In den Kniestand gehen, ein Fuß vorne aufgestellt. Gesäß anspannen und die Hüfte langsam nach vorne schieben, bis vorne an der Hüfte des hinteren Beins ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 42,
+      "name": "Oberschenkel vorn im Stand",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "Auf einem Bein stehen, den anderen Fuß hinten greifen und die Ferse Richtung Gesäß ziehen. Die Knie bleiben nah beieinander, das gebeugte zeigt nach unten. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 43,
+      "name": "Oberschenkel hinten (Ferse auf der Bank)",
+      "muscle_group": "Beine",
+      "equipment": "Bank",
+      "type": "stretch",
+      "description": "Eine Ferse auf die Bank legen, Bein fast gestreckt. Mit geradem Rücken aus der Hüfte nach vorne neigen, bis hinten im Oberschenkel ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 44,
+      "name": "Passives Hängen",
+      "muscle_group": "Rücken",
+      "equipment": "Stange",
+      "type": "stretch",
+      "description": "An der Klimmzugstange im schulterbreiten Obergriff hängen, Füße vom Boden. Schultern locker nach oben gleiten lassen und ruhig atmen.",
+      "hold": 1,
+      "sided": 0
     }
   ],
   "plans": [
@@ -294,6 +478,20 @@
       "type": "hit",
       "day_label": "HIT Tag B – Power",
       "sort_order": 5
+    },
+    {
+      "id": 6,
+      "name": "Aufwärmen",
+      "type": "warmup",
+      "day_label": "Vor dem Training",
+      "sort_order": 6
+    },
+    {
+      "id": 7,
+      "name": "Dehnen",
+      "type": "stretch",
+      "day_label": "Nach dem Training",
+      "sort_order": 7
     }
   ],
   "plan_exercises": [
@@ -548,6 +746,114 @@
       "reps": "10",
       "rest_seconds": 60,
       "sort_order": 4
+    },
+    {
+      "id": 29,
+      "plan_id": 6,
+      "exercise_id": 33,
+      "sets": 1,
+      "reps": "40 Sek",
+      "rest_seconds": 10,
+      "sort_order": 0
+    },
+    {
+      "id": 30,
+      "plan_id": 6,
+      "exercise_id": 34,
+      "sets": 1,
+      "reps": "40 Sek",
+      "rest_seconds": 10,
+      "sort_order": 1
+    },
+    {
+      "id": 31,
+      "plan_id": 6,
+      "exercise_id": 35,
+      "sets": 1,
+      "reps": "40 Sek",
+      "rest_seconds": 10,
+      "sort_order": 2
+    },
+    {
+      "id": 32,
+      "plan_id": 6,
+      "exercise_id": 36,
+      "sets": 1,
+      "reps": "40 Sek",
+      "rest_seconds": 10,
+      "sort_order": 3
+    },
+    {
+      "id": 33,
+      "plan_id": 6,
+      "exercise_id": 37,
+      "sets": 1,
+      "reps": "40 Sek",
+      "rest_seconds": 10,
+      "sort_order": 4
+    },
+    {
+      "id": 34,
+      "plan_id": 7,
+      "exercise_id": 38,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 0
+    },
+    {
+      "id": 35,
+      "plan_id": 7,
+      "exercise_id": 39,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 1
+    },
+    {
+      "id": 36,
+      "plan_id": 7,
+      "exercise_id": 40,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 2
+    },
+    {
+      "id": 37,
+      "plan_id": 7,
+      "exercise_id": 41,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 3
+    },
+    {
+      "id": 38,
+      "plan_id": 7,
+      "exercise_id": 42,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 4
+    },
+    {
+      "id": 39,
+      "plan_id": 7,
+      "exercise_id": 43,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 5
+    },
+    {
+      "id": 40,
+      "plan_id": 7,
+      "exercise_id": 44,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 6
     }
   ]
 }

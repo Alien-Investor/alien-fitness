@@ -127,6 +127,54 @@
     "32": {
       "name": "Sprinter Lunges",
       "description": "From a lunge, explosively drive your rear knee forward and up. Alternate left/right, maximum pace."
+    },
+    "33": {
+      "name": "Jumping Jacks",
+      "description": "Jump your feet apart while raising your arms overhead, then back. Keep it relaxed and steady, land softly on the balls of your feet."
+    },
+    "34": {
+      "name": "Arm Circles",
+      "description": "Stand tall, arms out to the sides, and circle them. Start small, then go bigger, and switch direction halfway through."
+    },
+    "35": {
+      "name": "Hip Circles",
+      "description": "Feet hip-width apart, hands on your hips. Move your pelvis slowly in big circles and switch direction halfway through."
+    },
+    "36": {
+      "name": "Bodyweight Squat",
+      "description": "Feet about shoulder-width apart, lower your hips back and down as if sitting onto a chair. Chest up, come back up smoothly and under control."
+    },
+    "37": {
+      "name": "Lunge with Twist",
+      "description": "Take a big step forward, lower your back knee toward the floor and turn your upper body toward your front leg. Return to standing, switch sides."
+    },
+    "38": {
+      "name": "Chest Stretch at the Bar",
+      "description": "Place your forearm at shoulder height against an upright of the pull-up bar or a door frame, elbow at roughly a right angle. Slowly turn your upper body away until you feel a stretch in your chest. Hold, then switch sides."
+    },
+    "39": {
+      "name": "Cross-Body Shoulder Stretch",
+      "description": "Bring one arm straight across your chest and gently pull it in with your other hand, just above the elbow. Hold, then switch sides."
+    },
+    "40": {
+      "name": "Overhead Triceps Stretch",
+      "description": "Raise one arm overhead and bend the elbow so your hand points down between your shoulder blades. Gently press the elbow back with your other hand. Hold, then switch sides."
+    },
+    "41": {
+      "name": "Kneeling Hip Flexor Stretch",
+      "description": "Kneel on one knee with the other foot planted in front. Squeeze your glutes and slowly push your hips forward until you feel a stretch at the front of the hip on your kneeling side. Hold, then switch sides."
+    },
+    "42": {
+      "name": "Standing Quad Stretch",
+      "description": "Stand on one leg, grab your other foot behind you and pull the heel toward your glutes. Keep your knees close together, the bent one pointing down. Hold, then switch sides."
+    },
+    "43": {
+      "name": "Hamstring Stretch (Heel on Bench)",
+      "description": "Rest one heel on the bench, leg almost straight. Keeping your back straight, hinge forward from the hips until you feel a stretch in the back of your thigh. Hold, then switch sides."
+    },
+    "44": {
+      "name": "Dead Hang",
+      "description": "Hang from the pull-up bar with an overhand, shoulder-width grip, feet off the floor. Relax your shoulders, let them slide upward and breathe calmly."
     }
   },
   "plans": {
@@ -149,6 +197,14 @@
     "5": {
       "name": "HIT — Power & Explosiveness",
       "day_label": "HIT Day B – Power"
+    },
+    "6": {
+      "name": "Warm-up",
+      "day_label": "Before training"
+    },
+    "7": {
+      "name": "Stretching",
+      "day_label": "After training"
     }
   },
   "muscle_groups": {

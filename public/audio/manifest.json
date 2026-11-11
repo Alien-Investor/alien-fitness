@@ -8,7 +8,23 @@
     "ten": 1,
     "next": 1,
     "done": 1,
-    "hi": 1
+    "hi": 1,
+    "nextex": 1,
+    "side": 1,
+    "warmdone": 1,
+    "stretchdone": 1,
+    "ex33": 1,
+    "ex34": 1,
+    "ex35": 1,
+    "ex36": 1,
+    "ex37": 1,
+    "ex38": 1,
+    "ex39": 1,
+    "ex40": 1,
+    "ex41": 1,
+    "ex42": 1,
+    "ex43": 1,
+    "ex44": 1
   },
   "en": {
     "prep": 1,
@@ -19,6 +35,10 @@
     "ten": 1,
     "next": 1,
     "done": 1,
-    "hi": 1
+    "hi": 1,
+    "nextex": 1,
+    "side": 1,
+    "warmdone": 1,
+    "stretchdone": 1
   }
 }

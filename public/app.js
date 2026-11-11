@@ -98,7 +98,7 @@ const tooSoonAfterClose = e => e && e.isTrusted && evtTime(e) - overlayClosedAt 
 // Release-Audit v2.10 I1–I5 (v2.11): dieselbe Lücke an drei weiteren Stellen — ein Tipp öffnet den Plan-Editor bzw. den
 // Timer oder blendet die Fortsetzen-Karte aus, der zweite Tipp traf darunter „Speichern“/„＋ Übung“/Hintergrund im Editor,
 // „Überspringen“ der Pause (Satz speichern bei offener Tastatur) oder eine Plan-Karte (Start ohne Sätze).
-let editorOpenedAt = 0, timerOpenedAt = 0;
+let editorOpenedAt = 0, timerOpenedAt = 0, workoutShownAt = 0, bannerShownAt = 0;
 const editorTooEarly = e => e && e.isTrusted && evtTime(e) - editorOpenedAt < DLG_ARM_MS;
 const timerTooEarly = e => e && e.isTrusted && evtTime(e) - timerOpenedAt < DLG_ARM_MS;
 function ask(msg, opt) {
@@ -398,7 +398,7 @@ async function loadDashboard() {
           <div class="plan-name">${esc(p.name)}</div>
           <div class="plan-meta">${esc(p.day_label || '')}</div>
         </div>
-        <span>${p.custom ? `<span class="badge">${I18N.t('badge.custom')}</span> ` : ''}<span class="badge ${p.type === 'hit' ? 'hit' : ''}">${p.type === 'hit' ? I18N.t('badge.hit') : I18N.t('badge.strength')}</span></span>`;
+        <span>${p.custom ? `<span class="badge">${I18N.t('badge.custom')}</span> ` : ''}<span class="badge ${p.type === 'hit' ? 'hit' : ''}">${I18N.t(TYPE_BADGE[p.type] || 'badge.strength')}</span></span>`;
       div.addEventListener('click', e => { if (!tooSoonAfterClose(e)) startWorkout(p.id); });
       el.appendChild(div);
     });
@@ -502,7 +502,11 @@ function restOf(ex, def) {
 // dann Vorlauf und Halte-Timer. Hängt an der ÜBUNG, nicht am Plan-Text — Plank in einem eigenen Plan
 // mit „max“ oder „8-12“ bekommt die Auswahl genauso. Ausnahme: HIT-Plan mit fester Zeitangabe
 // („20 Sek“) bleibt das Tabata-Intervall mit Kette.
-const HOLD_IDS = new Set([24]);                 // Plank
+// v2.11: Halteübung und „je Seite“ sind Eigenschaften der Übung in den Stammdaten (seed.json hold/sided) statt fester
+// HOLD_IDS = {24}. Gelesen über die Übungs-ID — Drafts aus v2.10 und importierte Pläne tragen die Felder nicht.
+const exFlags = ex => (window.LocalData && LocalData.exFlags && LocalData.exFlags(ex && ex.exercise_id)) || { hold: false, sided: false, type: 'strength' };
+const SIDE_SWITCH = 5;                          // Wechsel zwischen den Seiten (Sekunden), „Seite wechseln.“
+const TYPE_BADGE = { strength: 'badge.strength', hit: 'badge.hit', warmup: 'badge.warmup', stretch: 'badge.stretch' };
 const HOLD_CHOICES = [30, 45, 60, 90, 120, 180];
 // Intervalle (v2.10): gleiche Auswahl vor dem Start, aber ohne „Max“ (eine Stoppuhr passt nicht in eine Kette)
 const INTERVAL_CHOICES = [20, 30, 45, 60, 90, 120, 180];
@@ -510,7 +514,7 @@ const HOLD_PREP = 5;                            // Vorlauf „Bereit machen“ (
 const HOLD_MAX_CAP = 600;                       // Obergrenze für eigene Zeit und Stoppuhr
 const HOLD_KEY = 'fit-hold-target';             // zuletzt gewählte Haltezeit je Übung (Komfort, nicht im Backup)
 function isHoldSet(ex) {
-  if (!HOLD_IDS.has(Number(ex.exercise_id))) return false;
+  if (!exFlags(ex).hold) return false;
   return !(activeSession && activeSession.planType === 'hit' && timedSeconds(ex));
 }
 // Zähler ab einer Minute als m:ss („1:30“ statt „90“)
@@ -554,6 +558,7 @@ function showWorkoutScreen(title, adhoc) {
   document.getElementById('btn-add-exercise').style.display = adhoc ? '' : 'none';
   document.getElementById('workout-plan-name').textContent = title;
   document.getElementById('resume-card').style.display = 'none';
+  workoutShownAt = performance.now();   // v2.11: Start-Knopf der Aufwärm-Karte liegt dort, wo eben die Plan-Karte war
   acquireWakeLock();
 }
 
@@ -802,6 +807,8 @@ async function openExercisePicker() {
 function renderExercises(exercises) {
   const el = document.getElementById('exercise-list');
   el.innerHTML = '';
+  const rc = routineCardEl();   // v2.11: Aufwärmen ▶ bzw. eigener Plan am Stück
+  if (rc) el.appendChild(rc);
   exercises.forEach((ex, ei) => {
     const card = document.createElement('div');
     card.className = 'exercise-card' + (ei === 0 ? ' current' : '');
@@ -828,7 +835,7 @@ function renderExercises(exercises) {
     // sets und rest_seconds Nutzer- bzw. Fremddaten (Freitext bzw. aus Backup-JSON).
     info.innerHTML = `
       <div class="ex-name">${esc(ex.name)}</div>
-      <div class="ex-meta">${esc(ex.sets)} ${I18N.t('dyn.sets')} × ${esc(fmtReps(ex.reps))} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
+      <div class="ex-meta">${esc(ex.sets)} ${I18N.t(ex.sets === 1 ? 'dyn.set1' : 'dyn.sets')} × ${esc(fmtReps(ex.reps))}${exFlags(ex).sided ? ' ' + esc(I18N.t('tag.sided')) : ''} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
     header.appendChild(info);
     card.appendChild(header);
 
@@ -1091,10 +1098,10 @@ function rememberHoldTarget(exId, v) {
 }
 
 // Chips je Öffnen bauen (Halten mit „Max“, Intervall ohne); „Max“ trägt data-i18n für applyStatic
-function buildHoldChips(mode) {
+function buildHoldChips(mode, noMax) {   // noMax: Halten je Seite (v2.11) — eine Stoppuhr passt nicht zu zwei gleich langen Seiten
   const box = document.getElementById('hold-chips');
   box.textContent = '';
-  (mode === 'hold' ? [...HOLD_CHOICES, 'max'] : INTERVAL_CHOICES).forEach(v => {
+  (mode === 'hold' ? (noMax ? HOLD_CHOICES : [...HOLD_CHOICES, 'max']) : INTERVAL_CHOICES).forEach(v => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'hold-chip';
@@ -1122,12 +1129,13 @@ function setHoldValue(v, writeInput) {
 
 async function openHoldModal(exIdx, setNum, ex) {
   const mode = isHoldSet(ex) ? 'hold' : 'interval';
-  pendingHold = { exIdx, setNum, ex, mode, value: null };
+  const sided = mode === 'hold' && exFlags(ex).sided;
+  pendingHold = { exIdx, setNum, ex, mode, sided, value: null };
   holdOpenedAt = performance.now();
-  buildHoldChips(mode);
+  buildHoldChips(mode, sided);
   document.getElementById('hold-modal-title').textContent = `${I18N.t('dyn.setN')} ${setNum} — ${ex.name}`;
   const label = document.getElementById('hold-label');
-  label.dataset.i18n = mode === 'hold' ? 'hold.title' : 'hold.titleInterval';
+  label.dataset.i18n = mode === 'hold' ? (sided ? 'hold.titleSided' : 'hold.title') : 'hold.titleInterval';
   label.textContent = I18N.t(label.dataset.i18n);
   // Intervall: die Wahl gilt für die folgenden Runden der Kette (Hinweis nur, wenn noch Runden folgen)
   const chainHint = document.getElementById('hold-chain-hint');
@@ -1138,7 +1146,7 @@ async function openHoldModal(exIdx, setNum, ex) {
   const own = activeSession.sets.find(s => setRow(s) === exIdx && s.set_number === setNum && s.duration_seconds);
   const saved = readHoldTargets()[ex.exercise_id];
   const pre = (own && clampHold(own.duration_seconds))
-    || (saved === 'max' ? (mode === 'hold' ? 'max' : null) : clampHold(saved))
+    || (saved === 'max' ? (mode === 'hold' && !sided ? 'max' : null) : clampHold(saved))
     || clampHold(timedSeconds(ex)) || (mode === 'hold' ? 60 : 20);
   setHoldValue(pre, true);
   const lastEl = document.getElementById('hold-last');
@@ -1159,10 +1167,15 @@ function holdSub(ex, setNum) { return `${ex.name} · ${I18N.t('dyn.setN')} ${set
 
 function startHold() {
   if (!pendingHold || !pendingHold.value) return;
-  const { exIdx, setNum, ex, value, mode } = pendingHold;
+  const { exIdx, setNum, ex, value, mode, sided } = pendingHold;
   rememberHoldTarget(ex.exercise_id, value);
   closeHoldModal();
   const sub = holdSub(ex, setNum);
+  if (sided && value !== 'max') {   // v2.11: Seite 1 → Wechsel → Seite 2, gespeichert wird die kürzere Seite
+    startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () =>
+      runSided(value, { label: 'timer.hold', sub, cue: 'hold' }, secs => logHold(exIdx, setNum, ex, secs)) });
+    return;
+  }
   if (mode === 'interval') {
     // Vorlauf nur vor der ersten Runde; danach bereitet die Pause der Kette vor (Tabata bleibt 20/10)
     startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () => startTimedSet(exIdx, setNum, ex, value) });
@@ -1193,6 +1206,152 @@ function logHold(exIdx, setNum, ex, secs) {
                   : (nextEx ? I18N.t('dyn.nextExercise', { name: nextEx.name }) : I18N.t('dyn.lastRest')),
   });
 }
+
+// Halten je Seite (v2.11): Seite 1 → Wechsel (SIDE_SWITCH s, „Seite wechseln.“, drei Zähltöne) → Seite 2.
+// done(sec) bekommt die kürzere Seite — „30 s je Seite“ heißt: beide Seiten mindestens so lange.
+function runSided(secs, opts, done) {
+  const sub = n => `${opts.sub} · ${I18N.t('dyn.sideN', { n })}`;
+  startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(1), cue: opts.cue, onDone: first => {
+    startTimer(SIDE_SWITCH, { kind: 'prep', label: 'timer.side', chain: true, sub: sub(2), cue: 'side', onDone: () => {
+      startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(2), cue: opts.cue,
+        onDone: second => done(Math.min(first, second)) });
+    } });
+  } });
+}
+
+// ── Aufwärmen und Dehnen am Stück (v2.11) ─────────────────────────────────────
+// Freihändig über alle Übungen: Vorlauf (5 s) bzw. Wechsel (Pause der Zeile davor) mit Ansage der nächsten Übung →
+// Übung (je Seite: Seite 1, Wechsel, Seite 2) → nächste. „Fertig →“ beendet die Phase vorzeitig, „■ Stopp“ den Ablauf.
+// log=false: Block im Training (Entscheidung Nutzer 10.11.2026: wird NICHT gespeichert, zählt nicht in die Statistik);
+// log=true: eigener Plan „Aufwärmen“/„Dehnen“ — jede Übung wird ein Satz mit Dauer, die letzte schließt die Einheit ab.
+let routine = null;   // laufender Ablauf { kind, rows, log, i }
+const ROUTINE_TYPES = ['warmup', 'stretch'];
+const routineSecs = ex => clampHold(timedSeconds(ex)) || (exFlags(ex).hold ? 30 : 40);
+function routineMinutes(rows) {
+  const sec = rows.reduce((a, r, i) => {
+    const sided = exFlags(r.ex).sided;
+    return a + r.secs * (sided ? 2 : 1) + (sided ? SIDE_SWITCH : 0) + (i === 0 ? HOLD_PREP : restOf(rows[i - 1].ex, 10));
+  }, 0);
+  return Math.max(1, Math.round(sec / 60));
+}
+function runRoutine(kind, rows, log) {
+  if (!rows.length) return;
+  cancelTimer();
+  const r = { kind, rows, log, i: 0 };
+  routine = r;
+  acquireWakeLock();
+  const label = kind === 'stretch' ? 'timer.hold' : 'timer.work';
+  const cue = kind === 'stretch' ? 'hold' : 'go';
+  const step = i => {
+    if (routine !== r) return;
+    r.i = i;
+    if (i >= rows.length) {
+      routine = null;
+      announce(kind === 'stretch' ? 'stretchdone' : 'warmdone');   // fehlt die Datei, piept endTimer wie gewohnt
+      if (!activeSession || activeSession.finished) releaseWakeLock();
+      return;
+    }
+    const row = rows[i];
+    const sub = `${row.ex.name} · ${i + 1}/${rows.length}`;
+    const after = secs => {
+      if (routine !== r) return;
+      if (r.log && logRoutineRow(row, secs)) { routine = null; return; }   // letzte Übung: finishWorkout sagt „Geschafft“
+      step(i + 1);
+    };
+    const work = () => {
+      if (routine !== r) return;
+      if (exFlags(row.ex).sided) runSided(row.secs, { label, sub, cue }, after);
+      else startTimer(row.secs, { kind: 'work', label, chain: true, sub, cue, onDone: after });
+    };
+    const wait = i === 0 ? HOLD_PREP : restOf(rows[i - 1].ex, 10);
+    if (!wait) { work(); return; }   // Pause 0: direkt weiter
+    startTimer(wait, { kind: 'prep', label: i === 0 ? 'timer.prep' : 'timer.next', chain: true, sub,
+      cue: [`ex${Number(row.ex.exercise_id)}`, 'nextex', 'prep'], onDone: work });
+  };
+  step(0);
+}
+// Eigener Plan: erste noch offene Satznummer der Zeile eintragen; true = Einheit damit abgeschlossen
+function logRoutineRow(row, secs) {
+  const s = activeSession;
+  if (!s || s.finished || row.exIdx == null || s.exercises[row.exIdx] !== row.ex) return false;
+  let n = 1;
+  while (n <= row.ex.sets && isLogged(row.exIdx, n)) n++;
+  if (n > row.ex.sets) return false;
+  return commitSet(row.exIdx, n, row.ex, {
+    exercise_id: row.ex.exercise_id, set_number: n, reps: null, weight_kg: 0, duration_seconds: secs, completed: 1,
+  }).workoutDone;
+}
+// Block im Training: der mitgelieferte Plan des Typs (Aufwärmen/Dehnen) — eigene Pläne zählen hier nicht
+async function routineRowsFor(kind) {
+  const p = (await api('plans')).find(x => x.type === kind && !x.custom);
+  const full = p ? await api('plans/' + p.id) : null;
+  return ((full && full.exercises) || []).map(ex => ({ ex, exIdx: null, secs: routineSecs(ex) }));
+}
+// Eigener Plan: alle noch offenen Sätze der laufenden Einheit
+function sessionRoutineRows() {
+  const rows = [];
+  activeSession.exercises.forEach((ex, exIdx) => {
+    for (let n = 1; n <= ex.sets; n++) if (!isLogged(exIdx, n)) rows.push({ ex, exIdx, secs: routineSecs(ex) });
+  });
+  return rows;
+}
+// Karte über der ersten Übung: Kraft/HIT/Freies Training → „Aufwärmen“ als Block; eigener Plan Aufwärmen/Dehnen → am Stück.
+// Der Start-Knopf liegt dort, wo eben die Plan-Karte angetippt wurde: echte Tipps erst nach DLG_ARM_MS (wie #dlg, Audit R2-1).
+function routineCardEl() {
+  const s = activeSession;
+  if (!s || s.finished) return null;
+  const own = ROUTINE_TYPES.includes(s.planType);
+  const kind = own ? s.planType : 'warmup';
+  const box = document.createElement('div');
+  box.className = 'routine-card';
+  box.id = 'routine-card';
+  box.dataset.kind = kind;
+  const txt = document.createElement('div');
+  txt.className = 'routine-text';
+  const title = document.createElement('b');
+  title.textContent = I18N.t('routine.' + kind);
+  const meta = document.createElement('span');
+  meta.className = 'routine-meta';
+  txt.append(title, meta);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-sm';
+  btn.id = 'btn-routine';
+  btn.textContent = I18N.t('routine.start');
+  btn.addEventListener('click', async e => {
+    if (e && e.isTrusted && (evtTime(e) - workoutShownAt < DLG_ARM_MS || tooSoonAfterClose(e))) return;
+    if (activeSession !== s || s.finished) return;
+    if (own) { runRoutine(kind, sessionRoutineRows(), true); return; }
+    const rows = await routineRowsFor(kind);
+    if (activeSession !== s || s.finished) return;   // inzwischen beendet oder gewechselt
+    runRoutine(kind, rows, false);
+  });
+  box.append(txt, btn);
+  const fill = rows => {
+    if (!rows.length) { box.remove(); return; }
+    meta.textContent = I18N.t(own ? 'routine.metaPlan' : 'routine.meta', { n: rows.length, min: routineMinutes(rows) });
+  };
+  if (own) fill(sessionRoutineRows());
+  else routineRowsFor(kind).then(fill, () => box.remove());
+  return box;
+}
+// Abschluss-Banner: „Jetzt noch dehnen?“ (nicht nach einem Aufwärm-/Dehn-Plan)
+async function showStretchOffer(s) {
+  const box = document.getElementById('done-stretch');
+  box.classList.add('hidden');
+  if (ROUTINE_TYPES.includes(s.planType)) return;
+  const rows = await routineRowsFor('stretch').catch(() => []);
+  if (activeSession !== s || !rows.length) return;
+  document.getElementById('done-stretch-meta').textContent = I18N.t('routine.meta', { n: rows.length, min: routineMinutes(rows) });
+  box.classList.remove('hidden');
+}
+document.getElementById('btn-done-stretch').addEventListener('click', async e => {
+  if (e && e.isTrusted && evtTime(e) - bannerShownAt < DLG_ARM_MS) return;   // Banner erscheint unter dem Finger („Beenden“)
+  const s = activeSession;
+  const rows = await routineRowsFor('stretch');
+  if (activeSession !== s) return;
+  runRoutine('stretch', rows, false);
+});
 
 function logHoldWithoutTimer() {
   if (!pendingHold || !pendingHold.value || pendingHold.value === 'max') return;
@@ -1262,6 +1421,8 @@ async function finishWorkoutOnce() {
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
   document.getElementById('workout-done-banner').style.display = 'block';
+  bannerShownAt = performance.now();
+  showStretchOffer(s);
   // Mit Stimme hat endTimer den Piepton für „Geschafft“ zurückgehalten; fehlt die Datei, piept es hier (Audit b3/c1)
   if (!Voice.say('done') && Voice.on()) playBeep();
 }
@@ -1306,7 +1467,10 @@ const TIMER_SKIP  = { rest: 'timer.skip',  work: 'timer.done', prep: 'timer.go' 
 // Ansagen (v2.10, voice.js): jede Phase sagt sich beim Start an; opts.cue überschreibt (z.B. 'last', 'hold'), null = still
 const TIMER_CUE   = { rest: 'rest', work: 'go', prep: 'prep' };
 let announced = false;   // hat sich die Phase nach einem abgelaufenen Timer angesagt? Dann kein Piepton (endTimer)
-function announce(cue) { if (cue && Voice.say(cue)) announced = true; }
+// cue darf eine Liste sein (v2.11): die erste vorhandene Ansage spielt („ex33“ → „nextex“ → „prep“)
+function announce(cue) {
+  for (const c of [].concat(cue || [])) if (c && Voice.say(c)) { announced = true; return; }
+}
 // Während des Zählens: „Noch zehn Sekunden“ in Pausen und Arbeit ab 30 s; vor dem automatischen Start (Vorlauf, Pause
 // einer Kette) zählen drei kurze Töne, dann sagt Thorsten „Los geht's“. Gesprochene Zahlen klangen abgehackt bzw. auf
 // Englisch unverständlich (Hörprobe 10.11.2026, Wahl Nutzer: Ton + „Los“ in beiden Sprachen). Die Stoppuhr sagt nichts.
@@ -1396,6 +1560,7 @@ function endTimer(skipped) {
 function cancelTimer() {
   stopTicking();
   timerState = null;
+  routine = null;          // v2.11: „■ Stopp“ beendet auch Aufwärmen/Dehnen am Stück
   closeTimerOverlay();
   Voice.stop();            // eine laufende Ansage nicht nach dem Stopp weitersprechen lassen
 }
@@ -1700,7 +1865,7 @@ async function loadLibrary() {
 function renderLibrary(filter) {
   let list = allExercises;
   if (filter.startsWith('muscle:')) list = list.filter(e => e.muscle_group === filter.slice(7));
-  if (filter === 'type:hit') list = list.filter(e => e.type === 'hit');
+  if (filter.startsWith('type:')) list = list.filter(e => e.type === filter.slice(5));   // HIT, Aufwärmen, Dehnen (v2.11)
 
   const el = document.getElementById('library-list');
   el.innerHTML = '';
@@ -1718,7 +1883,7 @@ function renderLibrary(filter) {
       <div class="ex-lib-tags">
         <span class="tag">${esc(I18N.muscle(ex.muscle_group))}</span>
         <span class="tag">${esc(I18N.equip(ex.equipment))}</span>
-        ${ex.type === 'hit' ? '<span class="tag hit">HIT</span>' : ''}
+        ${ex.type === 'hit' ? '<span class="tag hit">HIT</span>' : ''}${TYPE_BADGE[ex.type] && ex.type !== 'hit' ? `<span class="tag">${esc(I18N.t(TYPE_BADGE[ex.type]))}</span>` : ''}${ex.sided ? `<span class="tag">${esc(I18N.t('tag.sided'))}</span>` : ''}
       </div>
       <div class="ex-lib-desc">${esc(ex.description || '')}</div>`;
     const kerstin = kerstinEl(ex.id, false);   // v2.10: in der Bibliothek immer offen

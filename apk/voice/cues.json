@@ -1,5 +1,5 @@
 {
-  "_info": "Ansagen der App (v2.10), gesprochen von Thorsten (Piper thorsten-high, Tempo 1,0, Wahl Nutzer 10.11.2026). Erzeugen: bash apk/make-voice.sh. Je Cue eine Liste von Varianten (die App wählt zufällig). {name} = Name der Stimme. Regeln wie in den Videos (~/Skripte/piper-aussprache.md): keine Ausrufezeichen, ganze Sätze statt Wortketten. Englisch spricht die deutsche Stimme in Lautschrift (Hörprobe 10.11.2026; „Take a break“ schaffte Thorsten in keiner Schreibweise, deshalb „Rest.“). Kein gesprochener Countdown (Zahlen klangen abgehackt, EN unverständlich): die App zählt die letzten drei Sekunden mit kurzen Tönen (playTick), in DE und EN gleich.",
+  "_info": "Ansagen der App (v2.10), gesprochen von Thorsten (Piper thorsten-high, Tempo 1,0, Wahl Nutzer 10.11.2026). Erzeugen: bash apk/make-voice.sh. Je Cue eine Liste von Varianten (die App wählt zufällig). {name} = Name der Stimme. Regeln wie in den Videos (~/Skripte/piper-aussprache.md): keine Ausrufezeichen, ganze Sätze statt Wortketten. Englisch spricht die deutsche Stimme in Lautschrift (Hörprobe 10.11.2026; „Take a break“ schaffte Thorsten in keiner Schreibweise, deshalb „Rest.“). Kein gesprochener Countdown (Zahlen klangen abgehackt, EN unverständlich): die App zählt die letzten drei Sekunden mit kurzen Tönen (playTick), in DE und EN gleich. v2.11: Aufwärmen/Dehnen — exNN = Ansage der nächsten Übung (ID NN, nur DE; Rückfall nextex), side = Seitenwechsel, warmdone/stretchdone = Ende des Ablaufs. Englische Übungsnamen klangen in Lautschrift zur Hälfte unverständlich (Whisper-Probe 11.11.2026) → EN sagt nur „Next exercise“. Nur diese neu erzeugen: bash apk/make-voice.sh --only <liste>.",
   "voices": {
     "thorsten": {
       "model": "de_DE-thorsten-high",
@@ -34,6 +34,54 @@
     ],
     "hi": [
       "Hier ist {name}."
+    ],
+    "nextex": [
+      "Weiter mit der nächsten Übung."
+    ],
+    "side": [
+      "Jetzt die andere Seite."
+    ],
+    "warmdone": [
+      "Aufwärmen geschafft. Jetzt geht es richtig los."
+    ],
+    "stretchdone": [
+      "Fertig gedehnt. Gut gemacht."
+    ],
+    "ex33": [
+      "Als Nächstes kommt der Hampelmann."
+    ],
+    "ex34": [
+      "Als Nächstes kommt Armkreisen."
+    ],
+    "ex35": [
+      "Als Nächstes kommt Hüftkreisen."
+    ],
+    "ex36": [
+      "Als Nächstes kommen Kniebeugen ohne Gewicht."
+    ],
+    "ex37": [
+      "Als Nächstes kommt der Ausfallschritt mit Drehung."
+    ],
+    "ex38": [
+      "Als Nächstes wird die Brust gedehnt."
+    ],
+    "ex39": [
+      "Als Nächstes wird die Schulter gedehnt."
+    ],
+    "ex40": [
+      "Als Nächstes wird der Trizeps gedehnt."
+    ],
+    "ex41": [
+      "Als Nächstes wird der Hüftbeuger gedehnt."
+    ],
+    "ex42": [
+      "Als Nächstes wird der vordere Oberschenkel gedehnt."
+    ],
+    "ex43": [
+      "Als Nächstes wird der hintere Oberschenkel gedehnt."
+    ],
+    "ex44": [
+      "Als Nächstes hängst du locker an der Stange."
     ]
   },
   "en": {
@@ -64,6 +112,18 @@
     ],
     "hi": [
       "Hai, {name} hiar."
+    ],
+    "nextex": [
+      "Nekst ekser-sais."
+    ],
+    "side": [
+      "Ahder said."
+    ],
+    "warmdone": [
+      "Wohrm-app komplieht."
+    ],
+    "stretchdone": [
+      "Stretsching komplieht."
     ]
   }
 }

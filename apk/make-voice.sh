@@ -4,6 +4,8 @@
 #   bash apk/make-voice.sh                  → public/audio/<stimme>/<sprache>/<cue>-<n>.ogg + public/audio/manifest.json
 #   bash apk/make-voice.sh --probe <ordner> → nur Hörproben: WAV je Ansage + je Stimme/Sprache eine Gesamtdatei mit Liste
 #   --cues <datei>                          → andere Textdatei (Standard apk/voice/cues.json)
+#   --only <cue,cue,…>                      → nur diese Ansagen erzeugen (auch mit --probe); alle anderen Dateien bleiben unverändert.
+#                                             Piper ist nicht deterministisch: ein Gesamtlauf würfelt die abgenommenen Ansagen neu (v2.11).
 #
 # Piper-Ordner $PIPER_DIR (Standard ~/Programme/piper/piper), Modelle unter $PIPER_DIR/voices/<model>.onnx.
 # Stimme: Thorsten (Thorsten-Voice, Datensatz CC0). Kerstin (kerstin-low) klang in kurzen Rufen abgehackt (Hörprobe
@@ -19,10 +21,12 @@ ROOT="$(dirname "$HERE")"
 PIPER_DIR="${PIPER_DIR:-$HOME/Programme/piper/piper}"
 CUES="$HERE/voice/cues.json"
 PROBE=""
+ONLY=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --probe) PROBE="${2:?Ordner fehlt}"; shift 2 ;;
     --cues)  CUES="${2:?Datei fehlt}";   shift 2 ;;
+    --only)  ONLY="${2:?Liste fehlt}";   shift 2 ;;
     *) echo "Unbekannte Option: $1" >&2; exit 2 ;;
   esac
 done
@@ -39,6 +43,16 @@ jq -e '(.voices | type == "object") and ([del(.voices, ._info)[]] | all(type == 
        and ([.voices[].model] | all(type == "string" and test("\\A[A-Za-z0-9_-]{1,64}\\z")))
        and ([del(.voices, ._info)[][]] | all(type == "array" and length > 0 and all(.[]; type == "string")))' "$CUES" >/dev/null \
   || { echo "Ungültige Textdatei $CUES: Schlüssel nur a-z, 0-9, _ und -; Modellname ohne Pfad; Texte als Liste von Strings" >&2; exit 1; }
+
+# --only: jeder Name wie ein Schlüssel der Textdatei (wird zu Dateinamen) und muss dort vorkommen
+if [[ -n "$ONLY" ]]; then
+  IFS=',' read -ra ONLY_LIST <<<"$ONLY"
+  for c in "${ONLY_LIST[@]}"; do
+    [[ "$c" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "--only: ungültiger Name '$c'" >&2; exit 2; }
+    jq -e --arg c "$c" '[del(.voices, ._info)[] | has($c)] | any' "$CUES" >/dev/null || { echo "--only: '$c' steht nicht in $CUES" >&2; exit 2; }
+  done
+fi
+want() { [[ -z "$ONLY" ]] || [[ ",$ONLY," == *",$1,"* ]]; }
 
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 mkdir -p "$CACHE"
@@ -83,6 +97,7 @@ if [[ -n "$PROBE" ]]; then
       list="$TMP/list.txt"; : > "$list"; legend="$PROBE/$v-$l-reihenfolge.txt"; : > "$legend"; i=0
       cue_lines "$l" "$v" > "$TMP/lines.tsv" || { echo "Textdatei: jq-Fehler bei $v/$l" >&2; exit 1; }
       while IFS=$'\t' read -r cue n text; do
+        want "$cue" || continue
         i=$((i + 1)); f="$PROBE/$v-$l-$cue-$n.wav"
         render "$text" "$model" "$ls_" "$f" "$ns"
         printf "file '%s'\nfile '%s'\n" "$f" "$TMP/gap.wav" >> "$list"
@@ -98,11 +113,13 @@ fi
 OUT="$ROOT/public/audio"
 for v in "${VOICES[@]}"; do
   model=$(vget "$v" model); ls_=$(vget "$v" length_scale); ns=$(vget "$v" noise_scale)
-  rm -rf "${OUT:?}/$v"
+  [[ -n "$ONLY" ]] || rm -rf "${OUT:?}/$v"
   for l in "${LANGS[@]}"; do
     mkdir -p "$OUT/$v/$l"
     cue_lines "$l" "$v" > "$TMP/lines.tsv" || { echo "Textdatei: jq-Fehler bei $v/$l" >&2; exit 1; }
+    if [[ -n "$ONLY" ]]; then for c in "${ONLY_LIST[@]}"; do rm -f "$OUT/$v/$l/$c-"*.ogg; done; fi   # alte Varianten dieser Ansagen
     while IFS=$'\t' read -r cue n text; do
+      want "$cue" || continue
       render "$text" "$model" "$ls_" "$TMP/clip.wav" "$ns"
       to_opus "$TMP/clip.wav" "$OUT/$v/$l/$cue-$n.ogg"
     done < "$TMP/lines.tsv"

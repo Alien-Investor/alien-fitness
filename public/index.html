@@ -167,6 +167,11 @@
       <div id="workout-done-banner" class="done-banner" style="display:none">
         <span data-i18n="workout.doneTitle">✓ TRAINING ABGESCHLOSSEN</span><br>
         <span style="font-size:0.6rem;color:var(--muted);margin-top:8px;display:block;" data-i18n="workout.doneSaved">Einheit gespeichert</span>
+        <!-- v2.11: Dehnen als Block nach dem Training (wird nicht gespeichert), app.js showStretchOffer -->
+        <div id="done-stretch" class="routine-card hidden">
+          <div class="routine-text"><b data-i18n="routine.stretchAsk">Jetzt noch dehnen?</b><span class="routine-meta" id="done-stretch-meta"></span></div>
+          <button type="button" class="btn btn-sm" id="btn-done-stretch" data-i18n="routine.start">▶ Start</button>
+        </div>
         <button class="btn mt" id="btn-done-ok" data-i18n="workout.backToDash">Zurück zum Dashboard</button>
       </div>
     </div>
@@ -205,6 +210,8 @@
       <button class="filter-btn" data-filter="muscle:Trizeps" data-i18n-muscle="Trizeps">Trizeps</button>
       <button class="filter-btn" data-filter="muscle:Core" data-i18n-muscle="Core">Core</button>
       <button class="filter-btn" data-filter="type:hit" data-i18n="filter.hit">HIT</button>
+      <button class="filter-btn" data-filter="type:warmup" data-i18n="filter.warmup">Aufwärmen</button>
+      <button class="filter-btn" data-filter="type:stretch" data-i18n="filter.stretch">Dehnen</button>
     </div>
     <div id="library-list" class="library-grid"></div>
   </div>
@@ -334,6 +341,10 @@
         <p data-i18n="help.timer.b">Startet automatisch nach jedem abgeschlossenen Satz, hält das Display wach und meldet sich am Ende mit Vibration und einer Ansage (bei ausgeschalteter Stimme mit einem Beep). Mit „Überspringen →“ kannst du die Pause jederzeit vorzeitig beenden.</p>
       </div>
       <div class="help-section">
+        <div class="help-section-title" data-i18n="help.routine.t">Aufwärmen &amp; Dehnen</div>
+        <p data-i18n="help.routine.b">Über der ersten Übung jedes Trainings startet „Aufwärmen ▶“ fünf Übungen ohne Gerät am Stück, nach dem Training bietet das Abschluss-Banner „Dehnen“ an. Beides läuft freihändig: Thorsten sagt die nächste Übung an, bei Dehnungen je Seite auch den Seitenwechsel. Als Block im Training wird nichts gespeichert; als eigener Plan gestartet zählt es wie jede Einheit.</p>
+      </div>
+      <div class="help-section">
         <div class="help-section-title" data-i18n="help.hit.t">HIT-Intervalle</div>
         <p data-i18n="help.hit.b">Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek“) laufen als Intervall: Satz antippen öffnet die Zeitwahl (20 bis 180 Sekunden oder eine eigene Zeit, vorbelegt mit der zuletzt gestarteten Zeit, sonst der Angabe im Plan). Nach „▶ Start“ bleiben 5 Sekunden zum Bereitmachen, dann läuft der Arbeits-Timer, danach die Pause, und die nächste Runde derselben Übung startet von selbst mit derselben Zeit. „■ Stopp“ unterbricht die Kette, „Fertig →“ beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.</p>
       </div>
@@ -351,7 +362,7 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.library.t">Übungsbibliothek</div>
-        <p data-i18n="help.library.b">Alle 32 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe oder HIT. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
+        <p data-i18n="help.library.b">Alle 44 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe, HIT, Aufwärmen oder Dehnen. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.history.t">Historie</div>
@@ -365,6 +376,8 @@
           <div class="help-plan-row"><span class="badge" data-i18n="badge.strength">Kraft</span><span data-i18n="help.plan.legs">Beine &amp; Core</span></div>
           <div class="help-plan-row"><span class="badge hit" data-i18n="badge.hit">HIT</span><span data-i18n="help.plan.tabata">Tabata (20 Sek / 10 Sek × 8)</span></div>
           <div class="help-plan-row"><span class="badge hit" data-i18n="badge.hit">HIT</span><span data-i18n="help.plan.power">Power &amp; Explosivkraft</span></div>
+          <div class="help-plan-row"><span class="badge" data-i18n="badge.warmup">Aufwärmen</span><span data-i18n="help.plan.warmup">5 Übungen ohne Gerät, je 40 s</span></div>
+          <div class="help-plan-row"><span class="badge" data-i18n="badge.stretch">Dehnen</span><span data-i18n="help.plan.stretch">7 Dehnungen, 30 s bzw. 30 s je Seite</span></div>
         </div>
       </div>
       <div class="help-section">

@@ -148,5 +148,53 @@
   "32": {
     "de": { "tip": "Erst die Bewegung langsam lernen, dann Tempo machen. Die Arme gegengleich mitnehmen wie beim Sprint." },
     "en": { "tip": "Learn the movement slowly first, then add speed. Swing your arms opposite to your legs, like when sprinting." }
+  },
+  "33": {
+    "de": { "tip": "Lieber locker als schnell: Es geht ums Warmwerden, nicht ums Auspowern. Wer nicht springen mag, setzt die Füße abwechselnd zur Seite." },
+    "en": { "tip": "Easy rather than fast: the goal is to warm up, not to wear yourself out. If you'd rather not jump, step your feet out to the side one at a time." }
+  },
+  "34": {
+    "de": { "tip": "Schultern unten lassen, nicht zu den Ohren ziehen. Die Kreise nur so groß machen, wie es sich ohne Ziehen oder Zwicken gut anfühlt." },
+    "en": { "tip": "Keep your shoulders down, away from your ears. Make the circles only as big as feels good, without pulling or pinching." }
+  },
+  "35": {
+    "de": { "tip": "Der Oberkörper bleibt möglichst ruhig, die Bewegung kommt aus dem Becken. Die Knie locker lassen, nicht durchdrücken." },
+    "en": { "tip": "Keep your upper body as still as you can; the movement comes from the pelvis. Keep your knees soft, not locked." }
+  },
+  "36": {
+    "de": { "tip": "Die Knie zeigen in dieselbe Richtung wie die Zehen und dürfen dabei nach vorne wandern. Nur so tief gehen, wie die Fersen am Boden bleiben." },
+    "en": { "tip": "Your knees point the same way as your toes and may travel forward. Only go as deep as you can keep your heels on the floor." }
+  },
+  "37": {
+    "de": { "tip": "Erst stabil im Ausfallschritt ankommen, dann drehen, nicht beides auf einmal. Die Drehung kommt aus dem Oberkörper, das vordere Knie bleibt über dem Fuß." },
+    "en": { "tip": "Settle into the lunge first, then twist, not both at once. The twist comes from your upper body; keep your front knee over your foot." }
+  },
+  "38": {
+    "de": { "tip": "Ein deutliches, aber angenehmes Ziehen reicht. Kribbeln oder Taubheit im Arm ist kein Dehngefühl: dann den Arm tiefer nehmen oder weniger weit drehen." },
+    "en": { "tip": "A clear but comfortable stretch is enough. Tingling or numbness in your arm is not a stretch: lower your arm or turn less." }
+  },
+  "39": {
+    "de": { "tip": "Die Schulter des gedehnten Arms bleibt unten. Mit der Hand am Oberarm ziehen, nicht am Ellenbogengelenk selbst." },
+    "en": { "tip": "Keep the shoulder of the stretched arm down. Pull on the upper arm, not on the elbow joint itself." }
+  },
+  "40": {
+    "de": { "tip": "Kopf gerade lassen und nicht ins Hohlkreuz ausweichen. Tut die Schulter beim Armheben weh, diese Dehnung lieber weglassen." },
+    "en": { "tip": "Keep your head straight and don't arch your lower back. If raising your arm hurts your shoulder, skip this stretch." }
+  },
+  "41": {
+    "de": { "tip": "Etwas Weiches unter das Knie legen. Oberkörper aufrecht, kein Hohlkreuz: Das angespannte Gesäß bringt die Dehnung an die richtige Stelle." },
+    "en": { "tip": "Put something soft under your knee. Upper body upright, no arched lower back: squeezing your glutes puts the stretch in the right place." }
+  },
+  "42": {
+    "de": { "tip": "Für das Gleichgewicht eine Hand an die Wand oder die Stange legen. Die Hüfte leicht nach vorne schieben, statt das Knie weit nach hinten zu ziehen." },
+    "en": { "tip": "Put one hand on a wall or the bar for balance. Push your hips slightly forward instead of pulling the knee far back." }
+  },
+  "43": {
+    "de": { "tip": "Der Rücken bleibt lang, die Bewegung kommt aus der Hüfte. Ist die Bank zu hoch, tut es auch eine niedrige Stufe; das Standbein bleibt leicht gebeugt." },
+    "en": { "tip": "Keep your back long; the movement comes from the hips. If the bench is too high, a lower step works too; keep your standing knee slightly bent." }
+  },
+  "44": {
+    "de": { "tip": "Steig ab, solange der Griff noch sicher hält, nicht erst beim Abrutschen. Wer Schulterbeschwerden hat, lässt die Füße am Boden und nimmt nur einen Teil des Gewichts in die Arme." },
+    "en": { "tip": "Step down while your grip still feels secure, not once you start to slip. If your shoulders bother you, keep your feet on the floor and take only part of your weight in your arms." }
   }
 }
