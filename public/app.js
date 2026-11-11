@@ -1055,7 +1055,8 @@ function saveSet() {
 function startTimedSet(exIdx, setNum, ex, secs) {
   secs = clampHold(secs) || timedSeconds(ex) || 20;
   const sub = `${ex.name} · ${I18N.t('dyn.setN')} ${setNum}/${ex.sets}`;
-  startTimer(secs, { kind: 'work', chain: true, sub, cue: ex.sets > 1 && setNum >= ex.sets ? 'last' : 'go', onDone: (elapsed) => {
+  startTimer(secs, { kind: 'work', chain: true, sub, cue: ex.sets > 1 && setNum >= ex.sets ? 'last' : 'go',
+    img: timerImg(ex), imgAlt: ex.name, onDone: (elapsed) => {
     const r = commitSet(exIdx, setNum, ex, {
       exercise_id: ex.exercise_id, set_number: setNum,
       reps: null, weight_kg: 0, duration_seconds: elapsed, completed: 1,
@@ -1171,20 +1172,21 @@ function startHold() {
   rememberHoldTarget(ex.exercise_id, value);
   closeHoldModal();
   const sub = holdSub(ex, setNum);
+  const im = { img: timerImg(ex), imgAlt: ex.name };   // v2.11: Bild nur bei Aufwärm-/Dehnübungen
   if (sided && value !== 'max') {   // v2.11: Seite 1 → Wechsel → Seite 2, gespeichert wird die kürzere Seite
-    startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () =>
-      runSided(value, { label: 'timer.hold', sub, cue: 'hold' }, secs => logHold(exIdx, setNum, ex, secs)) });
+    startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, ...im, onDone: () =>
+      runSided(value, { label: 'timer.hold', sub, cue: 'hold', ...im }, secs => logHold(exIdx, setNum, ex, secs)) });
     return;
   }
   if (mode === 'interval') {
     // Vorlauf nur vor der ersten Runde; danach bereitet die Pause der Kette vor (Tabata bleibt 20/10)
-    startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () => startTimedSet(exIdx, setNum, ex, value) });
+    startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, ...im, onDone: () => startTimedSet(exIdx, setNum, ex, value) });
     return;
   }
   // Vorlauf: Zeit, um vom Handy in die Position zu kommen. „Los →“ startet sofort, „■ Stopp“ bricht ohne Eintrag ab.
-  startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, onDone: () => {
+  startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, ...im, onDone: () => {
     const up = value === 'max';   // Stoppuhr zählt hoch, „Fertig →“ speichert die gehaltene Zeit
-    startTimer(up ? HOLD_MAX_CAP : value, { kind: 'work', label: 'timer.hold', up, chain: true, sub, cue: 'hold',
+    startTimer(up ? HOLD_MAX_CAP : value, { kind: 'work', label: 'timer.hold', up, chain: true, sub, cue: 'hold', ...im,
       onDone: elapsed => logHold(exIdx, setNum, ex, elapsed) });
   } });
 }
@@ -1211,9 +1213,10 @@ function logHold(exIdx, setNum, ex, secs) {
 // done(sec) bekommt die kürzere Seite — „30 s je Seite“ heißt: beide Seiten mindestens so lange.
 function runSided(secs, opts, done) {
   const sub = n => `${opts.sub} · ${I18N.t('dyn.sideN', { n })}`;
-  startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(1), cue: opts.cue, onDone: first => {
-    startTimer(SIDE_SWITCH, { kind: 'prep', label: 'timer.side', chain: true, sub: sub(2), cue: 'side', onDone: () => {
-      startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(2), cue: opts.cue,
+  const im = { img: opts.img, imgAlt: opts.imgAlt };
+  startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(1), cue: opts.cue, ...im, onDone: first => {
+    startTimer(SIDE_SWITCH, { kind: 'prep', label: 'timer.side', chain: true, sub: sub(2), cue: 'side', ...im, onDone: () => {
+      startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(2), cue: opts.cue, ...im,
         onDone: second => done(Math.min(first, second)) });
     } });
   } });
@@ -1226,6 +1229,13 @@ function runSided(secs, opts, done) {
 // log=true: eigener Plan „Aufwärmen“/„Dehnen“ — jede Übung wird ein Satz mit Dauer, die letzte schließt die Einheit ab.
 let routine = null;   // laufender Ablauf { kind, rows, log, i }
 const ROUTINE_TYPES = ['warmup', 'stretch'];
+// Bild im Timer (v2.11, Wunsch Nutzer): nur für Aufwärm- und Dehnübungen — im Krafttraining kennt man seine Übungen,
+// in der Pause zählt der große Countdown. Fehlt die Datei, verschwindet das Bild (error-Listener unten).
+const timerImg = ex => ex && ROUTINE_TYPES.includes(exFlags(ex).type) ? `images/exercises/${Number(ex.exercise_id)}.png` : null;
+document.getElementById('timer-img').addEventListener('error', e => {
+  e.target.dataset.failed = e.target.getAttribute('src');   // gleiche Datei nicht als kaputtes Bild wieder einblenden
+  e.target.classList.add('hidden');
+});
 const routineSecs = ex => clampHold(timedSeconds(ex)) || (exFlags(ex).hold ? 30 : 40);
 function routineMinutes(rows) {
   const sec = rows.reduce((a, r, i) => {
@@ -1258,14 +1268,15 @@ function runRoutine(kind, rows, log) {
       if (r.log && logRoutineRow(row, secs)) { routine = null; return; }   // letzte Übung: finishWorkout sagt „Geschafft“
       step(i + 1);
     };
+    const im = { img: timerImg(row.ex), imgAlt: row.ex.name };   // im Wechsel schon die kommende Übung zeigen
     const work = () => {
       if (routine !== r) return;
-      if (exFlags(row.ex).sided) runSided(row.secs, { label, sub, cue }, after);
-      else startTimer(row.secs, { kind: 'work', label, chain: true, sub, cue, onDone: after });
+      if (exFlags(row.ex).sided) runSided(row.secs, { label, sub, cue, ...im }, after);
+      else startTimer(row.secs, { kind: 'work', label, chain: true, sub, cue, ...im, onDone: after });
     };
     const wait = i === 0 ? HOLD_PREP : restOf(rows[i - 1].ex, 10);
     if (!wait) { work(); return; }   // Pause 0: direkt weiter
-    startTimer(wait, { kind: 'prep', label: i === 0 ? 'timer.prep' : 'timer.next', chain: true, sub,
+    startTimer(wait, { kind: 'prep', label: i === 0 ? 'timer.prep' : 'timer.next', chain: true, sub, ...im,
       cue: [`ex${Number(row.ex.exercise_id)}`, 'nextex', 'prep'], onDone: work });
   };
   step(0);
@@ -1500,6 +1511,12 @@ function startTimer(seconds, opts = {}) {
   document.getElementById('timer-label').textContent = I18N.t(opts.label || TIMER_LABEL[kind]);
   document.getElementById('timer-skip').textContent = I18N.t(TIMER_SKIP[kind]);
   document.getElementById('timer-exercise').textContent = opts.sub || '';
+  const img = document.getElementById('timer-img');   // v2.11: opts.img nur bei Aufwärmen/Dehnen (timerImg)
+  if (opts.img && img.dataset.failed !== opts.img) {
+    if (img.getAttribute('src') !== opts.img) img.setAttribute('src', opts.img);
+    img.alt = opts.imgAlt || '';
+    img.classList.remove('hidden');
+  } else img.classList.add('hidden');
   setTimerCount(timerState.up ? 0 : seconds);
   count.classList.remove('urgent');
   timerOpenedAt = performance.now();   // I1–I5: echte Tipps auf Überspringen/Stopp erst nach DLG_ARM_MS

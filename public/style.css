@@ -519,6 +519,14 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 #timer-overlay.prep #timer-label { color: var(--yellow); }
 #timer-overlay.prep #timer-count:not(.urgent) { color: var(--yellow); text-shadow: 0 0 40px var(--yellow), 0 0 80px rgba(255,204,68,0.3); }
 #timer-exercise { font-size: 0.9rem; color: var(--muted); margin-bottom: 36px; font-family: var(--font-r); }
+/* Bild der Übung (v2.11, nur Aufwärmen/Dehnen): im Wechsel die kommende Übung, damit man schon in Position geht.
+   Auf niedrigen Displays kleiner, Countdown und Knöpfe bleiben ganz sichtbar (geprüft bei 360×640). */
+#timer-img {
+  width: min(45vw, 220px); height: auto; aspect-ratio: 1 / 1; object-fit: cover;
+  border: 1px solid var(--neon-mid); border-radius: var(--radius); box-shadow: 0 0 18px rgba(0,255,204,0.15); margin-bottom: 18px;
+}
+#timer-overlay.prep #timer-img { border-color: rgba(255,204,68,0.45); box-shadow: 0 0 18px rgba(255,204,68,0.12); }
+@media (max-height: 720px) { #timer-img { width: min(34vw, 150px); margin-bottom: 12px; } }
 #timer-skip { margin-top: 0; }
 
 /* ── Ansage-Stimme (v2.10): Umschalter Kerstin → Thorsten → Aus ─────────────── */
