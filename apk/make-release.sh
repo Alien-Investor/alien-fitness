@@ -1,10 +1,12 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Release für Alien Fitness: legt für das aktuelle VERSION-Tag die signierte APK auf der eigenen Download-Seite ab (Hauptweg seit 01.10.2026, ab v2.8.0)
 # und ein GitHub-Release als Spiegel an. Ersetzt apk/cb-release.sh; Codeberg-Zweig entfernt am 01.10.2026 (Codeberg-Umzug, Muster Alien Notes).
 #   bash apk/make-release.sh [notizen.md]     (Notizen: Englisch, Markdown-Stichpunkte; optional)
 #   bash apk/make-release.sh --nur-seite      (nur die Download-Seite neu schreiben und hochladen)
 # GitHub: gh CLI, Token aus dem gh-Keyring (nie als Argument). Server: rsync über ssh (ssh-add -l).
 set -euo pipefail
+# Release-Audit v2.11 a2: nur mit der System-bash (eine bash-Attrappe im Nutzer-PATH konnte Prüffunktionen umdefinieren). Start: /bin/bash apk/make-release.sh
+case "$(realpath "${BASH:-}" 2>/dev/null)" in /usr/bin/bash|/bin/bash) ;; *) exec /bin/bash "$0" "$@" ;; esac
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 cd "$ROOT"
 OWNER="Alien-Investor"; REPO="alien-fitness"
@@ -61,19 +63,28 @@ NOTES_FILE="${1:-}"
 # v2.11 (Querfunde 10/11/14 aus Alien Notes run-13): alle drei Prüfungen mit den gepinnten Kopien aus apk/werkzeuge.sh, in einer Subshell mit
 # hartem PATH und leerer Umgebung je Aufruf — JAVA_TOOL_OPTIONS u. a. konnten apksigner eine falsche Zertifikatszeile ausgeben lassen.
 # Aus env.sh nur ANDROID_HOME/JAVA_HOME, nicht dessen PATH (gh, rsync, ssh unten laufen weiter über den Nutzer-PATH).
-source apk/werkzeuge.sh
+# Release-Audit v2.11: Prüfwerkzeuge und Endkontrolle kommen aus dem lokalen Tag (a1), geprüft und hochgeladen wird nur eine private Kopie der APK,
+# deren Hash vor jedem Upload und in der Schlusskontrolle gilt (a3: zwischen Prüfung und Kopie liefen gh/git aus dem Nutzer-PATH).
+/usr/bin/git rev-parse -q --verify "refs/tags/$TAG^{commit}" >/dev/null || { echo "FEHLER: lokaler Tag $TAG fehlt – erst git tag $TAG"; exit 1; }
+source <(/usr/bin/git show "$TAG:apk/werkzeuge.sh")
 wz_umgebung || exit 1
-WZ_NODE="$(command -v node || true)"   # nvm-node vor dem harten PATH festhalten
+WZ_NODE="$(command -v node || true)"   # nvm-node vor dem harten PATH festhalten (wz_einrichten prüft ihn gegen den Pin)
+STAGE=$(mktemp -d); trap 'rm -rf "$STAGE"' EXIT
+SAPK="$STAGE/alien-fitness-${NAME}.apk"
+cp "$APK" "$SAPK"
+/usr/bin/git show "$TAG:apk/VERSION" > "$STAGE/VERSION"
 (
   wz_pfad_hart awk cp cut env find grep head mkdir mktemp realpath rm sed sha256sum sort || exit 1
   trap wz_aufraeumen EXIT
-  wz_einrichten apk/patch-hardening.mjs || exit 1
-  wz_version "$APK" apk/VERSION || exit 1
-  wz_node --check-apk "$APK" || exit 1
-  CERTS="$(wz_apksigner verify --print-certs "$APK" 2>/dev/null | grep 'certificate SHA-256 digest' || true)"
+  wz_einrichten "$TAG" || exit 1
+  wz_version "$SAPK" "$STAGE/VERSION" || exit 1
+  wz_node --check-apk "$SAPK" || exit 1
+  CERTS="$(wz_apksigner verify --print-certs "$SAPK" 2>/dev/null | grep 'certificate SHA-256 digest' || true)"
   [ "$(grep -c . <<<"$CERTS")" = 1 ] && [ "$(awk '{print $NF}' <<<"$CERTS")" = "$FP_HEX" ] \
     || { echo "FEHLER: APK nicht (allein) mit dem Release-Zertifikat $FP_HEX signiert (${CERTS:-keins})"; exit 1; }
 ) || exit 1
+SUM="$(/usr/bin/sha256sum < "$SAPK" | /usr/bin/cut -c1-64)"
+sum_ok() { [ "$(/usr/bin/sha256sum < "$SAPK" | /usr/bin/cut -c1-64)" = "$SUM" ] || { echo "FEHLER: geprüfte APK-Kopie verändert – Abbruch"; exit 1; }; }
 
 GH_REPO="$OWNER/$REPO"
 gh auth status >/dev/null 2>&1 || { echo "FEHLER: gh nicht angemeldet (gh auth login)"; exit 1; }
@@ -84,10 +95,9 @@ BODY="Android release ${TAG} — install via Zap Store, Obtainium (source: ${DLU
 BODY+="Signing certificate fingerprint (SHA-256), identical for every version – verify with AppVerifier:"$'\n'
 BODY+='```text'$'\n'"AppVerifier: ${FP_COLON}"$'\n'"apksigner:   ${FP_HEX}"$'\n''```'
 
-# GitHub (Spiegel): APK unter Release-Namen bereitstellen
-STAGE=$(mktemp -d); trap 'rm -rf "$STAGE"' EXIT
-cp "$APK" "$STAGE/alien-fitness-${NAME}.apk"
+# GitHub (Spiegel): die geprüfte Kopie unter Release-Namen bereitstellen
 printf '%s\n' "$BODY" > "$STAGE/notes.md"
+sum_ok
 echo "=> GitHub: erstelle Release $TAG ..."
 gh release create "$TAG" -R "$GH_REPO" --verify-tag --latest --title "Alien Fitness $TAG" --notes-file "$STAGE/notes.md" \
   "$STAGE/alien-fitness-${NAME}.apk"
@@ -97,15 +107,16 @@ echo "=== GitHub fertig: https://github.com/$GH_REPO/releases/tag/$TAG ==="
 # Die Download-Seite geht erst NACH der APK hoch, damit sie nie auf eine fehlende Datei zeigt.
 echo "=> Server-Downloads: lade nach ${DL#*:} ..."
 download_page "$STAGE/index.html"
+sum_ok
 if rsync -a --no-o --no-g --chmod=F644 "$STAGE/alien-fitness-${NAME}.apk" "$DL" && rsync -a --no-o --no-g --chmod=F644 "$STAGE/index.html" "$DL"; then
   echo "=== Server fertig: ${DLURL}alien-fitness-${NAME}.apk, Download-Seite ${DLURL} ==="
 else
   echo "WARNUNG: Server-Upload fehlgeschlagen (ssh-add -l?) – GitHub-Release steht; Upload von Hand nachholen."
 fi
 
-# Nachweis: GitHub-Asset und Server-Datei == lokale APK
-LOCAL_SHA=$(sha256sum < "$APK" | cut -c1-64)
+# Nachweis: GitHub-Asset und Server-Datei == geprüfte APK (Hash der Kopie, System-curl/-sha256sum)
+LOCAL_SHA="$SUM"
 for URL in "https://github.com/$GH_REPO/releases/download/$TAG/alien-fitness-${NAME}.apk" "${DLURL}alien-fitness-${NAME}.apk"; do
-  REMOTE_SHA=$(curl -sfL "$URL" | sha256sum | cut -c1-64)
+  REMOTE_SHA=$(/usr/bin/curl -sfL "$URL" | /usr/bin/sha256sum | /usr/bin/cut -c1-64)
   [ "$REMOTE_SHA" = "$LOCAL_SHA" ] && echo "✓ $URL = lokale APK ($LOCAL_SHA)" || echo "FEHLER: $URL hat $REMOTE_SHA ≠ lokal $LOCAL_SHA"
 done

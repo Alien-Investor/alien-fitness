@@ -10,6 +10,9 @@
 # 14) aapt2, apksigner (java -jar) und node laufen mit `env -i`: JAVA_TOOL_OPTIONS u. a. luden sonst einen Java-Agenten, der eine falsche
 #     Zertifikatszeile ausgeben kann; NODE_OPTIONS könnte per --require Code in die Endkontrolle laden.
 # Grenze (wie Notes BUILD.md): java selbst (JAVA_HOME) bleibt ungepinnt — ein JDK lädt hunderte Dateien, der Pin einer einzelnen wäre nur Schein.
+# Release-Audit v2.11 (a1/a2): node ist per Hash gepinnt (nvm-Update = erst prüfen, dann WZ_NODE_PIN neu setzen), die Endkontrolle kommt aus einem
+# Git-Stand (HEAD bzw. Tag, nicht aus dem Arbeitsbaum), env.sh wird mit /bin/bash gelesen. Grenze (a6): Vertrauensanker bleibt die aufrufende
+# Shell — exportierte Funktionen (z. B. `type`), BASH_ENV, GCONV_PATH. Ganz sicher: env -i HOME="$HOME" /bin/bash apk/make-release.sh.
 
 WZ_BT_VERSION=34.0.0
 WZ_PIN='760aa057e89e3940c3e944e6bec61eda864ade42fd9c0a3113735e329657705f  aapt2
@@ -22,25 +25,30 @@ f a/b/c/aapt2
 f a/b/c/apksigner.jar
 f a/b/c/dexdump
 f a/b/c/patch-hardening.mjs'
+WZ_NODE_PIN='e32e2d16081cf644f88392934288086e7662529d0d43277c34f7aad2207cfafb'   # node v24.22.1 (nvm), Release-Audit v2.11 a1
 WZP=""; WZ=""; WZ_PH=""; WZ_NODE=""; WZ_NODE_SUM=""
 
 # ANDROID_HOME und JAVA_HOME aus env.sh übernehmen, NICHT dessen PATH (stellte JAVA_HOME/bin und platform-tools vor /usr/bin).
 wz_umgebung() {
-  eval "$(bash -c 'source ~/Apps/android-build/env.sh >/dev/null 2>&1; printf "ANDROID_HOME=%q\nJAVA_HOME=%q\n" "${ANDROID_HOME:-}" "${JAVA_HOME:-}"')"
+  eval "$(/bin/bash -c 'source ~/Apps/android-build/env.sh >/dev/null 2>&1; printf "ANDROID_HOME=%q\nJAVA_HOME=%q\n" "${ANDROID_HOME:-}" "${JAVA_HOME:-}"')"
   [ -n "$ANDROID_HOME" ] && [ -n "$JAVA_HOME" ] || { echo "FEHLER: ANDROID_HOME/JAVA_HOME aus ~/Apps/android-build/env.sh nicht lesbar"; return 1; }
   export ANDROID_HOME JAVA_HOME
 }
 
-# $1 = patch-hardening.mjs der Quelle. Kopien anlegen und prüfen; node festhalten (Pfad + Hash). Aufräumen: wz_aufraeumen (im trap des Aufrufers).
+# $1 = Git-Stand (HEAD bzw. Tag), aus dem patch-hardening.mjs der Endkontrolle kommt (nicht der Arbeitsbaum: ein Build-Schritt könnte ihn ändern).
+# Kopien anlegen und prüfen; node gegen den Pin. Aufräumen: wz_aufraeumen (im trap des Aufrufers).
 wz_einrichten() {
-  local bt="$ANDROID_HOME/build-tools/$WZ_BT_VERSION"
+  local bt="$ANDROID_HOME/build-tools/$WZ_BT_VERSION" top
+  top="$(/usr/bin/git rev-parse --show-toplevel)" || { echo "FEHLER: kein Git-Repo"; return 1; }
   WZP="$(realpath -e "$(mktemp -d)")"; WZ="$WZP/a/b/c"; mkdir -p "$WZ"
-  cp "$bt/aapt2" "$bt/dexdump" "$bt/lib/apksigner.jar" "$WZ/" && cp "$1" "$WZ/patch-hardening.mjs" || { echo "FEHLER: Prüfwerkzeuge nicht kopierbar"; return 1; }
+  cp "$bt/aapt2" "$bt/dexdump" "$bt/lib/apksigner.jar" "$WZ/" \
+    && /usr/bin/git -C "$top" show "$1:apk/patch-hardening.mjs" > "$WZ/patch-hardening.mjs" || { echo "FEHLER: Prüfwerkzeuge nicht kopierbar ($1)"; return 1; }
   WZ_PH="$(sha256sum < "$WZ/patch-hardening.mjs" | cut -d' ' -f1)"
   # node (nvm) vorher festhalten lassen, wenn der PATH schon hart ist: WZ_NODE="$(command -v node)" vor wz_pfad_hart
   [ -n "$WZ_NODE" ] || WZ_NODE="$(command -v node || true)"
   [ -n "$WZ_NODE" ] && WZ_NODE="$(realpath -e "$WZ_NODE")" || { echo "FEHLER: node nicht gefunden"; return 1; }
   WZ_NODE_SUM="$(sha256sum < "$WZ_NODE" | cut -d' ' -f1)"
+  [ "$WZ_NODE_SUM" = "$WZ_NODE_PIN" ] || { echo "FEHLER: node ($WZ_NODE) ≠ Pin — nach einem nvm-Update erst prüfen, dann WZ_NODE_PIN in apk/werkzeuge.sh neu setzen"; return 1; }
   wz_ok || { echo "FEHLER: aapt2/dexdump/apksigner.jar (build-tools $WZ_BT_VERSION) ≠ Pin — erst prüfen, dann in apk/werkzeuge.sh neu pinnen"; return 1; }
 }
 wz_aufraeumen() { [ -n "$WZP" ] && rm -rf "$WZP"; WZP=""; }

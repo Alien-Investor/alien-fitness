@@ -1,10 +1,12 @@
 // Statischer Test-Server für e2e-test.mjs: serviert ../public auf 127.0.0.1:3009.
 //   node apk/serve-test.mjs &   →   node apk/e2e-test.mjs
+//   PORT=3019 node apk/serve-test.mjs   → anderer Port (v2.11: parallele Prüfer/Sessions stören sich sonst gegenseitig)
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
+const PORT = Number(process.env.PORT) || 3009;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.ogg': 'audio/ogg' };
 http.createServer(async (req, res) => {
@@ -16,4 +18,4 @@ http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': TYPES[extname(fp)] || 'application/octet-stream' });
     res.end(data);
   } catch (e) { res.writeHead(404); res.end('404'); }
-}).listen(3009, '127.0.0.1', () => console.log('serving ' + ROOT + ' on http://127.0.0.1:3009'));
+}).listen(PORT, '127.0.0.1', () => console.log('serving ' + ROOT + ' on http://127.0.0.1:' + PORT));

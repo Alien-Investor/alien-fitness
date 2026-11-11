@@ -46,6 +46,8 @@ jq -e '(.voices | type == "object") and ([del(.voices, ._info)[]] | all(type == 
 
 # --only: jeder Name wie ein Schlüssel der Textdatei (wird zu Dateinamen) und muss dort vorkommen
 if [[ -n "$ONLY" ]]; then
+  # Release-Audit v2.11 a4: die GANZE Liste prüfen (ein Zeilenumbruch umging sonst die Einzelprüfung)
+  [[ "$ONLY" =~ ^[a-z][a-z0-9_-]{0,31}(,[a-z][a-z0-9_-]{0,31})*$ ]] || { echo "--only: ungültige Liste" >&2; exit 2; }
   IFS=',' read -ra ONLY_LIST <<<"$ONLY"
   for c in "${ONLY_LIST[@]}"; do
     [[ "$c" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "--only: ungültiger Name '$c'" >&2; exit 2; }
@@ -117,7 +119,7 @@ for v in "${VOICES[@]}"; do
   for l in "${LANGS[@]}"; do
     mkdir -p "$OUT/$v/$l"
     cue_lines "$l" "$v" > "$TMP/lines.tsv" || { echo "Textdatei: jq-Fehler bei $v/$l" >&2; exit 1; }
-    if [[ -n "$ONLY" ]]; then for c in "${ONLY_LIST[@]}"; do rm -f "$OUT/$v/$l/$c-"*.ogg; done; fi   # alte Varianten dieser Ansagen
+    if [[ -n "$ONLY" ]]; then for c in "${ONLY_LIST[@]}"; do rm -f "$OUT/$v/$l/$c"-[0-9].ogg; done; fi   # alte Varianten dieser Ansagen, exakt („ex“ löscht nicht „ex-b-1.ogg“, a4)
     while IFS=$'\t' read -r cue n text; do
       want "$cue" || continue
       render "$text" "$model" "$ls_" "$TMP/clip.wav" "$ns"

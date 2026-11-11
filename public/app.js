@@ -98,7 +98,7 @@ const tooSoonAfterClose = e => e && e.isTrusted && evtTime(e) - overlayClosedAt 
 // Release-Audit v2.10 I1–I5 (v2.11): dieselbe Lücke an drei weiteren Stellen — ein Tipp öffnet den Plan-Editor bzw. den
 // Timer oder blendet die Fortsetzen-Karte aus, der zweite Tipp traf darunter „Speichern“/„＋ Übung“/Hintergrund im Editor,
 // „Überspringen“ der Pause (Satz speichern bei offener Tastatur) oder eine Plan-Karte (Start ohne Sätze).
-let editorOpenedAt = 0, timerOpenedAt = 0, workoutShownAt = 0, bannerShownAt = 0;
+let editorOpenedAt = 0, timerOpenedAt = 0, workoutShownAt = 0, bannerShownAt = 0, editorDelAt = 0;
 const editorTooEarly = e => e && e.isTrusted && evtTime(e) - editorOpenedAt < DLG_ARM_MS;
 const timerTooEarly = e => e && e.isTrusted && evtTime(e) - timerOpenedAt < DLG_ARM_MS;
 function ask(msg, opt) {
@@ -481,7 +481,9 @@ async function acquireWakeLock() {
 }
 function releaseWakeLock() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && activeSession) acquireWakeLock();
+  // Release-Audit v2.11 b1: nur bei laufender (nicht beendeter) Einheit oder laufendem Aufwärmen/Dehnen — nach dem Abschluss
+  // hielt die Rückkehr in die App das Display sonst wach, bis zum nächsten Wechsel in den Hintergrund (schon in v2.10)
+  if (document.visibilityState === 'visible' && ((activeSession && !activeSession.finished) || routine)) acquireWakeLock();
 });
 
 // Intervall-Übung? „20 Sek“ / „30 s“ / „45 sec“ statt Wiederholungen → Sekunden, sonst null
@@ -539,7 +541,10 @@ function setRow(s) {
   return activeSession.exercises.findIndex(e => e.exercise_id === s.exercise_id);
 }
 function fmtSet(s) {
-  if (s.duration_seconds) return `${s.duration_seconds}${I18N.t('dyn.sec')}`;
+  // Release-Audit v2.11 c7: fremde Satzwerte (Import) lesbar — Dauer ganzzahlig, unter 1 s zählt nicht; ohne Wdh und Dauer „–“ statt „null Wdh“
+  const raw = Number(s.duration_seconds) || 0;
+  if (raw >= 1) return `${Math.round(raw)}${I18N.t('dyn.sec')}`;
+  if (s.reps == null || !Number.isFinite(Number(s.reps))) return '–';
   // Kilo mit Dezimalkomma im Deutschen („22,5kg“), Punkt im Englischen (v2.9)
   const kg = () => Number(s.weight_kg).toLocaleString(I18N.locale(), { maximumFractionDigits: 2 });
   return s.weight_kg > 0 ? `${s.reps}×${kg()}kg` : `${s.reps} ${I18N.t('dyn.reps')}`;
@@ -835,7 +840,7 @@ function renderExercises(exercises) {
     // sets und rest_seconds Nutzer- bzw. Fremddaten (Freitext bzw. aus Backup-JSON).
     info.innerHTML = `
       <div class="ex-name">${esc(ex.name)}</div>
-      <div class="ex-meta">${esc(ex.sets)} ${I18N.t(ex.sets === 1 ? 'dyn.set1' : 'dyn.sets')} × ${esc(fmtReps(ex.reps))}${exFlags(ex).sided ? ' ' + esc(I18N.t('tag.sided')) : ''} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
+      <div class="ex-meta">${esc(ex.sets)} ${I18N.t(ex.sets === 1 ? 'dyn.set1' : 'dyn.sets')} × ${esc(fmtReps(ex.reps))}${exFlags(ex).sided && hold ? ' ' + esc(I18N.t('tag.sided')) : ''} · ${I18N.t('dyn.rest')}: ${esc(ex.rest_seconds)}s · ${esc(I18N.muscle(ex.muscle_group))}</div>`;
     header.appendChild(info);
     card.appendChild(header);
 
@@ -1000,6 +1005,7 @@ function commitSet(exIdx, setNum, ex, entry) {
   }
   updateProgress();
   saveDraft();
+  refreshRoutineCard();   // Release-Audit v2.11 b3
 
   const result = { exerciseDone: false, workoutDone: false };
   // Freies Training: kein Auto-Abschluss — der Nutzer beendet über den Button
@@ -1313,6 +1319,7 @@ function routineCardEl() {
   const s = activeSession;
   if (!s || s.finished) return null;
   const own = ROUTINE_TYPES.includes(s.planType);
+  if (own && !sessionRoutineRows().length) return null;   // Release-Audit v2.11 c5: keine leere Karte mit wirkungslosem „▶ Start“
   const kind = own ? s.planType : 'warmup';
   const box = document.createElement('div');
   box.className = 'routine-card';
@@ -1345,7 +1352,12 @@ function routineCardEl() {
   };
   if (own) fill(sessionRoutineRows());
   else routineRowsFor(kind).then(fill, () => box.remove());
+  box._refresh = own ? () => fill(sessionRoutineRows()) : null;   // Release-Audit v2.11 b3: Zahlen nach jedem Satz/Stopp neu
   return box;
+}
+function refreshRoutineCard() {
+  const c = document.getElementById('routine-card');
+  if (c && c._refresh && activeSession && !activeSession.finished) c._refresh();
 }
 // Abschluss-Banner: „Jetzt noch dehnen?“ (nicht nach einem Aufwärm-/Dehn-Plan)
 async function showStretchOffer(s) {
@@ -1358,7 +1370,7 @@ async function showStretchOffer(s) {
   box.classList.remove('hidden');
 }
 document.getElementById('btn-done-stretch').addEventListener('click', async e => {
-  if (e && e.isTrusted && evtTime(e) - bannerShownAt < DLG_ARM_MS) return;   // Banner erscheint unter dem Finger („Beenden“)
+  if (e && e.isTrusted && (evtTime(e) - bannerShownAt < DLG_ARM_MS || tooSoonAfterClose(e))) return;   // Banner erscheint unter dem Finger („Beenden“); c1
   const s = activeSession;
   const rows = await routineRowsFor('stretch');
   if (activeSession !== s) return;
@@ -1461,8 +1473,13 @@ document.getElementById('btn-abort').addEventListener('click', async () => {
   releaseWakeLock();
 });
 
-document.getElementById('btn-done-ok').addEventListener('click', () => {
+document.getElementById('btn-done-ok').addEventListener('click', e => {
+  // Release-Audit v2.11 c2: Das Banner erscheint unter dem Finger, der „Beenden“ tippte; die Dehn-Karte schob den Knopf außerdem auf die
+  // Plan-Karten des Dashboards — ein Doppeltipp startete dort einen Plan. Sperre nach dem Erscheinen + Nachlauf-Sperre für die Karten.
+  if (e && e.isTrusted && evtTime(e) - bannerShownAt < DLG_ARM_MS) return;
   cancelTimer();
+  releaseWakeLock();       // Release-Audit v2.11 b1
+  overlayClosedAt = performance.now();
   document.getElementById('workout-active-screen').style.display = 'none';
   document.getElementById('workout-select-screen').style.display = 'block';
   document.getElementById('exercise-list').style.display = 'block';
@@ -1551,7 +1568,11 @@ function setTimerCount(sec) {
 }
 function stopTicking() { if (timerInterval) clearInterval(timerInterval); timerInterval = null; }
 function closeTimerOverlay() {
-  document.getElementById('timer-overlay').classList.remove('open', 'work', 'prep', 'chain');
+  const ov = document.getElementById('timer-overlay');
+  // Release-Audit v2.11 c1 (MITTEL): Nachlauf-Sperre auch für den Timer — ein Doppeltipp auf „■ Stopp“ traf darunter „✓ Beenden & speichern“
+  // (das Bild im Timer schob die Knöpfe auf dessen Höhe) und schloss die Einheit vorzeitig ab
+  if (ov.classList.contains('open')) overlayClosedAt = performance.now();
+  ov.classList.remove('open', 'work', 'prep', 'chain');
 }
 // Regulär abgelaufen (Beep + Vibration) oder per Taste beendet (skipped) → onDone
 function endTimer(skipped) {
@@ -1576,11 +1597,15 @@ function endTimer(skipped) {
 }
 // Abbrechen ohne onDone: Intervall-Kette stoppen, laufender Arbeits-Satz wird NICHT geloggt
 function cancelTimer() {
+  const wasRoutine = !!routine;
   stopTicking();
   timerState = null;
   routine = null;          // v2.11: „■ Stopp“ beendet auch Aufwärmen/Dehnen am Stück
   closeTimerOverlay();
   Voice.stop();            // eine laufende Ansage nicht nach dem Stopp weitersprechen lassen
+  // b1: Dehnen nach dem Training gestoppt → Display freigeben (runRoutine hatte die Sperre für den Ablauf geholt)
+  if (wasRoutine && (!activeSession || activeSession.finished)) releaseWakeLock();
+  refreshRoutineCard();    // b3
 }
 
 // Wächter (Audit run-2 C3): „Los →“ / „Überspringen →“ und „Fertig →“ sind derselbe Knopf an derselben
@@ -1794,7 +1819,12 @@ function addEditorRow(pe) {
   const rest = mk('er-rest', pe ? pe.rest_seconds : 90, 'number', { min: 0, max: 600, step: 15 });
   const del = document.createElement('button');
   del.className = 'er-del'; del.textContent = '✕';
-  del.addEventListener('click', e => { if (!editorTooEarly(e)) row.remove(); });
+  // Release-Audit v2.11 c6: nach dem Entfernen rückt die nächste Zeile unter den Finger — der 2. Tipp eines Doppeltipps löschte sie mit
+  del.addEventListener('click', e => {
+    if (editorTooEarly(e) || (e && e.isTrusted && evtTime(e) - editorDelAt < DLG_ARM_MS)) return;
+    editorDelAt = performance.now();
+    row.remove();
+  });
   row.append(combo, sets, reps, rest, del);
   document.getElementById('editor-rows').appendChild(row);
 }
@@ -2228,6 +2258,8 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
   allExercises = [];
   rerenderCurrentView();
   if (activeSession) relabelActiveSession();   // laufendes Training: Namen in der neuen Sprache (v2.9)
+  // Release-Audit v2.11 b2: Dehn-Angebot im Abschluss-Banner in der neuen Sprache
+  if (activeSession && activeSession.finished && !document.getElementById('done-stretch').classList.contains('hidden')) showStretchOffer(activeSession);
   renderVoiceBtns();
   Voice.preload();                              // Ansagen der neuen Sprache (v2.10)
 });

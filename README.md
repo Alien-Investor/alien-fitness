@@ -18,17 +18,18 @@ has been retired.
 
 - Create your own training plans: any exercise, sets, reps and rest — edit any time
 - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
-- Built-in plans: strength (Push / Pull / Legs) and HIT (Tabata, Power)
+- Built-in plans: strength (Push / Pull / Legs), HIT (Tabata, Power), warm-up and stretching
+- Warm-up and stretching: a hands-free warm-up block above every workout and a stretching offer when you finish (neither is saved), or run them as their own plans; Thorsten announces the next exercise (by name in German) and when to switch sides, and the timer shows a picture of the next exercise
 - Live session logging with automatic rest timer, corrections supported
 - "Last time" on the exercise cards and in every set dialog, sets come pre-filled: progressive overload at a glance
 - HIT intervals: timed sets ("20 sec") let you pick the work time (20–180 s or custom), then a 5 s get-ready countdown, work timer, rest and auto-chained next round
-- Hold exercises (plank): pick the hold time per set (30–180 s, custom, or "Max" as a stopwatch), 5 s get-ready countdown
+- Hold exercises (plank, stretches): pick the hold time per set (30–180 s, custom, or "Max" as a stopwatch), 5 s get-ready countdown; stretches done per side switch sides automatically
 - Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds before each automatic start (German, or simple English words in English mode); bundled audio files, turn it off with one tap
-- Technique tips for every exercise and safety warnings where it matters, from Kerstin (German and English)
+- Technique tips for every exercise and safety warnings for some, from Kerstin (German and English)
 - Interrupted workouts survive an app kill and can be resumed, saved or discarded
 - Session details with every set, a free-text note and delete
 - Progress charts per exercise (max weight / reps or seconds over time)
-- Exercise library with images, muscle groups and equipment
+- Exercise library with images, muscle groups and equipment, filterable by muscle group, HIT, warm-up or stretching
 - JSON backup: export saves a file to "Documents" and opens the share sheet (Android 11+; older versions: share sheet only); import with merge (duplicate detection) or replace
 - German and English interface, switchable in-app
 - Dark neon UI, mobile-first; screen stays awake during a workout, timer ends with vibration and an announcement (or a beep with the voice off)
