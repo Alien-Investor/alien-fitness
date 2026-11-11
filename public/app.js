@@ -1277,7 +1277,8 @@ function runRoutine(kind, rows, log) {
     const wait = i === 0 ? HOLD_PREP : restOf(rows[i - 1].ex, 10);
     if (!wait) { work(); return; }   // Pause 0: direkt weiter
     startTimer(wait, { kind: 'prep', label: i === 0 ? 'timer.prep' : 'timer.next', chain: true, sub, ...im,
-      cue: [`ex${Number(row.ex.exercise_id)}`, 'nextex', 'prep'], onDone: work });
+      // Ansage: Name der Übung (nur DE); ohne Namen vor der ERSTEN Übung „Mach dich bereit“, sonst „Nächste Übung“ (Fund Nutzer EN)
+      cue: i === 0 ? [`ex${Number(row.ex.exercise_id)}`, 'prep'] : [`ex${Number(row.ex.exercise_id)}`, 'nextex', 'prep'], onDone: work });
   };
   step(0);
 }
