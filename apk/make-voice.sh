@@ -47,7 +47,8 @@ jq -e '(.voices | type == "object") and ([del(.voices, ._info)[]] | all(type == 
 # --only: jeder Name wie ein Schlüssel der Textdatei (wird zu Dateinamen) und muss dort vorkommen
 if [[ -n "$ONLY" ]]; then
   # Release-Audit v2.11 a4: die GANZE Liste prüfen (ein Zeilenumbruch umging sonst die Einzelprüfung)
-  [[ "$ONLY" =~ ^[a-z][a-z0-9_-]{0,31}(,[a-z][a-z0-9_-]{0,31})*$ ]] || { echo "--only: ungültige Liste" >&2; exit 2; }
+  # Runde 2 (r2a-8): Prüfung im C-Locale (sonst passte „ä“ in [a-z])
+  LC_ALL=C /bin/bash -c '[[ "$1" =~ ^[a-z][a-z0-9_-]{0,31}(,[a-z][a-z0-9_-]{0,31})*$ ]]' _ "$ONLY" || { echo "--only: ungültige Liste" >&2; exit 2; }
   IFS=',' read -ra ONLY_LIST <<<"$ONLY"
   for c in "${ONLY_LIST[@]}"; do
     [[ "$c" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "--only: ungültiger Name '$c'" >&2; exit 2; }
@@ -113,19 +114,32 @@ if [[ -n "$PROBE" ]]; then
 fi
 
 OUT="$ROOT/public/audio"
+NEU="$TMP/neu"
+# Release-Audit v2.11 Runde 2 (r2a-8): erst alles in einen Arbeitsordner erzeugen; ersetzt wird erst, wenn jede Datei entstanden ist
+# (vorher löschte --only die alten Clips VOR dem Erzeugen — scheiterte Piper, fehlte der Clip, das Manifest zählte ihn weiter)
 for v in "${VOICES[@]}"; do
   model=$(vget "$v" model); ls_=$(vget "$v" length_scale); ns=$(vget "$v" noise_scale)
-  [[ -n "$ONLY" ]] || rm -rf "${OUT:?}/$v"
   for l in "${LANGS[@]}"; do
-    mkdir -p "$OUT/$v/$l"
+    mkdir -p "$NEU/$v/$l"
     cue_lines "$l" "$v" > "$TMP/lines.tsv" || { echo "Textdatei: jq-Fehler bei $v/$l" >&2; exit 1; }
-    if [[ -n "$ONLY" ]]; then for c in "${ONLY_LIST[@]}"; do rm -f "$OUT/$v/$l/$c"-[0-9].ogg; done; fi   # alte Varianten dieser Ansagen, exakt („ex“ löscht nicht „ex-b-1.ogg“, a4)
     while IFS=$'\t' read -r cue n text; do
       want "$cue" || continue
       render "$text" "$model" "$ls_" "$TMP/clip.wav" "$ns"
-      to_opus "$TMP/clip.wav" "$OUT/$v/$l/$cue-$n.ogg"
+      to_opus "$TMP/clip.wav" "$NEU/$v/$l/$cue-$n.ogg"
+      [[ -s "$NEU/$v/$l/$cue-$n.ogg" ]] || { echo "Ansage $v/$l/$cue-$n nicht erzeugt — nichts ersetzt" >&2; exit 1; }
     done < "$TMP/lines.tsv"
   done
+done
+for v in "${VOICES[@]}"; do
+  if [[ -z "$ONLY" ]]; then
+    rm -rf "${OUT:?}/$v"; mkdir -p "$OUT"; mv "$NEU/$v" "$OUT/$v"
+  else
+    for l in "${LANGS[@]}"; do
+      mkdir -p "$OUT/$v/$l"
+      for c in "${ONLY_LIST[@]}"; do rm -f "$OUT/$v/$l/$c"-[0-9].ogg; done   # alte Varianten dieser Ansagen, exakt („ex“ löscht nicht „ex-b-1.ogg“, a4)
+      for f in "$NEU/$v/$l/"*.ogg; do if [[ -e "$f" ]]; then cp "$f" "$OUT/$v/$l/"; fi; done
+    done
+  fi
 done
 # Anzahl der Varianten je Cue und Sprache (die App wählt zufällig eine davon)
 jq 'del(.voices, ._info) | map_values(map_values(length))' "$CUES" > "$OUT/manifest.json"

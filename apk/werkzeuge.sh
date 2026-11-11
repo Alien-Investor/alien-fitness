@@ -12,7 +12,8 @@
 # Grenze (wie Notes BUILD.md): java selbst (JAVA_HOME) bleibt ungepinnt — ein JDK lädt hunderte Dateien, der Pin einer einzelnen wäre nur Schein.
 # Release-Audit v2.11 (a1/a2): node ist per Hash gepinnt (nvm-Update = erst prüfen, dann WZ_NODE_PIN neu setzen), die Endkontrolle kommt aus einem
 # Git-Stand (HEAD bzw. Tag, nicht aus dem Arbeitsbaum), env.sh wird mit /bin/bash gelesen. Grenze (a6): Vertrauensanker bleibt die aufrufende
-# Shell — exportierte Funktionen (z. B. `type`), BASH_ENV, GCONV_PATH. Ganz sicher: env -i HOME="$HOME" /bin/bash apk/make-release.sh.
+# Shell — exportierte Funktionen (z. B. `type`), BASH_ENV, GCONV_PATH — und allgemein: gegen einen Angreifer mit vollen Nutzerrechten hilft das
+# nicht (der liest Keystore und gh-Token). Runde 2 (r2a-4): env.sh wird ohne eval gelesen, nur zwei absolute Pfade werden übernommen.
 
 WZ_BT_VERSION=34.0.0
 WZ_PIN='760aa057e89e3940c3e944e6bec61eda864ade42fd9c0a3113735e329657705f  aapt2
@@ -29,9 +30,10 @@ WZ_NODE_PIN='e32e2d16081cf644f88392934288086e7662529d0d43277c34f7aad2207cfafb'  
 WZP=""; WZ=""; WZ_PH=""; WZ_NODE=""; WZ_NODE_SUM=""
 
 # ANDROID_HOME und JAVA_HOME aus env.sh übernehmen, NICHT dessen PATH (stellte JAVA_HOME/bin und platform-tools vor /usr/bin).
-wz_umgebung() {
-  eval "$(/bin/bash -c 'source ~/Apps/android-build/env.sh >/dev/null 2>&1; printf "ANDROID_HOME=%q\nJAVA_HOME=%q\n" "${ANDROID_HOME:-}" "${JAVA_HOME:-}"')"
-  [ -n "$ANDROID_HOME" ] && [ -n "$JAVA_HOME" ] || { echo "FEHLER: ANDROID_HOME/JAVA_HOME aus ~/Apps/android-build/env.sh nicht lesbar"; return 1; }
+wz_umgebung() { local v
+  v="$(/bin/bash -c 'source ~/Apps/android-build/env.sh >/dev/null 2>&1; printf "%s\n%s" "${ANDROID_HOME:-}" "${JAVA_HOME:-}"')"
+  ANDROID_HOME="${v%%$'\n'*}"; JAVA_HOME="${v#*$'\n'}"
+  [[ "$ANDROID_HOME" == /* && "$JAVA_HOME" == /* && "$ANDROID_HOME$JAVA_HOME" != *$'\n'* && -d "$ANDROID_HOME" && -x "$JAVA_HOME/bin/java" ]] || { echo "FEHLER: ANDROID_HOME/JAVA_HOME aus ~/Apps/android-build/env.sh nicht lesbar"; return 1; }
   export ANDROID_HOME JAVA_HOME
 }
 
@@ -48,7 +50,7 @@ wz_einrichten() {
   [ -n "$WZ_NODE" ] || WZ_NODE="$(command -v node || true)"
   [ -n "$WZ_NODE" ] && WZ_NODE="$(realpath -e "$WZ_NODE")" || { echo "FEHLER: node nicht gefunden"; return 1; }
   WZ_NODE_SUM="$(sha256sum < "$WZ_NODE" | cut -d' ' -f1)"
-  [ "$WZ_NODE_SUM" = "$WZ_NODE_PIN" ] || { echo "FEHLER: node ($WZ_NODE) ≠ Pin — nach einem nvm-Update erst prüfen, dann WZ_NODE_PIN in apk/werkzeuge.sh neu setzen"; return 1; }
+  [ "$WZ_NODE_SUM" = "$WZ_NODE_PIN" ] || { echo "FEHLER: node ($WZ_NODE) ≠ Pin — nach einem nvm-Update erst prüfen, dann WZ_NODE_PIN in apk/werkzeuge.sh neu setzen und committen (make-release liest den Stand im Tag)"; return 1; }
   wz_ok || { echo "FEHLER: aapt2/dexdump/apksigner.jar (build-tools $WZ_BT_VERSION) ≠ Pin — erst prüfen, dann in apk/werkzeuge.sh neu pinnen"; return 1; }
 }
 wz_aufraeumen() { [ -n "$WZP" ] && rm -rf "$WZP"; WZP=""; }
@@ -89,4 +91,4 @@ wz_version() { local vc vn
   vc="$(sed -n 's/^VERSION_CODE=\([0-9][0-9]*\)$/\1/p' "$2")"; vn="$(sed -n 's/^VERSION_NAME=\([0-9][0-9.]*\)$/\1/p' "$2")"
   [ "$(grep -c . <<<"$vc")" = 1 ] && [ "$(grep -c . <<<"$vn")" = 1 ] \
     && grep -qF "package: name='org.alieninvestor.fitness' versionCode='$vc' versionName='$vn'" <<<"$(wz_aapt2 dump badging "$1" 2>/dev/null | head -1)" \
-    || { echo "FEHLER: App-ID/versionCode/versionName der APK ≠ VERSION (${vn:-?}/${vc:-?})"; return 1; }; }
+    || { echo "FEHLER: App-ID/versionCode/versionName der APK ≠ VERSION (${vn:-?}/${vc:-?}; make-release: VERSION aus dem Tag)"; return 1; }; }

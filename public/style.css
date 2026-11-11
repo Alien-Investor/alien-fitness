@@ -429,6 +429,8 @@ h3 {
   max-width: 560px;
   box-shadow: 0 -4px 40px rgba(0,255,204,0.15);
 }
+/* Release-Audit v2.11 R2c-7: bei niedrigem Fenster (offene Tastatur) scrollbar statt oben abgeschnitten */
+#set-modal, #hold-modal { max-height: 100%; overflow-y: auto; }
 #set-modal h3, #hold-modal h3 { margin-bottom: 18px; color: var(--neon); font-size: 0.78rem; }
 
 /* ── Zeitwahl (v2.9 Plank, seit v2.10 auch Intervalle) ────────────────────────  */
@@ -527,6 +529,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 }
 #timer-overlay.prep #timer-img { border-color: rgba(255,204,68,0.45); box-shadow: 0 0 18px rgba(255,204,68,0.12); }
 @media (max-height: 720px) { #timer-img { width: min(34vw, 150px); margin-bottom: 12px; } }
+@media (max-height: 480px) { #timer-img { width: min(26vw, 110px); margin-bottom: 8px; } }   /* R2c-7: Timer passt auch bei offener Tastatur */
 #timer-skip { margin-top: 0; }
 
 /* ── Ansage-Stimme (v2.10): Umschalter Kerstin → Thorsten → Aus ─────────────── */

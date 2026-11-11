@@ -55,8 +55,11 @@ function renderAbout() {
   const el = document.getElementById('about-line');
   if (el) el.textContent = I18N.t('about', { v: APP_VERSION });
 }
-document.getElementById('btn-help-close').addEventListener('click', () => helpOverlay.classList.remove('open'));
-helpOverlay.addEventListener('click', e => { if (e.target === helpOverlay) helpOverlay.classList.remove('open'); });
+// Release-Audit v2.11 Runde 2 (R2c-1…3): JEDES Fenster setzt beim Schließen die Nachlauf-Sperre — der 2. Tipp eines Doppeltipps traf sonst,
+// was darunter frei wird (Plan-Karte, „✓ Beenden & speichern“). Start-Knöpfe und „Beenden“ prüfen tooSoonAfterClose.
+function closeHelp() { helpOverlay.classList.remove('open'); overlayClosedAt = performance.now(); }
+document.getElementById('btn-help-close').addEventListener('click', closeHelp);
+helpOverlay.addEventListener('click', e => { if (e.target === helpOverlay) closeHelp(); });
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 const lightbox = document.getElementById('lightbox');
@@ -68,7 +71,7 @@ function openLightbox(src, caption) {
   lightboxCaption.textContent = caption || '';
   lightbox.classList.add('open');
 }
-lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
+lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); overlayClosedAt = performance.now(); });   // R2c-2
 
 // ── Rückfrage-Dialog (v2.8) statt confirm()/alert() ────────────────────────────
 // Der Android-Systemdialog (Capacitor-AlertDialog) erbt FLAG_SECURE nicht: ein Screenshot
@@ -123,6 +126,7 @@ function dialogClose(v) {
   const r = dlgResolve;
   if (!r) return;
   dlgResolve = null;
+  overlayClosedAt = performance.now();   // R2c-1: Doppeltipp „Training abbrechen“ startete sonst einen Plan aus der Liste darunter
   document.getElementById('dlg').classList.add('hidden');
   document.getElementById('dlg-msg').textContent = '';
   document.getElementById('dlg-ok').classList.remove('red');
@@ -455,6 +459,7 @@ const DRAFT_KEY = 'fit-active-workout';
 // bleibt, sonst bekäme „So speichern“ die Fortsetzen-Zeit als Ende (Dauer über die ganze Unterbrechung).
 function saveDraft(keepSavedAt) {
   try {
+    if (activeSession && activeSession.finished) return;   // R2c-6: eine gespeicherte Einheit legt keinen Draft mehr an (sonst zweite Einheit über „So speichern“)
     if (activeSession) {
       const prev = keepSavedAt ? readDraft() : null;
       const savedAt = (prev && prev.startedAt === activeSession.startedAt && prev.savedAt) || new Date().toISOString();
@@ -944,6 +949,7 @@ let setOpenedAt = 0;
 const setTooEarly = e => e && e.isTrusted && evtTime(e) - setOpenedAt < DLG_ARM_MS;
 
 async function openSetModal(exIdx, setNum, ex) {
+  if (!activeSession || activeSession.finished || finishBusy) return;   // R2c-6: nicht mehr während/nach dem Speichern der Einheit
   pendingSet = { exIdx, setNum, ex };
 
   document.getElementById('set-modal-title').textContent =
@@ -1135,6 +1141,7 @@ function setHoldValue(v, writeInput) {
 }
 
 async function openHoldModal(exIdx, setNum, ex) {
+  if (!activeSession || activeSession.finished || finishBusy) return;   // R2c-6
   const mode = isHoldSet(ex) ? 'hold' : 'interval';
   const sided = mode === 'hold' && exFlags(ex).sided;
   pendingHold = { exIdx, setNum, ex, mode, sided, value: null };
@@ -1476,7 +1483,7 @@ document.getElementById('btn-abort').addEventListener('click', async () => {
 document.getElementById('btn-done-ok').addEventListener('click', e => {
   // Release-Audit v2.11 c2: Das Banner erscheint unter dem Finger, der „Beenden“ tippte; die Dehn-Karte schob den Knopf außerdem auf die
   // Plan-Karten des Dashboards — ein Doppeltipp startete dort einen Plan. Sperre nach dem Erscheinen + Nachlauf-Sperre für die Karten.
-  if (e && e.isTrusted && evtTime(e) - bannerShownAt < DLG_ARM_MS) return;
+  if (e && e.isTrusted && (evtTime(e) - bannerShownAt < DLG_ARM_MS || tooSoonAfterClose(e))) return;   // R2c-5: auch nach „■ Stopp“ beim Dehnen
   cancelTimer();
   releaseWakeLock();       // Release-Audit v2.11 b1
   overlayClosedAt = performance.now();
@@ -1885,7 +1892,7 @@ async function savePlanFromEditorOnce() {
 
 document.getElementById('btn-new-plan').addEventListener('click', e => { if (!tooSoonAfterClose(e)) openPlanEditor(null); });
 document.getElementById('editor-save').addEventListener('click', savePlanFromEditor);
-document.getElementById('editor-add-row').addEventListener('click', e => { if (!editorTooEarly(e)) addEditorRow(null); });
+document.getElementById('editor-add-row').addEventListener('click', e => { if (!editorTooEarly(e) && !tooSoonAfterClose(e)) addEditorRow(null); });   // R2c-1: nach „OK“ eines Hinweises
 document.getElementById('editor-cancel').addEventListener('click', e => { if (!editorTooEarly(e)) closePlanEditor(); });
 document.getElementById('editor-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget && !editorTooEarly(e)) closePlanEditor();
@@ -2068,6 +2075,7 @@ async function openSessionDetail(id) {
 }
 
 function closeSessionDetail() {
+  overlayClosedAt = performance.now();
   document.getElementById('session-overlay').classList.remove('open');
   detailSessionId = null;
 }
@@ -2140,11 +2148,13 @@ async function saveBackupFile(name, text) {
 
 // Release-Audit v2.10 Runde 3: Ein Doppeltipp auf „Import“ startete zwei Läufe — eigene Pläne wurden doppelt angelegt
 // (Einheiten nicht, die gleicht „Zusammenführen“ ab). Wie exportBusy beim Export.
-let importBusy = false;
+let importBusy = false, importDoneAt = 0;
+// R2c-4: der erste Lauf ist nach Millisekunden fertig — ein Doppeltipp startete danach einen zweiten (Pläne doppelt). Echte Tipps bis 1 s danach zählen nicht.
+const importTooSoon = e => e && e.isTrusted && evtTime(e) - importDoneAt < 1000;
 async function applyImport(text) {
   if (importBusy) return;
   importBusy = true;
-  try { await applyImportOnce(text); } finally { importBusy = false; }
+  try { await applyImportOnce(text); } finally { importBusy = false; importDoneAt = performance.now(); }
 }
 async function applyImportOnce(text) {
   const msg = document.getElementById('backup-msg');
@@ -2216,7 +2226,8 @@ if (_importInput) _importInput.addEventListener('change', async (e) => {
 });
 
 const _importPasteBtn = document.getElementById('backup-import-paste');
-if (_importPasteBtn) _importPasteBtn.addEventListener('click', async () => {
+if (_importPasteBtn) _importPasteBtn.addEventListener('click', async e => {
+  if (importTooSoon(e)) return;   // Release-Audit v2.11 R2c-4
   const ta = document.getElementById('backup-json');
   if (ta && ta.value.trim()) await applyImport(ta.value);
 });
