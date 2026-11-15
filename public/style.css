@@ -495,6 +495,11 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   align-items: center;
   justify-content: center;
   text-align: center;
+  /* Release-Audit v2.12 b2/c2: niedriges Fenster (Tastatur, Querformat) oder große Systemschrift — der Inhalt beginnt unter den
+     Ecken-Knöpfen und das Fenster scrollt, statt „■ Stopp“ unten abzuschneiden. Passt alles, bleibt er mittig wie vorher
+     (Rand oben und unten gleich). Ohne „safe“ (alte WebView) gilt die Zeile davor. */
+  box-sizing: border-box; padding: 64px 0; overflow-y: auto;
+  justify-content: safe center;
 }
 #timer-overlay.open { display: flex; }
 #timer-label {
@@ -564,8 +569,13 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   stroke-linecap: round; stroke-linejoin: round; }
 .howto-btn .dot { stroke-width: 2.6; }
 .howto-btn.off { color: var(--muted); }
+/* Release-Audit v2.12 b1: feste Höhe (6 Zeilen, längste Beschreibung = Übung 38) — im Wechsel steht schon die nächste Übung mit
+   anderer Textlänge; mit wachsender Höhe rutschten „Fertig →“ und „■ Stopp“ um 20–30 px, ein später Tipp traf „■ Stopp“.
+   Längerer Text (320 px, große Schrift) scrollt im Kasten. */
+#timer-howto p { margin: auto 0; }   /* kurzer Text mittig im Kasten; Überlänge läuft nach unten (scrollt), nichts wird oben abgeschnitten */
 #timer-howto {
   width: min(calc(100vw - 32px), 440px); box-sizing: border-box; margin: -24px 0 24px; padding: 10px 12px;
+  flex-shrink: 0; height: calc(9em + 22px); overflow-y: auto; display: flex; flex-direction: column;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--card);
   font-family: var(--font-r); font-size: 0.85rem; line-height: 1.5; color: var(--text); text-align: left;
 }
@@ -578,8 +588,13 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 }
 @media (max-height: 640px) {
   #timer-overlay.howto-on #timer-img { width: min(30vw, 116px); margin-bottom: 8px; }
-  #timer-overlay.howto-on #timer-count { font-size: 4rem; }
-  #timer-overlay.howto-on #timer-howto { font-size: 0.8rem; line-height: 1.4; padding: 8px 10px; margin-bottom: 16px; }
+  #timer-overlay.howto-on #timer-count, #timer-overlay.howto-on #timer-count.long { font-size: 4rem; }   /* „1:30“ wie „9“: keine Verschiebung */
+  #timer-overlay.howto-on #timer-howto { font-size: 0.8rem; line-height: 1.4; padding: 8px 10px; margin-bottom: 16px; height: calc(8.4em + 18px); }
+}
+@media (max-height: 480px) {   /* b2: Tastatur offen / Querformat — die 640er-Regel machte das Bild hier größer als ohne Text */
+  #timer-overlay.howto-on #timer-img { width: min(22vw, 80px); margin-bottom: 6px; }
+  #timer-overlay.howto-on #timer-label { margin-bottom: 4px; }
+  #timer-overlay.howto-on #timer-count, #timer-overlay.howto-on #timer-count.long { font-size: 3rem; }
 }
 
 /* ── Progress Charts ─────────────────────────────────────────────────────────── */

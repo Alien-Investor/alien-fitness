@@ -1469,7 +1469,10 @@ document.getElementById('btn-finish').addEventListener('click', e => {
   finishWorkout();
 });
 
-document.getElementById('btn-abort').addEventListener('click', async () => {
+document.getElementById('btn-abort').addEventListener('click', async e => {
+  // Release-Audit v2.12 c1: „So geht’s“ liegt im Timer über „← Abbrechen“ (Seite etwas gescrollt). Ein Tipp kurz nach dem Schließen
+  // des Timers verwarf eine Einheit ohne Sätze ohne Rückfrage (z. B. im Aufwärm-Block) — Nachlauf-Sperre wie „Beenden“.
+  if (tooSoonAfterClose(e)) return;
   const s = activeSession;
   if (s && s.sets.length &&
       !(await ask(I18N.t('workout.abortConfirm', { n: s.sets.length }), { ok: 'dlg.abort', cancel: 'dlg.keepGoing', danger: true }))) return;
@@ -2312,9 +2315,8 @@ function renderHowto() {
   btn.classList.toggle('off', !howtoPref);
   btn.setAttribute('aria-pressed', String(howtoPref));
   btn.querySelector('.howto-name').textContent = I18N.t('howto.btn');
-  btn.title = I18N.t(howtoPref ? 'howto.hide' : 'howto.show');
-  btn.setAttribute('aria-label', btn.title);
-  txt.textContent = timerHowto;   // Stammdaten, trotzdem nur textContent
+  btn.title = I18N.t(howtoPref ? 'howto.hide' : 'howto.show');   // Name bleibt der sichtbare Text, Zustand über aria-pressed (Audit v2.12 c3)
+  txt.firstElementChild.textContent = timerHowto;   // Stammdaten, trotzdem nur textContent
   txt.classList.toggle('hidden', !show);
   document.getElementById('timer-overlay').classList.toggle('howto-on', show);
 }

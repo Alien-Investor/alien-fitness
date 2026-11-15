@@ -19,7 +19,7 @@ has been retired.
 - Create your own training plans: any exercise, sets, reps and rest — edit any time
 - Ad-hoc free workouts: start empty, add exercises on the fly, save when done
 - Built-in plans: strength (Push / Pull / Legs), HIT (Tabata, Power), warm-up and stretching
-- Warm-up and stretching: a hands-free warm-up block above every workout and a stretching offer when you finish (neither is saved), or run them as their own plans; Thorsten announces the next exercise (by name in German) and when to switch sides, and the timer shows a picture of the next exercise
+- Warm-up and stretching: a warm-up block above every workout and a stretching offer when you finish (neither is saved), or run them as their own plans; Thorsten announces the next exercise (by name in German) and when to switch sides, and the timer shows a picture of the next exercise and, at a tap on "How-to", how it is done
 - Live session logging with automatic rest timer, corrections supported
 - "Last time" on the exercise cards and in every set dialog, sets come pre-filled: progressive overload at a glance
 - HIT intervals: timed sets ("20 sec") let you pick the work time (20–180 s or custom), then a 5 s get-ready countdown, work timer, rest and auto-chained next round
