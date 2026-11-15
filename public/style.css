@@ -551,6 +551,37 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 #workout-header #workout-plan-name { order: 3; flex-basis: 100%; }
 #voice-btn-timer { position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; }
 
+/* ── Anleitung im Timer (v2.12, Wunsch Nutzer 15.11.2026): Knopf „So geht's“ oben links, gegenüber der Stimme.
+   Nur bei Aufwärm-/Dehnübungen; an = Beschreibung der Übung unter dem Namen. Der Knopf liegt fest in der Ecke,
+   das Ein- und Ausblenden des Texts verschiebt ihn nicht (Doppeltipp schaltet nur zurück). */
+.howto-btn {
+  position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px;
+  background: transparent; border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--neon); font-family: var(--font-b); font-size: 0.75rem; letter-spacing: 0.5px; cursor: pointer; white-space: nowrap;
+}
+.howto-btn svg { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+.howto-btn .dot { stroke-width: 2.6; }
+.howto-btn.off { color: var(--muted); }
+#timer-howto {
+  width: min(calc(100vw - 32px), 440px); box-sizing: border-box; margin: -24px 0 24px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--card);
+  font-family: var(--font-r); font-size: 0.85rem; line-height: 1.5; color: var(--text); text-align: left;
+}
+/* Mit Text wird es eng: Bild und Abstände kleiner, damit Countdown und Knöpfe im Fenster bleiben (geprüft bei 360×640) */
+@media (max-height: 820px) {
+  #timer-overlay.howto-on #timer-img { width: min(34vw, 130px); margin-bottom: 10px; }
+  #timer-overlay.howto-on #timer-label { margin-bottom: 8px; }
+  #timer-overlay.howto-on #timer-count { font-size: 5rem; }
+  #timer-overlay.howto-on #timer-count.long { font-size: min(5rem, 18vw); }
+}
+@media (max-height: 640px) {
+  #timer-overlay.howto-on #timer-img { width: min(30vw, 116px); margin-bottom: 8px; }
+  #timer-overlay.howto-on #timer-count { font-size: 4rem; }
+  #timer-overlay.howto-on #timer-howto { font-size: 0.8rem; line-height: 1.4; padding: 8px 10px; margin-bottom: 16px; }
+}
+
 /* ── Progress Charts ─────────────────────────────────────────────────────────── */
 /* Das Auswahlfeld ist seit v2.7 ein Kombifeld — das Aussehen steckt in .combo-btn. */
 .chart-combo { margin-bottom: 18px; }

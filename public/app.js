@@ -1068,7 +1068,7 @@ function startTimedSet(exIdx, setNum, ex, secs) {
   secs = clampHold(secs) || timedSeconds(ex) || 20;
   const sub = `${ex.name} · ${I18N.t('dyn.setN')} ${setNum}/${ex.sets}`;
   startTimer(secs, { kind: 'work', chain: true, sub, cue: ex.sets > 1 && setNum >= ex.sets ? 'last' : 'go',
-    img: timerImg(ex), imgAlt: ex.name, onDone: (elapsed) => {
+    ...timerPic(ex), onDone: (elapsed) => {
     const r = commitSet(exIdx, setNum, ex, {
       exercise_id: ex.exercise_id, set_number: setNum,
       reps: null, weight_kg: 0, duration_seconds: elapsed, completed: 1,
@@ -1185,7 +1185,7 @@ function startHold() {
   rememberHoldTarget(ex.exercise_id, value);
   closeHoldModal();
   const sub = holdSub(ex, setNum);
-  const im = { img: timerImg(ex), imgAlt: ex.name };   // v2.11: Bild nur bei Aufwärm-/Dehnübungen
+  const im = timerPic(ex);   // v2.11: Bild nur bei Aufwärm-/Dehnübungen, v2.12 mit Anleitung
   if (sided && value !== 'max') {   // v2.11: Seite 1 → Wechsel → Seite 2, gespeichert wird die kürzere Seite
     startTimer(HOLD_PREP, { kind: 'prep', chain: true, sub, ...im, onDone: () =>
       runSided(value, { label: 'timer.hold', sub, cue: 'hold', ...im }, secs => logHold(exIdx, setNum, ex, secs)) });
@@ -1226,7 +1226,7 @@ function logHold(exIdx, setNum, ex, secs) {
 // done(sec) bekommt die kürzere Seite — „30 s je Seite“ heißt: beide Seiten mindestens so lange.
 function runSided(secs, opts, done) {
   const sub = n => `${opts.sub} · ${I18N.t('dyn.sideN', { n })}`;
-  const im = { img: opts.img, imgAlt: opts.imgAlt };
+  const im = { img: opts.img, imgAlt: opts.imgAlt, howto: opts.howto };
   startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(1), cue: opts.cue, ...im, onDone: first => {
     startTimer(SIDE_SWITCH, { kind: 'prep', label: 'timer.side', chain: true, sub: sub(2), cue: 'side', ...im, onDone: () => {
       startTimer(secs, { kind: 'work', label: opts.label, chain: true, sub: sub(2), cue: opts.cue, ...im,
@@ -1245,6 +1245,9 @@ const ROUTINE_TYPES = ['warmup', 'stretch'];
 // Bild im Timer (v2.11, Wunsch Nutzer): nur für Aufwärm- und Dehnübungen — im Krafttraining kennt man seine Übungen,
 // in der Pause zählt der große Countdown. Fehlt die Datei, verschwindet das Bild (error-Listener unten).
 const timerImg = ex => ex && ROUTINE_TYPES.includes(exFlags(ex).type) ? `images/exercises/${Number(ex.exercise_id)}.png` : null;
+// Anleitung im Timer (v2.12, Wunsch Nutzer 15.11.2026: das Bild allein reicht nicht jedem): gleiche Bedingung wie das Bild,
+// Text = Beschreibung der Übung in der aktuellen Sprache. Angezeigt nur, wenn „So geht's“ an ist (renderHowto).
+const timerPic = ex => { const img = timerImg(ex); return { img, imgAlt: ex ? ex.name : '', howto: img ? (ex.description || '') : '' }; };
 document.getElementById('timer-img').addEventListener('error', e => {
   e.target.dataset.failed = e.target.getAttribute('src');   // gleiche Datei nicht als kaputtes Bild wieder einblenden
   e.target.classList.add('hidden');
@@ -1281,7 +1284,7 @@ function runRoutine(kind, rows, log) {
       if (r.log && logRoutineRow(row, secs)) { routine = null; return; }   // letzte Übung: finishWorkout sagt „Geschafft“
       step(i + 1);
     };
-    const im = { img: timerImg(row.ex), imgAlt: row.ex.name };   // im Wechsel schon die kommende Übung zeigen
+    const im = timerPic(row.ex);   // im Wechsel schon die kommende Übung zeigen (Bild und Anleitung)
     const work = () => {
       if (routine !== r) return;
       if (exFlags(row.ex).sided) runSided(row.secs, { label, sub, cue, ...im }, after);
@@ -1542,6 +1545,8 @@ function startTimer(seconds, opts = {}) {
     img.alt = opts.imgAlt || '';
     img.classList.remove('hidden');
   } else img.classList.add('hidden');
+  timerHowto = opts.howto || '';   // v2.12: Anleitung zur Übung (nur Aufwärmen/Dehnen, timerPic)
+  renderHowto();
   setTimerCount(timerState.up ? 0 : seconds);
   count.classList.remove('urgent');
   timerOpenedAt = performance.now();   // I1–I5: echte Tipps auf Überspringen/Stopp erst nach DLG_ARM_MS
@@ -1975,8 +1980,11 @@ function kerstinEl(exId, collapsed) {
     p.append(head, t);
     block.appendChild(p);
   };
-  if (k.tip) part('kerstin-tip', 'kerstin.tip', k.tip, true);
-  if (k.warn) part('kerstin-warn', 'kerstin.warn', k.warn, !k.tip);
+  // Bibliothek (offen, ohne Knopf): Porträt und „Kerstin-Tipp“ im Kopf des ersten Teils. Training (zum Aufklappen, v2.12, Wunsch Nutzer
+  // 12.11.2026, Vorbild Analyzer Teil 27): aufgeklappt wird der Knopf zur Kopfzeile „Kerstin · Bord-KI“, die Teile darunter nur „Tipp“ /
+  // „⚠ Warnung“ ohne Porträt — vorher standen Porträt und „Kerstin-Tipp“ zweimal untereinander.
+  if (k.tip) part('kerstin-tip', collapsed ? 'kerstin.tipShort' : 'kerstin.tip', k.tip, !collapsed);
+  if (k.warn) part('kerstin-warn', collapsed ? 'kerstin.warnShort' : 'kerstin.warn', k.warn, !collapsed && !k.tip);
   if (!collapsed) { wrap.appendChild(block); return wrap; }
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -1985,7 +1993,8 @@ function kerstinEl(exId, collapsed) {
   const mini = avatar();
   mini.className = 'kerstin-mini';
   const lbl = document.createElement('span');
-  lbl.textContent = I18N.t('kerstin.tip');
+  const caption = open => { lbl.textContent = I18N.t(open ? 'kerstin.who' : 'kerstin.tip'); };
+  caption(false);
   btn.append(mini, lbl);
   if (k.warn) { const f = document.createElement('span'); f.className = 'kerstin-flag'; f.textContent = '⚠'; btn.appendChild(f); }
   const chev = document.createElement('span');
@@ -1998,6 +2007,7 @@ function kerstinEl(exId, collapsed) {
     block.classList.toggle('hidden', !open);
     wrap.classList.toggle('open', open);
     btn.setAttribute('aria-expanded', String(open));
+    caption(open);
   });
   wrap.append(btn, block);
   return wrap;
@@ -2287,6 +2297,32 @@ function renderVoiceBtns() {
   });
 }
 document.querySelectorAll('.voice-btn').forEach(b => b.addEventListener('click', () => { Voice.next(); renderVoiceBtns(); }));
+
+// ── Anleitung im Timer (v2.12): Knopf „So geht's“ blendet die Beschreibung der Aufwärm-/Dehnübung ein ──
+// Standard aus („optional“, Wunsch Nutzer), die Wahl gilt für alle folgenden Übungen und wird gemerkt (nicht im Backup).
+// Kein Fenster, keine Sperre nötig: der Knopf liegt fest oben links, ein Doppeltipp schaltet nur hin und zurück.
+const HOWTO_KEY = 'fit-howto';
+let howtoPref = (() => { try { return localStorage.getItem(HOWTO_KEY) === 'on'; } catch (e) { return false; } })();
+let timerHowto = '';
+function renderHowto() {
+  const btn = document.getElementById('timer-howto-btn');
+  const txt = document.getElementById('timer-howto');
+  const show = howtoPref && !!timerHowto;
+  btn.classList.toggle('hidden', !timerHowto);
+  btn.classList.toggle('off', !howtoPref);
+  btn.setAttribute('aria-pressed', String(howtoPref));
+  btn.querySelector('.howto-name').textContent = I18N.t('howto.btn');
+  btn.title = I18N.t(howtoPref ? 'howto.hide' : 'howto.show');
+  btn.setAttribute('aria-label', btn.title);
+  txt.textContent = timerHowto;   // Stammdaten, trotzdem nur textContent
+  txt.classList.toggle('hidden', !show);
+  document.getElementById('timer-overlay').classList.toggle('howto-on', show);
+}
+document.getElementById('timer-howto-btn').addEventListener('click', () => {
+  howtoPref = !howtoPref;
+  try { localStorage.setItem(HOWTO_KEY, howtoPref ? 'on' : 'off'); } catch (e) {}
+  renderHowto();
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.documentElement.lang = I18N.lang;
