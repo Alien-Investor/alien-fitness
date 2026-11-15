@@ -1504,6 +1504,7 @@ document.getElementById('btn-done-ok').addEventListener('click', e => {
 // ── TIMER (Pause + Intervall-Arbeit) ──────────────────────────────────────────
 let timerInterval = null;
 let timerState = null;   // { kind: 'rest'|'work'|'prep', chain, up, start, end, seconds, onDone }
+let timerScrollReset = false;   // Release-Audit v2.12 R2-4: nächster Timer beginnt oben (closeTimerOverlay setzt es, wenn keine Kette folgt)
 const TIMER_LABEL = { rest: 'timer.label', work: 'timer.work', prep: 'timer.prep' };
 const TIMER_SKIP  = { rest: 'timer.skip',  work: 'timer.done', prep: 'timer.go' };
 // Ansagen (v2.10, voice.js): jede Phase sagt sich beim Start an; opts.cue überschreibt (z.B. 'last', 'hold'), null = still
@@ -1554,6 +1555,7 @@ function startTimer(seconds, opts = {}) {
   count.classList.remove('urgent');
   timerOpenedAt = performance.now();   // I1–I5: echte Tipps auf Überspringen/Stopp erst nach DLG_ARM_MS
   overlay.classList.add('open');
+  if (timerScrollReset) { overlay.scrollTop = 0; timerScrollReset = false; }   // R2-4: erst nach 'open' (ohne Box wirkt scrollTop nicht)
   announce(opts.cue !== undefined ? opts.cue : TIMER_CUE[kind]);
 
   const urgentAt = kind === 'rest' ? 5 : 3;
@@ -1586,7 +1588,11 @@ function closeTimerOverlay() {
   const ov = document.getElementById('timer-overlay');
   // Release-Audit v2.11 c1 (MITTEL): Nachlauf-Sperre auch für den Timer — ein Doppeltipp auf „■ Stopp“ traf darunter „✓ Beenden & speichern“
   // (das Bild im Timer schob die Knöpfe auf dessen Höhe) und schloss die Einheit vorzeitig ab
-  if (ov.classList.contains('open')) overlayClosedAt = performance.now();
+  if (ov.classList.contains('open')) {
+    overlayClosedAt = performance.now();
+    // Release-Audit v2.12 R2-4: bleibt das Fenster zu (keine Kette — die öffnet im selben Durchlauf wieder), beginnt der nächste Timer oben
+    setTimeout(() => { if (!ov.classList.contains('open')) timerScrollReset = true; }, 0);
+  }
   ov.classList.remove('open', 'work', 'prep', 'chain');
 }
 // Regulär abgelaufen (Beep + Vibration) oder per Taste beendet (skipped) → onDone
