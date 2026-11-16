@@ -196,5 +196,29 @@
   "44": {
     "de": { "tip": "Steig ab, solange der Griff noch sicher hält, nicht erst beim Abrutschen. Wer Schulterbeschwerden hat, lässt die Füße am Boden und nimmt nur einen Teil des Gewichts in die Arme." },
     "en": { "tip": "Step down while your grip still feels secure, not once you start to slip. If your shoulders bother you, keep your feet on the floor and take only part of your weight in your arms." }
+  },
+  "45": {
+    "de": { "tip": "Nimm ein leichtes Gewicht, deutlich leichter als beim Rudern: Mit fast gestreckten Armen ist der Hebel lang. Hebe ohne Schwung, der Oberkörper bleibt dabei ruhig." },
+    "en": { "tip": "Pick a light weight, much lighter than for rows: with your arms almost straight, the lever is long. Lift without momentum and keep your upper body still." }
+  },
+  "46": {
+    "de": { "tip": "Zieh mit den Ellenbogen, nicht mit den Händen. Der Oberkörper bleibt in seiner Neigung und richtet sich beim Ziehen nicht auf." },
+    "en": { "tip": "Pull with your elbows, not your hands. Your upper body keeps its angle and doesn't rise as you pull." }
+  },
+  "47": {
+    "de": { "tip": "Die Hüfte sinkt nicht ab und weicht nicht nach hinten aus. Drück dich mit dem Unterarm aktiv vom Boden weg und atme ruhig weiter." },
+    "en": { "tip": "Your hips don't sag and don't drift backwards. Actively push the floor away with your forearm and keep breathing calmly." }
+  },
+  "48": {
+    "de": { "tip": "Heb nur so hoch, wie es ohne Schwung geht. Gesäß anspannen und oben ein bis zwei Sekunden halten." },
+    "en": { "tip": "Lift only as high as you can without momentum. Squeeze your glutes and hold for one to two seconds at the top." }
+  },
+  "49": {
+    "de": { "tip": "Der untere Rücken bleibt die ganze Zeit am Boden. Löst er sich, streck das Bein weniger weit aus. Beweg Arm und Bein langsam und kontrolliert." },
+    "en": { "tip": "Your lower back stays on the floor the whole time. If it lifts, don't extend your leg as far. Move your arm and leg slowly and with control." }
+  },
+  "50": {
+    "de": { "tip": "Erst angehen, wenn das hängende Knieheben sauber klappt. Roll das Becken oben leicht ein und senk die Beine langsam ab. Nicht schwingen." },
+    "en": { "tip": "Start this once the hanging knee raise goes cleanly. Tuck your pelvis slightly at the top and lower your legs slowly. Don't swing." }
   }
 }

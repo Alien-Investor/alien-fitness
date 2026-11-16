@@ -441,6 +441,66 @@
       "description": "An der Klimmzugstange im schulterbreiten Obergriff hängen, Füße vom Boden. Schultern locker nach oben gleiten lassen und ruhig atmen.",
       "hold": 1,
       "sided": 0
+    },
+    {
+      "id": 45,
+      "name": "Vorgebeugtes Seitheben (Reverse Fly)",
+      "muscle_group": "Schultern",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Mit leicht gebeugten Knien aus der Hüfte weit nach vorne beugen, Rücken gerade, die Hanteln hängen unter den Schultern. Arme mit leicht gebeugten Ellenbogen seitlich bis etwa auf Schulterhöhe heben, langsam absenken. Trainiert die hintere Schulter und den oberen Rücken.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 46,
+      "name": "Vorgebeugtes Rudern beidarmig",
+      "muscle_group": "Rücken",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Mit leicht gebeugten Knien aus der Hüfte nach vorne beugen, Rücken gerade, die Hanteln hängen unter den Schultern. Beide Hanteln gleichzeitig Richtung Hüfte ziehen, Ellenbogen nah am Körper, Schulterblätter zusammenziehen. Langsam absenken.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 47,
+      "name": "Seitstütz",
+      "muscle_group": "Core",
+      "equipment": "Körpergewicht",
+      "type": "strength",
+      "description": "Auf die Seite legen, Unterarm am Boden, Ellenbogen unter der Schulter, Beine gestreckt übereinander. Hüfte anheben, bis der Körper von Kopf bis Fuß eine Linie bildet. Halten, dann Seite wechseln. Leichter: die Knie anwinkeln und auf dem unteren Knie statt auf den Füßen abstützen.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 48,
+      "name": "Rückenstrecker am Boden (Superman)",
+      "muscle_group": "Rücken",
+      "equipment": "Körpergewicht",
+      "type": "strength",
+      "description": "Auf den Bauch legen, Arme nach vorne gestreckt. Arme und Beine gleichzeitig ein paar Zentimeter vom Boden heben, die Brust hebt sich nur leicht mit, kurz halten, langsam ablegen. Blick zum Boden. Trainiert den unteren Rücken und das Gesäß.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 49,
+      "name": "Dead Bug",
+      "muscle_group": "Core",
+      "equipment": "Körpergewicht",
+      "type": "strength",
+      "description": "Auf den Rücken legen, Arme senkrecht nach oben, Hüfte und Knie im rechten Winkel. Einen Arm und das gegenüberliegende Bein langsam Richtung Boden strecken, der untere Rücken bleibt am Boden. Zurück, dann die andere Seite. Jede Seite zählt als eine Wiederholung.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 50,
+      "name": "Hängendes Beinheben",
+      "muscle_group": "Core",
+      "equipment": "Stange",
+      "type": "strength",
+      "description": "An der Stange hängen, die fast gestreckten Beine nach vorne heben, bis sie etwa waagerecht sind. Langsam absenken, ohne zu schwingen. Schwerer als das hängende Knieheben.",
+      "hold": 0,
+      "sided": 0
     }
   ],
   "plans": [
@@ -470,28 +530,35 @@
       "name": "HIT — Tabata (20 Sek an / 10 Sek Pause × 8)",
       "type": "hit",
       "day_label": "HIT Tag A – Tabata",
-      "sort_order": 4
+      "sort_order": 5
     },
     {
       "id": 5,
       "name": "HIT — Power & Explosivkraft",
       "type": "hit",
       "day_label": "HIT Tag B – Power",
-      "sort_order": 5
+      "sort_order": 6
     },
     {
       "id": 6,
       "name": "Aufwärmen",
       "type": "warmup",
       "day_label": "Vor dem Training",
-      "sort_order": 6
+      "sort_order": 7
     },
     {
       "id": 7,
       "name": "Dehnen",
       "type": "stretch",
       "day_label": "Nach dem Training",
-      "sort_order": 7
+      "sort_order": 8
+    },
+    {
+      "id": 8,
+      "name": "Core & Rücken",
+      "type": "strength",
+      "day_label": "Kurzprogramm – ca. 20 Min",
+      "sort_order": 4
     }
   ],
   "plan_exercises": [
@@ -588,32 +655,41 @@
     {
       "id": 11,
       "plan_id": 2,
-      "exercise_id": 15,
+      "exercise_id": 45,
       "sets": 3,
-      "reps": "10-12",
+      "reps": "12-15",
       "rest_seconds": 60,
       "sort_order": 3
     },
     {
       "id": 12,
       "plan_id": 2,
-      "exercise_id": 16,
+      "exercise_id": 15,
       "sets": 3,
-      "reps": "12",
+      "reps": "10-12",
       "rest_seconds": 60,
       "sort_order": 4
     },
     {
       "id": 13,
       "plan_id": 2,
-      "exercise_id": 18,
+      "exercise_id": 16,
       "sets": 3,
-      "reps": "12-15",
+      "reps": "12",
       "rest_seconds": 60,
       "sort_order": 5
     },
     {
       "id": 14,
+      "plan_id": 2,
+      "exercise_id": 18,
+      "sets": 3,
+      "reps": "12-15",
+      "rest_seconds": 60,
+      "sort_order": 6
+    },
+    {
+      "id": 15,
       "plan_id": 3,
       "exercise_id": 19,
       "sets": 4,
@@ -622,7 +698,7 @@
       "sort_order": 0
     },
     {
-      "id": 15,
+      "id": 16,
       "plan_id": 3,
       "exercise_id": 20,
       "sets": 4,
@@ -631,7 +707,7 @@
       "sort_order": 1
     },
     {
-      "id": 16,
+      "id": 17,
       "plan_id": 3,
       "exercise_id": 21,
       "sets": 4,
@@ -640,7 +716,7 @@
       "sort_order": 2
     },
     {
-      "id": 17,
+      "id": 18,
       "plan_id": 3,
       "exercise_id": 22,
       "sets": 3,
@@ -649,7 +725,7 @@
       "sort_order": 3
     },
     {
-      "id": 18,
+      "id": 19,
       "plan_id": 3,
       "exercise_id": 23,
       "sets": 3,
@@ -658,7 +734,7 @@
       "sort_order": 4
     },
     {
-      "id": 19,
+      "id": 20,
       "plan_id": 3,
       "exercise_id": 24,
       "sets": 3,
@@ -667,7 +743,16 @@
       "sort_order": 5
     },
     {
-      "id": 20,
+      "id": 21,
+      "plan_id": 3,
+      "exercise_id": 47,
+      "sets": 2,
+      "reps": "30 Sek",
+      "rest_seconds": 60,
+      "sort_order": 6
+    },
+    {
+      "id": 22,
       "plan_id": 4,
       "exercise_id": 25,
       "sets": 8,
@@ -676,7 +761,7 @@
       "sort_order": 0
     },
     {
-      "id": 21,
+      "id": 23,
       "plan_id": 4,
       "exercise_id": 26,
       "sets": 8,
@@ -685,7 +770,7 @@
       "sort_order": 1
     },
     {
-      "id": 22,
+      "id": 24,
       "plan_id": 4,
       "exercise_id": 27,
       "sets": 8,
@@ -694,7 +779,7 @@
       "sort_order": 2
     },
     {
-      "id": 23,
+      "id": 25,
       "plan_id": 4,
       "exercise_id": 28,
       "sets": 8,
@@ -703,7 +788,7 @@
       "sort_order": 3
     },
     {
-      "id": 24,
+      "id": 26,
       "plan_id": 5,
       "exercise_id": 29,
       "sets": 4,
@@ -712,7 +797,7 @@
       "sort_order": 0
     },
     {
-      "id": 25,
+      "id": 27,
       "plan_id": 5,
       "exercise_id": 30,
       "sets": 4,
@@ -721,7 +806,7 @@
       "sort_order": 1
     },
     {
-      "id": 26,
+      "id": 28,
       "plan_id": 5,
       "exercise_id": 31,
       "sets": 3,
@@ -730,7 +815,7 @@
       "sort_order": 2
     },
     {
-      "id": 27,
+      "id": 29,
       "plan_id": 5,
       "exercise_id": 32,
       "sets": 3,
@@ -739,7 +824,7 @@
       "sort_order": 3
     },
     {
-      "id": 28,
+      "id": 30,
       "plan_id": 5,
       "exercise_id": 25,
       "sets": 3,
@@ -748,7 +833,7 @@
       "sort_order": 4
     },
     {
-      "id": 29,
+      "id": 31,
       "plan_id": 6,
       "exercise_id": 33,
       "sets": 1,
@@ -757,7 +842,7 @@
       "sort_order": 0
     },
     {
-      "id": 30,
+      "id": 32,
       "plan_id": 6,
       "exercise_id": 34,
       "sets": 1,
@@ -766,7 +851,7 @@
       "sort_order": 1
     },
     {
-      "id": 31,
+      "id": 33,
       "plan_id": 6,
       "exercise_id": 35,
       "sets": 1,
@@ -775,7 +860,7 @@
       "sort_order": 2
     },
     {
-      "id": 32,
+      "id": 34,
       "plan_id": 6,
       "exercise_id": 36,
       "sets": 1,
@@ -784,7 +869,7 @@
       "sort_order": 3
     },
     {
-      "id": 33,
+      "id": 35,
       "plan_id": 6,
       "exercise_id": 37,
       "sets": 1,
@@ -793,7 +878,7 @@
       "sort_order": 4
     },
     {
-      "id": 34,
+      "id": 36,
       "plan_id": 7,
       "exercise_id": 38,
       "sets": 1,
@@ -802,7 +887,7 @@
       "sort_order": 0
     },
     {
-      "id": 35,
+      "id": 37,
       "plan_id": 7,
       "exercise_id": 39,
       "sets": 1,
@@ -811,7 +896,7 @@
       "sort_order": 1
     },
     {
-      "id": 36,
+      "id": 38,
       "plan_id": 7,
       "exercise_id": 40,
       "sets": 1,
@@ -820,7 +905,7 @@
       "sort_order": 2
     },
     {
-      "id": 37,
+      "id": 39,
       "plan_id": 7,
       "exercise_id": 41,
       "sets": 1,
@@ -829,7 +914,7 @@
       "sort_order": 3
     },
     {
-      "id": 38,
+      "id": 40,
       "plan_id": 7,
       "exercise_id": 42,
       "sets": 1,
@@ -838,7 +923,7 @@
       "sort_order": 4
     },
     {
-      "id": 39,
+      "id": 41,
       "plan_id": 7,
       "exercise_id": 43,
       "sets": 1,
@@ -847,13 +932,58 @@
       "sort_order": 5
     },
     {
-      "id": 40,
+      "id": 42,
       "plan_id": 7,
       "exercise_id": 44,
       "sets": 1,
       "reps": "30 Sek",
       "rest_seconds": 10,
       "sort_order": 6
+    },
+    {
+      "id": 43,
+      "plan_id": 8,
+      "exercise_id": 49,
+      "sets": 3,
+      "reps": "10-12",
+      "rest_seconds": 45,
+      "sort_order": 0
+    },
+    {
+      "id": 44,
+      "plan_id": 8,
+      "exercise_id": 50,
+      "sets": 3,
+      "reps": "8-12",
+      "rest_seconds": 60,
+      "sort_order": 1
+    },
+    {
+      "id": 45,
+      "plan_id": 8,
+      "exercise_id": 47,
+      "sets": 2,
+      "reps": "30 Sek",
+      "rest_seconds": 45,
+      "sort_order": 2
+    },
+    {
+      "id": 46,
+      "plan_id": 8,
+      "exercise_id": 46,
+      "sets": 3,
+      "reps": "10-12",
+      "rest_seconds": 60,
+      "sort_order": 3
+    },
+    {
+      "id": 47,
+      "plan_id": 8,
+      "exercise_id": 48,
+      "sets": 3,
+      "reps": "12-15",
+      "rest_seconds": 45,
+      "sort_order": 4
     }
   ]
 }

@@ -175,6 +175,30 @@
     "44": {
       "name": "Dead Hang",
       "description": "Hang from the pull-up bar with an overhand, shoulder-width grip, feet off the floor. Relax your shoulders, let them slide upward and breathe calmly."
+    },
+    "45": {
+      "name": "Bent-over Reverse Fly",
+      "description": "With your knees slightly bent, hinge far forward at the hips, back straight, dumbbells hanging below your shoulders. Raise your arms out to the sides to about shoulder height with elbows slightly bent, lower slowly. Works the rear shoulders and upper back."
+    },
+    "46": {
+      "name": "Bent-over Dumbbell Row",
+      "description": "With your knees slightly bent, hinge forward at the hips, back straight, dumbbells hanging below your shoulders. Pull both dumbbells towards your hips at the same time, elbows close to your body, squeezing your shoulder blades together. Lower slowly."
+    },
+    "47": {
+      "name": "Side Plank",
+      "description": "Lie on your side, forearm on the floor, elbow under your shoulder, legs straight and stacked. Lift your hips until your body forms a line from head to feet. Hold, then switch sides. Easier: bend your knees and rest on your lower knee instead of your feet."
+    },
+    "48": {
+      "name": "Floor Back Extension (Superman)",
+      "description": "Lie face down, arms stretched out in front of you. Lift your arms and legs a few centimetres off the floor at the same time, your chest rises only slightly, hold briefly, lower slowly. Look at the floor. Works the lower back and glutes."
+    },
+    "49": {
+      "name": "Dead Bug",
+      "description": "Lie on your back, arms straight up, hips and knees at right angles. Slowly extend one arm and the opposite leg towards the floor while your lower back stays on the floor. Return, then the other side. Each side counts as one rep."
+    },
+    "50": {
+      "name": "Hanging Leg Raise",
+      "description": "Hang from the bar and raise your almost straight legs forward until they are roughly horizontal. Lower slowly without swinging. Harder than the hanging knee raise."
     }
   },
   "plans": {
@@ -205,6 +229,10 @@
     "7": {
       "name": "Stretching",
       "day_label": "After training"
+    },
+    "8": {
+      "name": "Core & Back",
+      "day_label": "Short routine – approx. 20 min"
     }
   },
   "muscle_groups": {

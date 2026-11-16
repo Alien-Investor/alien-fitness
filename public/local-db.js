@@ -392,7 +392,59 @@ window.LocalData = (function () {
       const s = sessions[0];
       last_session = { started_at: s.started_at, plan_name: s.plan_id != null ? planNameById(s.plan_id) : null };
     }
-    return { total_sessions, last_session, this_week };
+    return { total_sessions, last_session, this_week, next_plan_id: await nextPlanId(sessions) };
+  }
+
+  // „Als Nächstes dran“ (v2.13), nur Kraft-Pläne (fest oder eigene); HIT, Aufwärmen, Dehnen und freies Training nehmen nicht teil.
+  // 1. Gewohnte Reihenfolge: der Plan, der beim letzten Mal auf den zuletzt trainierten Plan folgte (Push → Pull → Beine → Push …).
+  // 2. Gibt es dazu keine Vorgeschichte (Plan zum ersten Mal trainiert): der Plan, dessen letzte Einheit am längsten zurückliegt,
+  //    nie trainierte zuerst, bei Gleichstand in der Reihenfolge der Liste.
+  // Bewusst nicht NUR Regel 2: ein Plan, den jemand nie oder nur einmal trainiert, wäre sonst auf Dauer „als Nächstes“ markiert.
+  // Ohne jede gespeicherte Einheit gibt es keinen Hinweis (ein neuer Nutzer soll frei wählen). sessions: neueste zuerst.
+  async function nextPlanId(sessions) {
+    if (!sessions.length) return null;
+    const plans = (await getPlans()).filter(p => (p.type || 'strength') === 'strength');
+    const known = new Set(plans.map(p => p.id));
+    const seq = sessions.filter(s => known.has(s.plan_id) && sessTime(s) > -Infinity).map(s => s.plan_id);
+    const cur = seq.length ? seq[0] : null;
+    for (let i = 1; i < seq.length; i++) if (seq[i] === cur && seq[i - 1] !== cur) return seq[i - 1];
+    // seq ist nach Zeit sortiert: je später ein Plan darin zum ersten Mal auftaucht, desto länger liegt er zurück
+    let best = null, bestAge = -1;
+    for (const p of plans) {
+      if (p.id === cur) continue;
+      const i = seq.indexOf(p.id);
+      const age = i < 0 ? Infinity : i;
+      if (age > bestAge) { best = p.id; bestAge = age; }
+    }
+    return best;
+  }
+
+  // Bilanz je Körperbereich (v2.13): abgeschlossene Sätze der letzten 7 und 28 Kalendertage (heute eingeschlossen). Jede Übung zählt
+  // für ihren Hauptbereich (muscle_group aus den Stammdaten, deutscher Schlüssel); Aufwärmen und Dehnen zählen nicht. Sätze mit einer
+  // Übungs-ID, die es in den Stammdaten nicht gibt (Backup aus einer neueren Version), werden übersprungen. Nur Lesezugriff.
+  const BALANCE_GROUPS = ['Brust', 'Rücken', 'Beine', 'Schultern', 'Bizeps', 'Trizeps', 'Core', 'Ganzkörper'];
+  async function getBalance() {
+    const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const from7 = new Date(d); from7.setDate(d.getDate() - 6);
+    const from28 = new Date(d); from28.setDate(d.getDate() - 27);
+    const t7 = from7.getTime(), t28 = from28.getTime();
+    const when = new Map(allSessions.map(s => [s.id, sessTime(s)]));
+    const rows = new Map(BALANCE_GROUPS.map(g => [g, { group: g, d7: 0, d28: 0 }]));
+    for (const st of allSets) {
+      if (!st.completed) continue;
+      const t = when.get(st.session_id);
+      if (t === undefined || t < t28) continue;
+      const e = exById.get(st.exercise_id);
+      if (!e || !rows.has(e.muscle_group) || e.type === 'warmup' || e.type === 'stretch') continue;
+      const row = rows.get(e.muscle_group);
+      row.d28++;
+      if (t >= t7) row.d7++;
+    }
+    // „Ganzkörper“ ist kein Bereich, der fehlen kann: die Zeile erscheint nur, wenn dort etwas gezählt wurde
+    const groups = Array.from(rows.values()).filter(r => r.group !== 'Ganzkörper' || r.d28 > 0);
+    return { groups, has_sessions: allSessions.length > 0 };
   }
 
   // ── Backup: Export / Import ─────────────────────────────────────────────────────
@@ -540,7 +592,7 @@ window.LocalData = (function () {
     getExercises, getExercise, getPlans, getPlan,
     savePlan, getCustomPlan, deletePlan,
     getSessions, getSession, addSession, deleteSession, updateSession, getLastSets, getLastSetsMany,
-    getProgress, getStats, hasData,
+    getProgress, getStats, getBalance, hasData,
     exportAll, importAll, kerstinFor, exFlags,
   };
 })();

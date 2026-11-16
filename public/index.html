@@ -180,6 +180,17 @@
   <!-- ── PROGRESS ───────────────────────────────────────────────────────────── -->
   <div id="view-progress" class="view">
     <h2 data-i18n="progress.title">Fortschritt</h2>
+    <!-- v2.13: Bilanz je Körperbereich (app.js renderBalance, Zeilen per textContent) -->
+    <div class="card" id="balance-card">
+      <div class="card-title" data-i18n="balance.title">Sätze je Körperbereich</div>
+      <div class="balance-switch">
+        <button type="button" class="btn btn-sm active-btn" id="balance-btn-7" aria-pressed="true" data-i18n="balance.d7">7 Tage</button>
+        <button type="button" class="btn btn-sm ghost" id="balance-btn-28" aria-pressed="false" data-i18n="balance.d28">28 Tage</button>
+      </div>
+      <div class="balance-empty hidden" id="balance-empty" data-i18n="balance.empty">Noch keine Einheit gespeichert.</div>
+      <div id="balance-rows"></div>
+      <div class="balance-note" data-i18n="balance.note">Abgeschlossene Sätze aus Kraft und HIT. Jede Übung zählt für ihren Hauptbereich.</div>
+    </div>
     <div class="combo chart-combo" id="progress-combo">
       <button type="button" class="combo-btn" aria-haspopup="listbox" aria-expanded="false"><span class="combo-label"></span><span class="caret">▾</span></button>
       <select class="combo-native" id="progress-exercise-select">
@@ -335,7 +346,7 @@
     <div id="help-content">
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.dashboard.t">Dashboard</div>
-        <p data-i18n="help.dashboard.b">Zeigt deine Trainingsstatistiken (Gesamt-Einheiten, diese Woche, letztes Training) und das zuletzt absolvierte Workout. Klicke direkt auf einen Plan um sofort zu starten.</p>
+        <p data-i18n="help.dashboard.b">Zeigt deine Trainingsstatistiken (Gesamt-Einheiten, diese Woche, letztes Training) und das zuletzt absolvierte Workout. Klicke direkt auf einen Plan um sofort zu starten. „Als Nächstes dran“ markiert den Kraft-Plan, der in deiner gewohnten Reihenfolge folgt; ohne Vorgeschichte den, der am längsten zurückliegt.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.start.t">Training starten</div>
@@ -363,11 +374,11 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.progress.t">Fortschritt</div>
-        <p data-i18n="help.progress.b">Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über die letzten 60 Trainingstage — umschalten über die Buttons unter dem Chart. Übungen ohne Gewicht (z. B. Klimmzüge, Plank) zeigen gleich Wiederholungen bzw. Sekunden.</p>
+        <p data-i18n="help.progress.b">Oben siehst du, wie viele Sätze du in den letzten 7 oder 28 Tagen je Körperbereich gemacht hast — Bereiche ohne Satz bleiben sichtbar. Darunter: Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über die letzten 60 Trainingstage — umschalten über die Buttons unter dem Chart. Übungen ohne Gewicht (z. B. Klimmzüge, Plank) zeigen gleich Wiederholungen bzw. Sekunden.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.library.t">Übungsbibliothek</div>
-        <p data-i18n="help.library.b">Alle 44 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe, HIT, Aufwärmen oder Dehnen. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
+        <p data-i18n="help.library.b">Alle 50 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe, HIT, Aufwärmen oder Dehnen. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.history.t">Historie</div>

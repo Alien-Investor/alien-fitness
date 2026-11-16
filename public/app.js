@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.12.0';
+const APP_VERSION = '2.13.0';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
@@ -19,6 +19,7 @@ async function api(path, opts = {}) {
 
   switch (seg[0]) {
     case 'stats':     return LocalData.getStats();
+    case 'balance':   return LocalData.getBalance();
     case 'plans':     return seg[1] ? LocalData.getPlan(seg[1]) : LocalData.getPlans();
     case 'exercises': return seg[1] ? LocalData.getExercise(seg[1]) : LocalData.getExercises(query);
     case 'progress':  return LocalData.getProgress(seg[1]);
@@ -403,6 +404,15 @@ async function loadDashboard() {
           <div class="plan-meta">${esc(p.day_label || '')}</div>
         </div>
         <span>${p.custom ? `<span class="badge">${I18N.t('badge.custom')}</span> ` : ''}<span class="badge ${p.type === 'hit' ? 'hit' : ''}">${I18N.t(TYPE_BADGE[p.type] || 'badge.strength')}</span></span>`;
+      // v2.13 „Als Nächstes dran“: nur eine Marke an der Zeile. Die Reihenfolge der Liste bleibt, wie sie ist (kein Umsortieren
+      // unter dem Finger), es entsteht keine neue Tipp-Fläche. Regel: LocalData.getStats → next_plan_id.
+      if (p.id === stats.next_plan_id) {
+        div.classList.add('next');
+        const mark = document.createElement('div');
+        mark.className = 'plan-next';
+        mark.textContent = I18N.t('dash.next');
+        div.firstElementChild.appendChild(mark);
+      }
       div.addEventListener('click', e => { if (!tooSoonAfterClose(e)) startWorkout(p.id); });
       el.appendChild(div);
     });
@@ -1708,7 +1718,48 @@ async function loadProgressView() {
     sel.appendChild(opt);
   });
   syncCombo(document.getElementById('progress-combo'));   // Knopf zeigt die neue Auswahl
+  await renderBalance();
 }
+
+// ── Bilanz je Körperbereich (v2.13) ───────────────────────────────────────────
+// Sätze je Körperbereich in den letzten 7 bzw. 28 Tagen (LocalData.getBalance). Balken in HTML/CSS, alles per textContent.
+// Bereiche ohne Satz bleiben stehen (gedimmt, „–“): genau diese Lücke soll man sehen. Reine Zählung, keine Empfehlung.
+let balanceDays = 7;
+async function renderBalance() {
+  const box = document.getElementById('balance-rows');
+  const b7 = document.getElementById('balance-btn-7'), b28 = document.getElementById('balance-btn-28');
+  for (const [btn, on] of [[b7, balanceDays === 7], [b28, balanceDays === 28]]) {
+    btn.classList.toggle('active-btn', on); btn.classList.toggle('ghost', !on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  let data;
+  try { data = await api('balance'); } catch (e) { console.error(e); return; }
+  const key = balanceDays === 7 ? 'd7' : 'd28';
+  const max = Math.max(1, ...data.groups.map(g => g[key]));
+  box.textContent = '';
+  document.getElementById('balance-empty').classList.toggle('hidden', data.has_sessions);
+  for (const g of data.groups) {
+    const n = g[key];
+    const row = document.createElement('div');
+    row.className = 'balance-row' + (n ? '' : ' zero');
+    const name = document.createElement('span');
+    name.className = 'balance-name';
+    name.textContent = I18N.muscle(g.group);
+    const track = document.createElement('span');
+    track.className = 'balance-track';
+    const fill = document.createElement('span');
+    fill.className = 'balance-fill';
+    fill.style.width = (n / max * 100).toFixed(1) + '%';
+    track.appendChild(fill);
+    const num = document.createElement('span');
+    num.className = 'balance-num';
+    num.textContent = n ? String(n) : '–';
+    row.append(name, track, num);
+    box.appendChild(row);
+  }
+}
+document.getElementById('balance-btn-7').addEventListener('click', () => { balanceDays = 7; renderBalance(); });
+document.getElementById('balance-btn-28').addEventListener('click', () => { balanceDays = 28; renderBalance(); });
 
 document.getElementById('progress-exercise-select').addEventListener('change', async function() {
   const id = this.value;

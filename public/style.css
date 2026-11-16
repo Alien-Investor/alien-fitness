@@ -268,6 +268,10 @@ h3 {
   margin-left: 10px;
 }
 .badge.hit { background: rgba(255,68,102,0.12); border-color: rgba(255,68,102,0.3); color: var(--red); }
+/* v2.13 „Als Nächstes dran“: Marke unter dem Tageslabel, linker Rand in Neon. Steht links im Textblock, damit rechts neben den
+   Typ-Marken bei 360 px nichts dazukommt. */
+.plan-item.next { border-left: 3px solid var(--neon); padding-left: 16px; }
+.plan-next { margin-top: 6px; font-family: var(--font-b); font-size: 0.62rem; letter-spacing: 1px; text-transform: uppercase; color: var(--neon); }
 
 /* ── Workout flow ────────────────────────────────────────────────────────────── */
 #workout-header {
@@ -616,6 +620,18 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 
 /* ── Progress Charts ─────────────────────────────────────────────────────────── */
 /* Das Auswahlfeld ist seit v2.7 ein Kombifeld — das Aussehen steckt in .combo-btn. */
+/* ── Bilanz je Körperbereich (v2.13): Sätze der letzten 7/28 Tage als Balken, Bereiche ohne Satz gedimmt ── */
+#balance-card { margin-bottom: 18px; }
+.balance-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+.balance-row { display: grid; grid-template-columns: 6.5em 1fr 2.2em; align-items: center; gap: 10px; padding: 5px 0; }
+.balance-name { font-family: var(--font-b); font-size: 0.72rem; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.balance-track { height: 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.balance-fill { display: block; height: 100%; background: var(--neon); box-shadow: 0 0 8px rgba(0,255,204,0.5); }
+.balance-num { font-family: var(--font-b); font-size: 0.78rem; text-align: right; color: var(--neon); }
+.balance-row.zero .balance-name, .balance-row.zero .balance-num { color: var(--muted); }
+.balance-row.zero .balance-track { border-style: dashed; }
+.balance-empty { font-family: var(--font-r); font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+.balance-note { font-family: var(--font-r); font-size: 0.72rem; color: var(--muted); margin-top: 10px; line-height: 1.4; }
 .chart-combo { margin-bottom: 18px; }
 .chart-wrap {
   background: var(--card);
