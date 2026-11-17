@@ -184,7 +184,7 @@
     },
     {
       "id": 19,
-      "name": "Bulgarian Split Squat (DB)",
+      "name": "Bulgarian Split Squat",
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
@@ -194,7 +194,7 @@
     },
     {
       "id": 20,
-      "name": "Romanian Deadlift (DB)",
+      "name": "Romanian Deadlift",
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
@@ -214,7 +214,7 @@
     },
     {
       "id": 22,
-      "name": "Reverse Lunge (DB)",
+      "name": "Reverse Lunge",
       "muscle_group": "Beine",
       "equipment": "Kurzhanteln",
       "type": "strength",
@@ -501,6 +501,86 @@
       "description": "An der Stange hängen, die fast gestreckten Beine nach vorne heben, bis sie etwa waagerecht sind. Langsam absenken, ohne zu schwingen. Schwerer als das hängende Knieheben.",
       "hold": 0,
       "sided": 0
+    },
+    {
+      "id": 51,
+      "name": "Goblet Squat",
+      "muscle_group": "Beine",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Eine Kurzhantel senkrecht mit beiden Händen vor der Brust halten, Ellenbogen nah am Körper. Füße etwa schulterbreit, Hüfte nach hinten unten absenken, Oberkörper aufrecht, dann aus den Beinen wieder hochdrücken. Trainiert Oberschenkel und Gesäß.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 52,
+      "name": "Step-up auf die Bank",
+      "muscle_group": "Beine",
+      "equipment": "Bank",
+      "type": "strength",
+      "description": "Einen Fuß ganz auf die Bank stellen, über dieses Bein hochdrücken, bis du aufrecht auf der Bank stehst, dann langsam wieder absenken, bis der andere Fuß den Boden erreicht. Erst alle Wiederholungen mit einem Bein, dann mit dem anderen. Schwerer: Kurzhanteln in den Händen halten.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 53,
+      "name": "Wandsitzen",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "strength",
+      "description": "Mit dem Rücken an eine Wand lehnen und nach unten rutschen, bis die Oberschenkel etwa waagerecht sind. Knie über den Fußgelenken, Rücken flach an der Wand, Hände nicht auf die Oberschenkel stützen. Halten. Leichter: weniger tief gehen.",
+      "hold": 1,
+      "sided": 0
+    },
+    {
+      "id": 54,
+      "name": "Cossack Squat",
+      "muscle_group": "Beine",
+      "equipment": "Kurzhanteln",
+      "type": "strength",
+      "description": "Sehr breiter Stand. Das Gewicht auf ein Bein verlagern und dieses Knie beugen, die Hüfte geht nach hinten unten, das andere Bein bleibt gestreckt. Die Ferse des gebeugten Beins bleibt am Boden, die Zehen des gestreckten Beins dürfen sich heben. Hochdrücken und die Seite wechseln, abwechselnd links und rechts. Zuerst ohne Gewicht, später mit einer Kurzhantel vor der Brust.",
+      "hold": 0,
+      "sided": 0
+    },
+    {
+      "id": 55,
+      "name": "Wadendehnung im Sitzen (Handtuch)",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "Auf den Boden setzen, ein Bein gestreckt nach vorne. Ein Handtuch um den Fußballen legen und beide Enden festhalten. Mit geradem Rücken und gestrecktem Knie die Fußspitze zu dir ziehen, bis in der Wade ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 56,
+      "name": "Gesäßdehnung im Sitzen",
+      "muscle_group": "Beine",
+      "equipment": "Bank",
+      "type": "stretch",
+      "description": "Auf die Bank setzen, beide Füße am Boden. Einen Knöchel auf das andere Knie legen, das Knie des oberen Beins zeigt nach außen. Mit geradem Rücken aus der Hüfte nach vorne neigen, bis im Gesäß des oberen Beins ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
+      "hold": 1,
+      "sided": 1
+    },
+    {
+      "id": 57,
+      "name": "Oberschenkel innen im Sitzen (Schmetterling)",
+      "muscle_group": "Beine",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "Aufrecht auf den Boden setzen, die Fußsohlen aneinanderlegen und die Knie nach außen fallen lassen. Die Füße mit den Händen halten und mit geradem Rücken leicht nach vorne neigen, bis an der Innenseite der Oberschenkel ein Ziehen spürbar ist. Halten.",
+      "hold": 1,
+      "sided": 0
+    },
+    {
+      "id": 58,
+      "name": "Kindhaltung",
+      "muscle_group": "Rücken",
+      "equipment": "Körpergewicht",
+      "type": "stretch",
+      "description": "Auf die Knie gehen, die großen Zehen berühren sich, das Gesäß sinkt Richtung Fersen. Den Oberkörper nach vorne ablegen, die Arme lang nach vorne strecken, die Stirn Richtung Boden. Ruhig atmen und halten. Dehnt Rücken und Schultern.",
+      "hold": 1,
+      "sided": 0
     }
   ],
   "plans": [
@@ -691,36 +771,36 @@
     {
       "id": 15,
       "plan_id": 3,
-      "exercise_id": 19,
+      "exercise_id": 51,
       "sets": 4,
-      "reps": "8-10",
+      "reps": "10-12",
       "rest_seconds": 120,
       "sort_order": 0
     },
     {
       "id": 16,
       "plan_id": 3,
-      "exercise_id": 20,
+      "exercise_id": 19,
       "sets": 4,
-      "reps": "10-12",
-      "rest_seconds": 90,
+      "reps": "8-10",
+      "rest_seconds": 120,
       "sort_order": 1
     },
     {
       "id": 17,
       "plan_id": 3,
-      "exercise_id": 21,
+      "exercise_id": 20,
       "sets": 4,
-      "reps": "12-15",
+      "reps": "10-12",
       "rest_seconds": 90,
       "sort_order": 2
     },
     {
       "id": 18,
       "plan_id": 3,
-      "exercise_id": 22,
-      "sets": 3,
-      "reps": "10",
+      "exercise_id": 21,
+      "sets": 4,
+      "reps": "12-15",
       "rest_seconds": 90,
       "sort_order": 3
     },
@@ -934,7 +1014,7 @@
     {
       "id": 42,
       "plan_id": 7,
-      "exercise_id": 44,
+      "exercise_id": 56,
       "sets": 1,
       "reps": "30 Sek",
       "rest_seconds": 10,
@@ -942,6 +1022,24 @@
     },
     {
       "id": 43,
+      "plan_id": 7,
+      "exercise_id": 44,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 7
+    },
+    {
+      "id": 44,
+      "plan_id": 7,
+      "exercise_id": 58,
+      "sets": 1,
+      "reps": "30 Sek",
+      "rest_seconds": 10,
+      "sort_order": 8
+    },
+    {
+      "id": 45,
       "plan_id": 8,
       "exercise_id": 49,
       "sets": 3,
@@ -950,7 +1048,7 @@
       "sort_order": 0
     },
     {
-      "id": 44,
+      "id": 46,
       "plan_id": 8,
       "exercise_id": 50,
       "sets": 3,
@@ -959,7 +1057,7 @@
       "sort_order": 1
     },
     {
-      "id": 45,
+      "id": 47,
       "plan_id": 8,
       "exercise_id": 47,
       "sets": 2,
@@ -968,7 +1066,7 @@
       "sort_order": 2
     },
     {
-      "id": 46,
+      "id": 48,
       "plan_id": 8,
       "exercise_id": 46,
       "sets": 3,
@@ -977,7 +1075,7 @@
       "sort_order": 3
     },
     {
-      "id": 47,
+      "id": 49,
       "plan_id": 8,
       "exercise_id": 48,
       "sets": 3,

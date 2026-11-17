@@ -73,11 +73,11 @@
       "description": "Hang from the bar, pull your knees to your chest. Lower slowly. Variation: straight legs for more intensity."
     },
     "19": {
-      "name": "Bulgarian Split Squat (DB)",
+      "name": "Bulgarian Split Squat",
       "description": "Rear foot on the bench, front foot well forward. Lower deep, knee pointing forward. Works the thighs and glutes, one leg at a time."
     },
     "20": {
-      "name": "Romanian Deadlift (DB)",
+      "name": "Romanian Deadlift",
       "description": "Slightly bent knees, dumbbells close to your body down your legs. Keep tension in the hamstrings."
     },
     "21": {
@@ -85,7 +85,7 @@
       "description": "Shoulders on the bench, lower your hips and drive up explosively. Place a dumbbell on your hips for more resistance."
     },
     "22": {
-      "name": "Reverse Lunge (DB)",
+      "name": "Reverse Lunge",
       "description": "Step back, lower your knee toward the floor, return to the start. Alternate sides."
     },
     "23": {
@@ -199,6 +199,38 @@
     "50": {
       "name": "Hanging Leg Raise",
       "description": "Hang from the bar and raise your almost straight legs forward until they are roughly horizontal. Lower slowly without swinging. Harder than the hanging knee raise."
+    },
+    "51": {
+      "name": "Goblet Squat",
+      "description": "Hold one dumbbell upright against your chest with both hands, elbows close to your body. Feet about shoulder-width apart, lower your hips back and down, keep your torso upright, then push back up through your legs. Works thighs and glutes."
+    },
+    "52": {
+      "name": "Bench Step-up",
+      "description": "Place one foot fully on the bench, push up through that leg until you stand upright on the bench, then lower yourself slowly until your other foot reaches the floor. Do all reps with one leg first, then with the other. Harder: hold dumbbells in your hands."
+    },
+    "53": {
+      "name": "Wall Sit",
+      "description": "Lean your back against a wall and slide down until your thighs are roughly horizontal. Knees above your ankles, back flat against the wall, hands not resting on your thighs. Hold. Easier: don't go as deep."
+    },
+    "54": {
+      "name": "Cossack Squat",
+      "description": "Take a very wide stance. Shift your weight onto one leg and bend that knee, hips going back and down, while the other leg stays straight. The heel of the bent leg stays on the floor; the toes of the straight leg may lift. Push back up and switch sides, alternating left and right. Start without weight, later hold one dumbbell in front of your chest."
+    },
+    "55": {
+      "name": "Seated Calf Stretch (Towel)",
+      "description": "Sit on the floor with one leg straight out in front of you. Loop a towel around the ball of your foot and hold both ends. Keeping your back and knee straight, pull your toes toward you until you feel a stretch in your calf. Hold, then switch sides."
+    },
+    "56": {
+      "name": "Seated Glute Stretch",
+      "description": "Sit on the bench with both feet on the floor. Rest one ankle on the opposite knee and let the knee of the crossed leg point outward. Keeping your back straight, lean forward from the hips until you feel a stretch in the glute of the crossed leg. Hold, then switch sides."
+    },
+    "57": {
+      "name": "Seated Inner Thigh Stretch (Butterfly)",
+      "description": "Sit upright on the floor, bring the soles of your feet together and let your knees fall outward. Hold your feet with your hands and lean forward slightly with a straight back until you feel a stretch along your inner thighs. Hold."
+    },
+    "58": {
+      "name": "Child's Pose",
+      "description": "Kneel down with your big toes touching and let your hips sink toward your heels. Fold your upper body forward, reach your arms long in front of you, forehead toward the floor. Breathe calmly and hold. Stretches the back and shoulders."
     }
   },
   "plans": {

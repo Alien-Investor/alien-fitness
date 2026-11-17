@@ -3,7 +3,7 @@
 // Versionsanzeige (unten in der Anleitung). Einzige Quelle ist die VERSION-Datei:
 // apk/build-www.sh setzt diese Konstante beim APK-Build aus VERSION_NAME, e2e-test.mjs
 // prüft den Abgleich. Beim Web-Redeploy ebenfalls mit VERSION_NAME synchron halten.
-const APP_VERSION = '2.13.0';
+const APP_VERSION = '2.14.0';
 
 // ── Offline-Datenschicht ────────────────────────────────────────────────────────
 // Die App läuft rein lokal: Stammdaten aus der gebündelten seed.json, der
@@ -708,6 +708,7 @@ async function relabelActiveSession() {
   updateProgress();
   window.scrollTo(0, y);
   if (!s.finished) saveDraft(true);
+  else fillDoneRecords(s);   // v2.14: Übungsnamen der Bestleistungen im Abschluss-Banner in der neuen Sprache (gleiche Zeilenzahl)
 }
 
 // Draft ohne Umweg über den Trainingsbildschirm als Einheit speichern („So speichern“)
@@ -769,6 +770,7 @@ function applyLoggedSets() {
     btn.classList.add('done');
     btn.querySelector('.set-val').textContent = fmtSet(s);
   });
+  markRecords();   // v2.14 (Fortsetzen, Sprachwechsel, Freies Training neu gezeichnet)
   if (activeSession.adhoc) return;
   let currentSet = false;
   activeSession.exercises.forEach((ex, ei) => {
@@ -888,6 +890,11 @@ function renderExercises(exercises) {
     lastLine.className = 'ex-last hidden';
     lastLine.id = 'ex-last-' + ei;
     card.appendChild(lastLine);
+    // v2.14: Bestleistung und Steigerungs-Hinweis, eigenes Element darunter (füllt fillLastLines im selben Schritt)
+    const moreLine = document.createElement('div');
+    moreLine.className = 'ex-last ex-more hidden';
+    moreLine.id = 'ex-more-' + ei;
+    card.appendChild(moreLine);
 
     const setsRow = document.createElement('div');
     setsRow.className = 'sets-row';
@@ -940,7 +947,100 @@ async function fillLastLines(exercises) {
     if (!el || !last || !last.sets.length) return;
     renderLastLine(el, last);
     el.classList.remove('hidden');
+    // v2.14: Bestleistung und Steigerungs-Hinweis entstehen im selben Schritt wie „Letztes Mal“ — die Karte wächst nur einmal
+    const more = document.getElementById('ex-more-' + ei);
+    if (more) renderMoreLines(more, last.best, progressHint(ex, last));
   });
+  markRecords();   // der Cache kann nach dem ersten Satz eintreffen (Fortsetzen, schneller Tipp)
+}
+
+// ── Steigerungs-Hinweis (v2.14) ── doppelte Progression: Hat die letzte Einheit in ALLEN geplanten Sätzen die obere
+// Wiederholungsgrenze des Plans erreicht, steht beim nächsten Mal der Hinweis unter „Letztes Mal“. Nur Kraft-Pläne mit
+// Wiederholungsangabe („8-12“, „10“) — nicht bei „max“, Freitext, Zeitsätzen, HIT, Aufwärmen/Dehnen, Freiem Training.
+// ex.reps und ex.sets sind bei eigenen/importierten Plänen Nutzer- bzw. Fremddaten: nur ein strenges Muster zählt.
+function repsTop(reps) {
+  const m = String(reps ?? '').match(/^\s*(\d{1,3})\s*(?:[-–]\s*(\d{1,3}))?\s*$/);
+  if (!m) return null;
+  const top = Math.max(Number(m[1]), m[2] ? Number(m[2]) : 0);
+  return top >= 1 ? top : null;
+}
+function progressHint(ex, last) {
+  const s = activeSession;
+  if (!s || s.adhoc || s.planType !== 'strength' || !ex || !last || !Array.isArray(last.sets)) return null;
+  if (exFlags(ex).hold || timedSeconds(ex)) return null;
+  const top = repsTop(ex.reps);
+  const planned = Math.min(30, Math.max(0, parseInt(ex.sets) || 0));
+  if (!top || planned < 1) return null;
+  const done = last.sets.filter(x => x.completed && !(Number(x.duration_seconds) >= 1));
+  if (done.length < planned || !done.every(x => Number(x.reps) >= top)) return null;
+  // „mehr Gewicht“ nur, wo Gewicht im Spiel ist: Kurzhantel-Übung oder letztes Mal mit Gewicht eingetragen
+  const weighted = ex.equipment === 'Kurzhanteln' || done.some(x => Number(x.weight_kg) > 0);
+  return I18N.t(weighted ? 'hint.weight' : 'hint.harder', { top });
+}
+
+// ── Bestleistung im Training (v2.14) ── Welche Sätze DIESER Einheit überbieten den Stand vor der Einheit (cache[id].best)
+// bzw. den laufenden Bestwert der Einheit? Reine Funktion über s.sets in Eintrage-Reihenfolge, nach jeder Korrektur neu
+// berechnet (ein ★ kann wieder verschwinden). Ohne Vorgeschichte gibt es keine „neue“ Bestleistung; im HIT-Intervall gibt
+// der Timer die Dauer vor. Liefert { marks: Set der Satz-Objekte, byEx: Map exercise_id → { name, set } (bester Satz) }.
+function sessionRecords(s, cache) {
+  const marks = new Set(), byEx = new Map(), run = {};
+  if (!s || !Array.isArray(s.sets) || ROUTINE_TYPES.includes(s.planType)) return { marks, byEx };
+  for (const st of s.sets) {
+    if (!st || !st.completed) continue;
+    const id = st.exercise_id;
+    const h = cache && cache[id];
+    if (!h || !h.best) continue;
+    const row = Number.isInteger(st.row) ? st.row : s.exercises.findIndex(e => e.exercise_id === id);
+    const ex = s.exercises[row];
+    if (!ex || (s.planType === 'hit' && timedSeconds(ex))) continue;
+    const c = LocalData.recordOf(id, st);
+    if (!c || !LocalData.beats(c, run[id] || h.best)) continue;
+    run[id] = c;
+    marks.add(st);
+    byEx.set(id, { name: ex.name, set: st });
+  }
+  return { marks, byEx };
+}
+// ★ an den Satz-Knöpfen: nur eine Klasse (der Stern sitzt absolut in der Ecke, die Knopfgröße bleibt gleich) und der
+// Name für TalkBack (sichtbarer Text plus „neue Bestleistung“).
+function markRecords() {
+  const s = activeSession;
+  if (!s) return;
+  const { marks } = sessionRecords(s, lastSetsCache);
+  document.querySelectorAll('#exercise-list .set-btn.record').forEach(b => { b.classList.remove('record'); b.removeAttribute('aria-label'); });
+  s.sets.forEach(st => {
+    if (!marks.has(st)) return;
+    const btn = document.getElementById(`set-${setRow(st)}-${st.set_number}`);
+    if (!btn) return;
+    btn.classList.add('record');
+    btn.setAttribute('aria-label', `${I18N.t('dyn.setN')} ${st.set_number}: ${fmtSet(st)}, ${I18N.t('rec.sr')}`);
+  });
+}
+// Liste im Abschluss-Banner. Läuft SYNCHRON vor dem Einblenden des Banners: „Zurück zum Dashboard“ darf nicht unter dem
+// Finger wandern. Höchstens 5 Zeilen (Freies Training mit vielen Übungen), Namen und Werte nur per textContent.
+const DONE_RECORDS_MAX = 5;
+function fillDoneRecords(s) {
+  const box = document.getElementById('done-records');
+  const list = document.getElementById('done-records-list');
+  list.textContent = '';
+  const rows = [...sessionRecords(s, lastSetsCache).byEx.values()];
+  rows.slice(0, DONE_RECORDS_MAX).forEach(r => {
+    const row = document.createElement('div');
+    const name = document.createElement('span');
+    name.className = 'rec-name';
+    name.textContent = r.name;
+    const val = document.createElement('b');
+    val.textContent = fmtSet(r.set);
+    row.append(name, ' ', val);
+    list.appendChild(row);
+  });
+  if (rows.length > DONE_RECORDS_MAX) {
+    const more = document.createElement('div');
+    more.className = 'rec-more';
+    more.textContent = I18N.t('rec.more', { n: rows.length - DONE_RECORDS_MAX });
+    list.appendChild(more);
+  }
+  box.classList.toggle('hidden', !rows.length);
 }
 
 // ── Set Modal ─────────────────────────────────────────────────────────────────
@@ -955,9 +1055,30 @@ async function lastSetsFor(exId) {
 }
 
 // Zeile „Letztes Mal (5. Nov.): …“ im Satz- und im Haltezeit-Fenster
+const shortDate = iso => new Date(iso).toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short' });
+// v2.14: eigenes Element UNTER „Letztes Mal“ — Zeile „Bestleistung (3. Nov.): …“ (nur Übungskarte) und Steigerungs-Hinweis
+// (Karte und Satz-Fenster). Nur textContent. Liefert, ob etwas zu zeigen ist.
+function renderMoreLines(el, best, hint) {
+  el.textContent = '';
+  if (best) {
+    const row = document.createElement('span'), val = document.createElement('b');
+    row.className = 'ex-best';
+    val.textContent = fmtSet(best);
+    row.append(I18N.t('ex.best', { date: shortDate(best.date) }) + ' ', val);
+    el.appendChild(row);
+  }
+  if (hint) {
+    const row = document.createElement('span');
+    row.className = 'ex-hint';
+    row.textContent = hint;
+    el.appendChild(row);
+  }
+  el.classList.toggle('hidden', !best && !hint);
+  return !!(best || hint);
+}
 function renderLastLine(el, last) {
   if (last && last.sets.length) {
-    const d = new Date(last.date).toLocaleDateString(I18N.locale(), { day: 'numeric', month: 'short' });
+    const d = shortDate(last.date);
     // höchstens 10 Sätze (run-2 B1): ein fremdes Backup mit Hunderten Sätzen blähte sonst jede Karte auf
     const shown = last.sets.slice(0, 10).map(fmtSet).join(' · ') + (last.sets.length > 10 ? ' · …' : '');
     el.innerHTML = `${esc(I18N.t('set.lastTime', { date: d }))} <b>${esc(shown)}</b>`;
@@ -985,6 +1106,7 @@ async function openSetModal(exIdx, setNum, ex) {
   const last = await lastSetsFor(ex.exercise_id);
   if (pendingSet == null || pendingSet.ex !== ex || pendingSet.setNum !== setNum) return; // inzwischen geschlossen
   renderLastLine(document.getElementById('set-last'), last);
+  renderMoreLines(document.getElementById('set-hint'), null, progressHint(ex, last));   // v2.14: Hinweis dort, wo das Gewicht gewählt wird
 
   // Vorbelegung: eigener Satz (Korrektur) > voriger Satz dieser Einheit >
   // gleicher Satz vom letzten Mal > letzter Satz vom letzten Mal
@@ -1035,6 +1157,7 @@ function commitSet(exIdx, setNum, ex, entry) {
   updateProgress();
   saveDraft();
   refreshRoutineCard();   // Release-Audit v2.11 b3
+  markRecords();          // v2.14: ★ sofort, nach einer Korrektur neu berechnet
 
   const result = { exerciseDone: false, workoutDone: false };
   // Freies Training: kein Auto-Abschluss — der Nutzer beendet über den Button
@@ -1477,6 +1600,7 @@ async function finishWorkoutOnce() {
   releaseWakeLock();
   document.getElementById('exercise-list').style.display = 'none';
   document.getElementById('workout-controls').style.display = 'none';
+  fillDoneRecords(s);   // v2.14: vor dem Einblenden, damit im Banner danach nichts mehr rutscht
   document.getElementById('workout-done-banner').style.display = 'block';
   bannerShownAt = performance.now();
   showStretchOffer(s);
@@ -1826,7 +1950,24 @@ document.getElementById('chart-btn-reps').addEventListener('click', async () => 
   if (currentProgressExId) await renderProgressChart(currentProgressExId, progressMode);
 });
 
+// Bestleistung unter dem Chart (v2.14). Wird mit dem Chart zusammen gelesen; eine ältere Antwort überschreibt keine neuere,
+// nach einem Lesefehler bleibt die Zeile leer (keine Zahl der vorigen Übung). Die Zeile hält ihren Platz auch leer.
+let progressBestSeq = 0;
+async function renderProgressBest(exId) {
+  const el = document.getElementById('progress-best');
+  const seq = ++progressBestSeq;
+  let best = null;
+  try { best = await LocalData.getBest(exId); } catch (e) { console.error(e); }
+  if (seq !== progressBestSeq) return;
+  el.textContent = '';
+  if (!best) return;
+  const val = document.createElement('b');
+  val.textContent = fmtSet(best);
+  el.append(I18N.t('ex.best', { date: shortDate(best.date) }) + ' ', val);
+}
+
 async function renderProgressChart(exId, mode) {
+  renderProgressBest(exId);
   const data = await api('progress/' + exId);
   const wrap = document.getElementById('chart-wrap');
   const canvas = document.getElementById('progress-chart');
@@ -2379,6 +2520,7 @@ if (_langToggle) _langToggle.addEventListener('click', () => {
   // Release-Audit v2.11 b2: Dehn-Angebot im Abschluss-Banner in der neuen Sprache
   if (activeSession && activeSession.finished && !document.getElementById('done-stretch').classList.contains('hidden')) showStretchOffer(activeSession);
   renderVoiceBtns();
+  if (currentProgressExId) renderProgressBest(currentProgressExId);   // v2.14: Datum und Einheit der Bestleistung in der neuen Sprache
   Voice.preload();                              // Ansagen der neuen Sprache (v2.10)
 });
 

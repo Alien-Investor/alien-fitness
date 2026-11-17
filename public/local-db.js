@@ -274,15 +274,62 @@ window.LocalData = (function () {
   // braucht den Vergleich zur Vorwoche, nicht nur zum vorigen Satz derselben Einheit)
   async function getLastSets(exId) {
     const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
-    return lastSetsFrom(Number(exId), allSets, new Map(allSessions.map(s => [s.id, s.started_at || ''])));
+    return historyFrom(Number(exId), allSets, new Map(allSessions.map(s => [s.id, s.started_at || ''])));
   }
   // Für mehrere Übungen auf einmal (Übungskarten im Training, v2.9): ein Lesezugriff statt einer pro Übung
   async function getLastSetsMany(ids) {
     const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
     const started = new Map(allSessions.map(s => [s.id, s.started_at || '']));
     const out = {};
-    for (const id of ids) out[id] = lastSetsFrom(Number(id), allSets, started);
+    for (const id of ids) out[id] = historyFrom(Number(id), allSets, started);
     return out;
+  }
+  // „Letztes Mal“ plus Bestleistung (v2.14) aus demselben Lesezugriff: { date, sets, best } | null
+  function historyFrom(exId, allSets, started) {
+    const last = lastSetsFrom(exId, allSets, started);
+    return last ? { ...last, best: bestFrom(exId, allSets, started) } : null;
+  }
+
+  // ── Bestleistung (v2.14) ── wird aus den vorhandenen Sätzen berechnet, nichts wird gespeichert (Backup-Format unverändert).
+  // Halteübung: längste Dauer. Sonst: schwerstes Gewicht, bei gleichem Gewicht die meisten Wdh (ohne Gewicht also die meisten
+  // Wdh). Aufwärm- und Dehnübungen sowie fremde Übungs-IDs haben keine. Satzwerte können aus einem Import stammen: nur endliche
+  // Zahlen zählen, die Dauer gerundet wie in der Anzeige (fmtSet).
+  function recordOf(exId, st) {
+    const f = exFlags(exId);
+    if (!f || !st || f.type === 'warmup' || f.type === 'stretch') return null;
+    const dur = Math.round(Number(st.duration_seconds));
+    if (f.hold) return Number.isFinite(dur) && dur >= 1 ? { kind: 'time', reps: null, weight_kg: 0, duration_seconds: dur } : null;
+    if (Number.isFinite(dur) && dur >= 1) return null;   // Intervall-Satz (HIT): die Dauer gibt der Timer vor
+    const reps = Math.floor(Number(st.reps));
+    if (!Number.isFinite(reps) || reps < 1) return null;
+    const w = Number(st.weight_kg);
+    return { kind: 'reps', reps, weight_kg: Number.isFinite(w) && w > 0 ? w : 0, duration_seconds: null };
+  }
+  // Ist a besser als b? (b fehlt → ja)
+  function beats(a, b) {
+    if (!a) return false;
+    if (!b || a.kind !== b.kind) return true;
+    if (a.kind === 'time') return a.duration_seconds > b.duration_seconds;
+    return a.weight_kg > b.weight_kg || (a.weight_kg === b.weight_kg && a.reps > b.reps);
+  }
+  // Gleicher Datumsfilter wie „Letztes Mal“ (Unlesbares und Zukünftiges zählt nicht); bei Gleichstand gilt die frühere Einheit
+  function bestFrom(exId, allSets, started) {
+    let best = null;
+    const latest = Date.now() + 86400000;
+    for (const st of allSets) {
+      if (st.exercise_id !== exId || !st.completed) continue;
+      const c = recordOf(exId, st);
+      if (!c) continue;
+      const d = started.get(st.session_id);
+      const t = d == null ? NaN : Date.parse(d);
+      if (!Number.isFinite(t) || t > latest) continue;
+      if (beats(c, best) || (!beats(best, c) && t < best.t)) best = { ...c, date: d, t };
+    }
+    return best;
+  }
+  async function getBest(exId) {
+    const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
+    return bestFrom(Number(exId), allSets, new Map(allSessions.map(s => [s.id, s.started_at || ''])));
   }
   function lastSetsFrom(exId, allSets, started) {
     const mine = allSets.filter(st => st.exercise_id === exId && st.completed);
@@ -612,6 +659,7 @@ window.LocalData = (function () {
     savePlan, getCustomPlan, deletePlan,
     getSessions, getSession, addSession, deleteSession, updateSession, getLastSets, getLastSetsMany,
     getProgress, getStats, getBalance, hasData,
+    getBest, recordOf, beats,
     exportAll, importAll, kerstinFor, exFlags,
   };
 })();

@@ -220,5 +220,39 @@
   "50": {
     "de": { "tip": "Erst angehen, wenn das hängende Knieheben sauber klappt. Roll das Becken oben leicht ein und senk die Beine langsam ab. Nicht schwingen." },
     "en": { "tip": "Start this once the hanging knee raise goes cleanly. Tuck your pelvis slightly at the top and lower your legs slowly. Don't swing." }
+  },
+  "51": {
+    "de": { "tip": "Die Hantel bleibt dicht an der Brust, dann fällt der aufrechte Oberkörper leichter. Die Knie zeigen in Richtung der Zehen, die Fersen bleiben am Boden." },
+    "en": { "tip": "Keep the dumbbell close to your chest; that makes it easier to stay upright. Your knees point the same way as your toes, heels stay on the floor." }
+  },
+  "52": {
+    "de": { "tip": "Die Arbeit macht das Bein auf der Bank; mit dem unteren Bein nicht abstoßen. Langsam absenken, statt dich fallen zu lassen.",
+            "warn": "Die Bank muss fest stehen und darf nicht kippen oder rutschen. Erst ohne Hanteln üben; ist die Bank zu hoch, nimm eine niedrigere Stufe." },
+    "en": { "tip": "The leg on the bench does the work; don't push off with the lower leg. Lower yourself slowly instead of dropping down.",
+            "warn": "The bench must stand firmly and must not tip or slide. Practise without dumbbells first; if the bench is too high, use a lower step." }
+  },
+  "53": {
+    "de": { "tip": "Ruhig weiteratmen, nicht die Luft anhalten. Wird es zu schwer, schieb dich ein Stück höher, statt abzubrechen." },
+    "en": { "tip": "Keep breathing calmly, don't hold your breath. If it gets too hard, slide up a little instead of stopping." }
+  },
+  "54": {
+    "de": { "tip": "Nur so tief gehen, wie die Ferse am Boden bleibt und es in der Leiste angenehm ist. Mit regelmäßigem Üben wird es oft tiefer." },
+    "en": { "tip": "Only go as deep as you can keep your heel down and your groin comfortable. With regular practice, depth often improves." }
+  },
+  "55": {
+    "de": { "tip": "Zieh gleichmäßig und ohne Ruck. Statt des Handtuchs geht auch ein Gürtel oder ein Band." },
+    "en": { "tip": "Pull steadily, without jerking. Instead of a towel, you can also use a belt or a band." }
+  },
+  "56": {
+    "de": { "tip": "Das Ziehen gehört ins Gesäß, nicht ins Knie; spürst du es im Knie, neig dich weniger weit vor." },
+    "en": { "tip": "You should feel the stretch in the glute, not in the knee; if you feel it in the knee, lean forward less." }
+  },
+  "57": {
+    "de": { "tip": "Die Knie nicht mit den Händen oder Ellenbogen nach unten drücken und nicht wippen. Über den Abstand der Fersen zum Körper kannst du die Dehnung anpassen." },
+    "en": { "tip": "Don't push your knees down with your hands or elbows, and don't bounce. You can adjust the stretch by moving your heels closer to or further from your body." }
+  },
+  "58": {
+    "de": { "tip": "Kommt das Gesäß nicht bis zu den Fersen, leg ein Kissen oder ein gerolltes Handtuch dazwischen. Mit weiter geöffneten Knien hat der Bauch mehr Platz." },
+    "en": { "tip": "If your hips don't reach your heels, put a cushion or a rolled towel in between. With your knees wider apart, your belly has more room." }
   }
 }

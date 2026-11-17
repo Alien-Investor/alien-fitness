@@ -373,6 +373,25 @@ h3 {
 /* v2.9: „Letztes Mal“ auf der Übungskarte (gleiches Muster wie im Satz-Fenster) */
 .ex-last { font-family: var(--font-b); font-size: 0.7rem; color: var(--muted); padding: 0 16px 12px; line-height: 1.5; }
 .ex-last b { color: var(--neon); font-weight: 400; }
+/* v2.14: Bestleistung und Steigerungs-Hinweis als eigene Zeilen unter „Letztes Mal“ (Karte und Satz-Fenster). Das Element
+   .ex-more schließt ohne Lücke an „Letztes Mal“ an (dessen unterer Innenabstand wird zurückgenommen). */
+.ex-more { margin-top: -12px; }
+.ex-best, .ex-hint { display: block; }
+.ex-hint { color: var(--neon); }
+/* v2.14: ★ am Satz-Knopf — absolut in der Ecke, der Knopf behält seine Größe (nichts rutscht beim Eintragen) */
+.set-btn { position: relative; }
+.set-btn.record::after { content: '★'; position: absolute; top: 2px; right: 5px; font-size: 0.7rem; line-height: 1; color: var(--neon); text-shadow: 0 0 6px var(--neon); }
+/* v2.14: neue Bestleistungen im Abschluss-Banner, Bestleistung unter dem Chart */
+.done-records { margin: 18px 0 0; letter-spacing: 0; text-shadow: none; }
+.done-records > b { display: block; font-family: var(--font-h); font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+#done-records-list { font-family: var(--font-b); font-size: 0.78rem; line-height: 1.6; color: var(--muted); max-width: 26em; margin: 0 auto; }
+/* Name links, Wert rechts: ein langer Name bricht um, der Wert bleibt in seiner Spalte (zentriert sprang er in eine eigene Zeile) */
+#done-records-list > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; text-align: left; }
+#done-records-list .rec-name { min-width: 0; overflow-wrap: anywhere; }
+#done-records-list b { flex: none; color: var(--neon); font-weight: 400; white-space: nowrap; }
+#done-records-list .rec-more { justify-content: center; }
+.progress-best { font-family: var(--font-b); font-size: 0.7rem; color: var(--muted); min-height: 1.5em; line-height: 1.5; margin-bottom: 12px; }
+.progress-best b { color: var(--neon); font-weight: 400; }
 
 /* ── Kerstin (v2.10): Tipp/Warnung je Übung, wie die Kerstin-Blöcke der Bücher im Neon-Look ── */
 .kerstin { padding: 0 16px 12px; }

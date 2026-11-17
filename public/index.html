@@ -167,6 +167,11 @@
       <div id="workout-done-banner" class="done-banner" style="display:none">
         <span data-i18n="workout.doneTitle">✓ TRAINING ABGESCHLOSSEN</span><br>
         <span style="font-size:0.6rem;color:var(--muted);margin-top:8px;display:block;" data-i18n="workout.doneSaved">Einheit gespeichert</span>
+        <!-- v2.14: neue Bestleistungen dieser Einheit (app.js fillDoneRecords, Zeilen per textContent, vor dem Einblenden gefüllt) -->
+        <div id="done-records" class="done-records hidden">
+          <b data-i18n="rec.new">★ Neue Bestleistung</b>
+          <div id="done-records-list"></div>
+        </div>
         <!-- v2.11: Dehnen als Block nach dem Training (wird nicht gespeichert), app.js showStretchOffer -->
         <div id="done-stretch" class="routine-card hidden">
           <div class="routine-text"><b data-i18n="routine.stretchAsk">Jetzt noch dehnen?</b><span class="routine-meta" id="done-stretch-meta"></span></div>
@@ -206,6 +211,8 @@
       <button class="btn btn-sm active-btn" id="chart-btn-weight" data-i18n="progress.weight">Gewicht (kg)</button>
       <button class="btn btn-sm ghost" id="chart-btn-reps" data-i18n="progress.reps">Wiederholungen</button>
     </div>
+    <!-- v2.14: Bestleistung der gewählten Übung (app.js renderProgressBest, nur textContent); hält ihren Platz auch leer -->
+    <div id="progress-best" class="progress-best"></div>
   </div>
 
   <!-- ── LIBRARY ────────────────────────────────────────────────────────────── -->
@@ -266,6 +273,8 @@
   <div id="set-modal">
     <h3 id="set-modal-title" data-i18n="set.title">Satz eintragen</h3>
     <div id="set-last" class="set-last"></div>
+    <!-- v2.14: Steigerungs-Hinweis (app.js renderMoreLines, nur textContent) -->
+    <div id="set-hint" class="set-last hidden"></div>
     <div class="input-row">
       <div class="input-group">
         <label data-i18n="set.reps">Wiederholungen</label>
@@ -350,7 +359,7 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.start.t">Training starten</div>
-        <p data-i18n="help.start.b">Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Das Modal zeigt, was du beim letzten Mal bei dieser Übung geschafft hast, und ist vorbelegt (mit dem vorigen Satz, beim ersten Satz mit dem letzten Mal); dieselbe Zeile „Letztes Mal“ steht schon vorher auf den Übungskarten. Abgeschlossene Sätze leuchten grün; erneut antippen korrigiert. Wird die App mittendrin geschlossen, bietet das Dashboard beim nächsten Start an, das Training fortzusetzen.</p>
+        <p data-i18n="help.start.b">Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Das Modal zeigt, was du beim letzten Mal bei dieser Übung geschafft hast, und ist vorbelegt (mit dem vorigen Satz, beim ersten Satz mit dem letzten Mal); dieselbe Zeile „Letztes Mal“ steht schon vorher auf den Übungskarten. Darunter steht deine Bestleistung der Übung (schwerstes Gewicht, bei gleichem Gewicht die meisten Wiederholungen, bei Halteübungen die längste Zeit); überbietest du sie, bekommt der Satz einen ★ und der Abschluss nennt sie. Hast du beim letzten Mal in allen Sätzen die obere Wiederholungszahl des Plans geschafft, erinnert ein Hinweis daran, dass du steigern kannst. Abgeschlossene Sätze leuchten grün; erneut antippen korrigiert. Wird die App mittendrin geschlossen, bietet das Dashboard beim nächsten Start an, das Training fortzusetzen.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.timer.t">Pause-Timer</div>
@@ -374,11 +383,11 @@
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.progress.t">Fortschritt</div>
-        <p data-i18n="help.progress.b">Oben siehst du, wie viele Sätze du in den letzten 7 oder 28 Tagen je Körperbereich gemacht hast — Bereiche ohne Satz bleiben sichtbar. Darunter: Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über die letzten 60 Trainingstage — umschalten über die Buttons unter dem Chart. Übungen ohne Gewicht (z. B. Klimmzüge, Plank) zeigen gleich Wiederholungen bzw. Sekunden.</p>
+        <p data-i18n="help.progress.b">Oben siehst du, wie viele Sätze du in den letzten 7 oder 28 Tagen je Körperbereich gemacht hast — Bereiche ohne Satz bleiben sichtbar. Darunter: Wähle eine Übung aus dem Dropdown. Der Chart zeigt den Verlauf von Maximalgewicht (kg) oder Wiederholungen über die letzten 60 Trainingstage — umschalten über die Buttons unter dem Chart. Übungen ohne Gewicht (z. B. Klimmzüge, Plank) zeigen gleich Wiederholungen bzw. Sekunden. Unter den Buttons steht die Bestleistung der gewählten Übung.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.library.t">Übungsbibliothek</div>
-        <p data-i18n="help.library.b">Alle 50 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe, HIT, Aufwärmen oder Dehnen. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
+        <p data-i18n="help.library.b">Alle 58 Übungen mit Beschreibung, Muskelgruppe und Equipment. Filtere nach Muskelgruppe, HIT, Aufwärmen oder Dehnen. Klick auf ein Bild öffnet die Vollbild-Ansicht — ESC oder Klick schließt sie wieder.</p>
       </div>
       <div class="help-section">
         <div class="help-section-title" data-i18n="help.history.t">Historie</div>
@@ -394,7 +403,7 @@
           <div class="help-plan-row"><span class="badge hit" data-i18n="badge.hit">HIT</span><span data-i18n="help.plan.tabata">Tabata (20 Sek / 10 Sek × 8)</span></div>
           <div class="help-plan-row"><span class="badge hit" data-i18n="badge.hit">HIT</span><span data-i18n="help.plan.power">Power &amp; Explosivkraft</span></div>
           <div class="help-plan-row"><span class="badge" data-i18n="badge.warmup">Aufwärmen</span><span data-i18n="help.plan.warmup">5 Übungen ohne Gerät, je 40 s</span></div>
-          <div class="help-plan-row"><span class="badge" data-i18n="badge.stretch">Dehnen</span><span data-i18n="help.plan.stretch">7 Dehnungen, 30 s bzw. 30 s je Seite</span></div>
+          <div class="help-plan-row"><span class="badge" data-i18n="badge.stretch">Dehnen</span><span data-i18n="help.plan.stretch">9 Dehnungen, 30 s bzw. 30 s je Seite</span></div>
         </div>
       </div>
       <div class="help-section">
