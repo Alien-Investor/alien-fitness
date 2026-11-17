@@ -274,35 +274,47 @@ window.LocalData = (function () {
   // braucht den Vergleich zur Vorwoche, nicht nur zum vorigen Satz derselben Einheit)
   async function getLastSets(exId) {
     const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
-    return historyFrom(Number(exId), allSets, new Map(allSessions.map(s => [s.id, s.started_at || ''])));
+    return historyFrom(Number(exId), allSets, sessCtx(allSessions));
   }
   // Für mehrere Übungen auf einmal (Übungskarten im Training, v2.9): ein Lesezugriff statt einer pro Übung
   async function getLastSetsMany(ids) {
     const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
-    const started = new Map(allSessions.map(s => [s.id, s.started_at || '']));
+    const ctx = sessCtx(allSessions);
     const out = {};
-    for (const id of ids) out[id] = historyFrom(Number(id), allSets, started);
+    for (const id of ids) out[id] = historyFrom(Number(id), allSets, ctx);
     return out;
   }
+  // Startzeit je Einheit und die Einheiten aus HIT-Plänen (Halteübungen dort zählen nicht zur Bestleistung, Release-Audit v2.14 a-1)
+  function sessCtx(allSessions) {
+    return {
+      started: new Map(allSessions.map(s => [s.id, s.started_at || ''])),
+      hit: new Set(allSessions.filter(s => s.plan_id != null && planTypeById(s.plan_id) === 'hit').map(s => s.id)),
+    };
+  }
   // „Letztes Mal“ plus Bestleistung (v2.14) aus demselben Lesezugriff: { date, sets, best } | null
-  function historyFrom(exId, allSets, started) {
-    const last = lastSetsFrom(exId, allSets, started);
-    return last ? { ...last, best: bestFrom(exId, allSets, started) } : null;
+  function historyFrom(exId, allSets, ctx) {
+    const last = lastSetsFrom(exId, allSets, ctx.started);
+    return last ? { ...last, best: bestFrom(exId, allSets, ctx) } : null;
   }
 
   // ── Bestleistung (v2.14) ── wird aus den vorhandenen Sätzen berechnet, nichts wird gespeichert (Backup-Format unverändert).
   // Halteübung: längste Dauer. Sonst: schwerstes Gewicht, bei gleichem Gewicht die meisten Wdh (ohne Gewicht also die meisten
-  // Wdh). Aufwärm- und Dehnübungen sowie fremde Übungs-IDs haben keine. Satzwerte können aus einem Import stammen: nur endliche
-  // Zahlen zählen, die Dauer gerundet wie in der Anzeige (fmtSet).
+  // Wdh). Aufwärm- und Dehnübungen sowie fremde Übungs-IDs haben keine. Satzwerte können aus einem Import oder einem Draft stammen:
+  // nur Zahl und Text werden gelesen (ein Objekt mit eigenem toString warf in Number() und blockierte Satz-Fenster und
+  // Abschluss-Banner, Release-Audit v2.14 c1), nur endliche Werte zählen. Schwellen und Werte wie in der Anzeige (fmtSet): Dauer
+  // ab 1 s und gerundet, Wdh unverändert (a-8).
+  function numOf(v) { return typeof v === 'number' ? v : (typeof v === 'string' && v !== '' ? Number(v) : NaN); }
   function recordOf(exId, st) {
+    if ((typeof exId !== 'number' && typeof exId !== 'string') || !st || typeof st !== 'object') return null;
     const f = exFlags(exId);
-    if (!f || !st || f.type === 'warmup' || f.type === 'stretch') return null;
-    const dur = Math.round(Number(st.duration_seconds));
-    if (f.hold) return Number.isFinite(dur) && dur >= 1 ? { kind: 'time', reps: null, weight_kg: 0, duration_seconds: dur } : null;
-    if (Number.isFinite(dur) && dur >= 1) return null;   // Intervall-Satz (HIT): die Dauer gibt der Timer vor
-    const reps = Math.floor(Number(st.reps));
+    if (!f || f.type === 'warmup' || f.type === 'stretch') return null;
+    const raw = numOf(st.duration_seconds);
+    const dur = Number.isFinite(raw) && raw >= 1 ? Math.round(raw) : 0;
+    if (f.hold) return dur ? { kind: 'time', reps: null, weight_kg: 0, duration_seconds: dur } : null;
+    if (dur) return null;   // Intervall-Satz (HIT): die Dauer gibt der Timer vor
+    const reps = numOf(st.reps);
     if (!Number.isFinite(reps) || reps < 1) return null;
-    const w = Number(st.weight_kg);
+    const w = numOf(st.weight_kg);
     return { kind: 'reps', reps, weight_kg: Number.isFinite(w) && w > 0 ? w : 0, duration_seconds: null };
   }
   // Ist a besser als b? (b fehlt → ja)
@@ -312,15 +324,19 @@ window.LocalData = (function () {
     if (a.kind === 'time') return a.duration_seconds > b.duration_seconds;
     return a.weight_kg > b.weight_kg || (a.weight_kg === b.weight_kg && a.reps > b.reps);
   }
-  // Gleicher Datumsfilter wie „Letztes Mal“ (Unlesbares und Zukünftiges zählt nicht); bei Gleichstand gilt die frühere Einheit
-  function bestFrom(exId, allSets, started) {
+  // Gleicher Datumsfilter wie „Letztes Mal“ (Unlesbares und Zukünftiges zählt nicht); bei Gleichstand gilt die frühere Einheit.
+  // Halteübungen aus HIT-Plänen zählen nicht (dort gibt der Timer die Dauer vor; im Training gibt es dafür auch keinen ★).
+  function bestFrom(exId, allSets, ctx) {
     let best = null;
     const latest = Date.now() + 86400000;
+    const f = exFlags(exId);
+    const skipHit = !!(f && f.hold);
     for (const st of allSets) {
       if (st.exercise_id !== exId || !st.completed) continue;
+      if (skipHit && ctx.hit.has(st.session_id)) continue;
       const c = recordOf(exId, st);
       if (!c) continue;
-      const d = started.get(st.session_id);
+      const d = ctx.started.get(st.session_id);
       const t = d == null ? NaN : Date.parse(d);
       if (!Number.isFinite(t) || t > latest) continue;
       if (beats(c, best) || (!beats(best, c) && t < best.t)) best = { ...c, date: d, t };
@@ -329,7 +345,16 @@ window.LocalData = (function () {
   }
   async function getBest(exId) {
     const [allSets, allSessions] = await Promise.all([allFrom('sets'), allFrom('sessions')]);
-    return bestFrom(Number(exId), allSets, new Map(allSessions.map(s => [s.id, s.started_at || ''])));
+    return bestFrom(Number(exId), allSets, sessCtx(allSessions));
+  }
+  // Name und Beschreibung einer Übung in der aktuellen Sprache, synchron (Fortsetzen eines Drafts: Namen aus den Stammdaten
+  // nachziehen, Release-Audit v2.14 a-4 — ein Draft aus v2.13 trug noch „… (DB)“)
+  function exLabel(id) {
+    if (typeof id !== 'number' && typeof id !== 'string') return null;
+    const e = exById && exById.get(Number(id));
+    if (!e) return null;
+    const trx = window.I18N && window.I18N.exercise(e.id);
+    return { name: trx ? trx.name : e.name, description: trx ? trx.description : e.description };
   }
   function lastSetsFrom(exId, allSets, started) {
     const mine = allSets.filter(st => st.exercise_id === exId && st.completed);
@@ -374,6 +399,10 @@ window.LocalData = (function () {
   }
 
   async function addSession(payload) {
+    // Release-Audit v2.14 c1/b2: Sätze VOR dem Öffnen der Schreib-Transaktion normalisieren, mit denselben Grenzen wie der Import
+    // (cleanSet). Der Draft kann fremde Werte tragen (Objekt statt Zahl, 1e300 kg): ungeprüft gespeichert verdarben sie
+    // „Letztes Mal“ und die Bestleistung jeder späteren Einheit mit dieser Übung.
+    const rows = (payload && Array.isArray(payload.sets) ? payload.sets : []).filter(isRec).map(cleanSet);
     const { os: [sessStore, setStore], done } = wtx(['sessions', 'sets']);
     const nowISO = new Date().toISOString();
     const id = await reqP(sessStore.add({
@@ -382,19 +411,7 @@ window.LocalData = (function () {
       finished_at: payload.finished_at || nowISO,
       notes: payload.notes || null,
     }));
-    if (Array.isArray(payload.sets)) {
-      for (const s of payload.sets) {
-        await reqP(setStore.add({
-          session_id: id,
-          exercise_id: s.exercise_id,
-          set_number: s.set_number,
-          reps: s.reps != null ? s.reps : null,
-          weight_kg: s.weight_kg != null ? s.weight_kg : 0,
-          duration_seconds: s.duration_seconds != null ? s.duration_seconds : null,
-          completed: s.completed ? 1 : 0,
-        }));
-      }
-    }
+    for (const s of rows) await reqP(setStore.add({ session_id: id, ...s }));
     await done;   // erst nach dem Commit ist die Einheit wirklich gespeichert (C1)
     return { id };
   }
@@ -659,7 +676,7 @@ window.LocalData = (function () {
     savePlan, getCustomPlan, deletePlan,
     getSessions, getSession, addSession, deleteSession, updateSession, getLastSets, getLastSetsMany,
     getProgress, getStats, getBalance, hasData,
-    getBest, recordOf, beats,
+    getBest, recordOf, beats, exLabel,
     exportAll, importAll, kerstinFor, exFlags,
   };
 })();

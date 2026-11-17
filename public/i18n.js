@@ -86,8 +86,8 @@ window.I18N = (function () {
       'set.lastTime': 'Letztes Mal ({date}):', 'set.noLast': 'Erstes Mal mit dieser Übung',
       // v2.14: Bestleistung und Steigerungs-Hinweis
       'ex.best': 'Bestleistung ({date}):', 'rec.new': '★ Neue Bestleistung', 'rec.more': '+ {n} weitere', 'rec.sr': 'neue Bestleistung',
-      'hint.weight': '▲ Letztes Mal in allen Sätzen {top} Wdh geschafft: Du kannst heute etwas mehr Gewicht versuchen.',
-      'hint.harder': '▲ Letztes Mal in allen Sätzen {top} Wdh geschafft: Du kannst eine schwerere Variante versuchen.',
+      'hint.weight': '▲ Letztes Mal in allen Sätzen {top}\u00a0Wdh geschafft: Du kannst heute etwas mehr Gewicht versuchen.',
+      'hint.harder': '▲ Letztes Mal in allen Sätzen {top}\u00a0Wdh geschafft: Du kannst eine schwerere Variante versuchen.',
       'timer.work': 'ARBEIT', 'timer.done': 'Fertig →', 'timer.stop': '■ Stopp',
       'dyn.sec': 's', 'dyn.maxRepsSec': 'Max. Reps / Sekunden', 'dyn.duration': 'Dauer',
       'workout.abortConfirm': 'Training abbrechen? {n} geloggte Sätze gehen verloren.',
@@ -110,7 +110,7 @@ window.I18N = (function () {
       'session.notes': 'Notiz', 'session.notesPh': 'z.B. wenig geschlafen, Schulter zwickt',
       'session.saveNotes': 'Notiz speichern', 'session.notesSaved': 'Notiz gespeichert.',
       'session.noSets': 'Keine Sätze geloggt.',
-      'help.start.b': 'Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Das Modal zeigt, was du beim letzten Mal bei dieser Übung geschafft hast, und ist vorbelegt (mit dem vorigen Satz, beim ersten Satz mit dem letzten Mal); dieselbe Zeile „Letztes Mal“ steht schon vorher auf den Übungskarten. Darunter steht deine Bestleistung der Übung (schwerstes Gewicht, bei gleichem Gewicht die meisten Wiederholungen, bei Halteübungen die längste Zeit); überbietest du sie, bekommt der Satz einen ★ und der Abschluss nennt sie. Hast du beim letzten Mal in allen Sätzen die obere Wiederholungszahl des Plans geschafft, erinnert ein Hinweis daran, dass du steigern kannst. Abgeschlossene Sätze leuchten grün; erneut antippen korrigiert. Wird die App mittendrin geschlossen, bietet das Dashboard beim nächsten Start an, das Training fortzusetzen.',
+      'help.start.b': 'Wähle einen Plan aus. Gehe Übung für Übung durch — tippe auf einen Satz-Button um Wiederholungen und Gewicht einzutragen. Das Modal zeigt, was du beim letzten Mal bei dieser Übung geschafft hast, und ist vorbelegt (mit dem vorigen Satz, beim ersten Satz mit dem letzten Mal); dieselbe Zeile „Letztes Mal“ steht schon vorher auf den Übungskarten. Darunter steht deine Bestleistung der Übung (schwerstes Gewicht, bei gleichem Gewicht die meisten Wiederholungen, bei Halteübungen die längste Zeit); überbietest du sie, bekommt der Satz einen ★ und der Abschluss nennt sie. Hast du in einem Kraft-Plan zuletzt in allen Sätzen mit gleichem Gewicht die obere Wiederholungszahl geschafft, zeigt ein Hinweis: Du kannst steigern. Abgeschlossene Sätze leuchten grün; erneut antippen korrigiert. Wird die App mittendrin geschlossen, bietet das Dashboard beim nächsten Start an, das Training fortzusetzen.',
       'help.timer.b': 'Startet automatisch nach jedem abgeschlossenen Satz, hält das Display wach und meldet sich am Ende mit Vibration und einer Ansage (bei ausgeschalteter Stimme mit einem Beep). Mit „Überspringen →“ kannst du die Pause jederzeit vorzeitig beenden.',
       'help.hit.t': 'HIT-Intervalle',
       'help.hit.b': 'Übungen mit Zeitangabe statt Wiederholungen (z.B. „20 Sek“) laufen als Intervall: Satz antippen öffnet die Zeitwahl (20 bis 180 Sekunden oder eine eigene Zeit, vorbelegt mit der zuletzt gestarteten Zeit, sonst der Angabe im Plan). Nach „▶ Start“ bleiben 5 Sekunden zum Bereitmachen, dann läuft der Arbeits-Timer, danach die Pause, und die nächste Runde derselben Übung startet von selbst mit derselben Zeit. „■ Stopp“ unterbricht die Kette, „Fertig →“ beendet ein Intervall vorzeitig und loggt die tatsächliche Dauer.',
@@ -147,7 +147,7 @@ window.I18N = (function () {
       'workout.replaceConfirm': 'Es läuft noch ein Training ({name}, {n} Sätze geloggt). Verwerfen und neu starten?',
       'err.saveFailed': 'Speichern fehlgeschlagen — ist der Speicher voll? Bitte Platz schaffen und erneut versuchen.',
       'help.hold.t': 'Halteübungen (Plank, Seitstütz, Dehnen)',
-      'help.hold.b': 'Bei Plank, Seitstütz und Dehnungen wählst du vor jedem Satz die Haltezeit: 30 bis 180 Sekunden, eine eigene Zeit oder „Max“ als Stoppuhr. Bei Seitstütz und Dehnungen je Seite gilt die Zeit für jede Seite, dazwischen kommt ein kurzer Wechsel (ohne „Max“). Vorbelegt ist die zuletzt gestartete Zeit, sonst die Angabe im Plan. Nach „▶ Start“ bleiben 5 Sekunden, um in Position zu kommen, dann läuft der Halte-Timer. „Fertig →“ beendet früher und speichert die gehaltene Zeit, „■ Stopp“ bricht ohne Eintrag ab. „Ohne Timer eintragen“ speichert die gewählte Zeit direkt, etwa zum Korrigieren.',
+      'help.hold.b': 'Bei Plank, Seitstütz, Wandsitzen und Dehnungen wählst du vor jedem Satz die Haltezeit: 30 bis 180 Sekunden, eine eigene Zeit oder „Max“ als Stoppuhr. Bei Seitstütz und Dehnungen je Seite gilt die Zeit für jede Seite, dazwischen kommt ein kurzer Wechsel (ohne „Max“). Vorbelegt ist die zuletzt gestartete Zeit, sonst die Angabe im Plan. Nach „▶ Start“ bleiben 5 Sekunden, um in Position zu kommen, dann läuft der Halte-Timer. „Fertig →“ beendet früher und speichert die gehaltene Zeit, „■ Stopp“ bricht ohne Eintrag ab. „Ohne Timer eintragen“ speichert die gewählte Zeit direkt, etwa zum Korrigieren.',
     },
     en: {
       'nav.dashboard': 'Dashboard', 'nav.training': 'Training', 'nav.progress': 'Progress',
@@ -224,8 +224,8 @@ window.I18N = (function () {
       'set.lastTime': 'Last time ({date}):', 'set.noLast': 'First time for this exercise',
       // v2.14: personal best and progression hint
       'ex.best': 'Personal best ({date}):', 'rec.new': '★ New personal best', 'rec.more': '+ {n} more', 'rec.sr': 'new personal best',
-      'hint.weight': '▲ Last time you hit {top} reps in every set: you could go a little heavier today.',
-      'hint.harder': '▲ Last time you hit {top} reps in every set: you could try a harder variation.',
+      'hint.weight': '▲ Last time you hit {top}\u00a0reps in every set: you could go a little heavier today.',
+      'hint.harder': '▲ Last time you hit {top}\u00a0reps in every set: you could try a harder variation.',
       'timer.work': 'WORK', 'timer.done': 'Done →', 'timer.stop': '■ Stop',
       'dyn.sec': 's', 'dyn.maxRepsSec': 'Max reps / seconds', 'dyn.duration': 'Duration',
       'workout.abortConfirm': 'Cancel workout? {n} logged sets will be lost.',
@@ -248,7 +248,7 @@ window.I18N = (function () {
       'session.notes': 'Note', 'session.notesPh': 'e.g. slept badly, shoulder sore',
       'session.saveNotes': 'Save note', 'session.notesSaved': 'Note saved.',
       'session.noSets': 'No sets logged.',
-      'help.start.b': 'Pick a plan. Work through it exercise by exercise — tap a set button to log reps and weight. The dialog shows what you did last time for this exercise and comes pre-filled (with your previous set, for the first set with last time); the same "Last time" line is already shown on the exercise cards. Below it you see your personal best for the exercise (heaviest weight, at equal weight the most reps, for holds the longest time); beat it and the set gets a ★ and the completion screen lists it. If you hit the top of the plan\'s rep range in every set last time, a hint reminds you that you can progress. Completed sets glow green; tap again to correct. If the app gets closed mid-workout, the dashboard offers to resume it on the next start.',
+      'help.start.b': 'Pick a plan. Work through it exercise by exercise — tap a set button to log reps and weight. The dialog shows what you did last time for this exercise and comes pre-filled (with your previous set, for the first set with last time); the same "Last time" line is already shown on the exercise cards. Below it you see your personal best for the exercise (heaviest weight, at equal weight the most reps, for holds the longest time); beat it and the set gets a ★ and the completion screen lists it. If last time every set hit the top of a strength plan\'s rep range at the same weight, a hint says you can progress. Completed sets glow green; tap again to correct. If the app gets closed mid-workout, the dashboard offers to resume it on the next start.',
       'help.timer.b': 'Starts automatically after each completed set, keeps the screen awake and signals the end with a vibration and an announcement (a beep when the voice is off). Use "Skip →" to end the rest early at any time.',
       'help.hit.t': 'HIT Intervals',
       'help.hit.b': 'Exercises with a time instead of reps (e.g. "20 sec") run as intervals: tapping a set opens the time picker (20 to 180 seconds or a custom time, pre-filled with the time you started last, otherwise the value from the plan). After "▶ Start" you get 5 seconds to get ready, then the work timer runs, the rest follows and the next round of the same exercise starts by itself with the same time. "■ Stop" breaks the chain, "Done →" ends an interval early and logs the actual duration.',
@@ -285,7 +285,7 @@ window.I18N = (function () {
       'workout.replaceConfirm': 'A workout is still running ({name}, {n} sets logged). Discard it and start a new one?',
       'err.saveFailed': 'Saving failed — is the storage full? Please free up space and try again.',
       'help.hold.t': 'Hold exercises (plank, side plank, stretches)',
-      'help.hold.b': 'For the plank, side plank and stretches you pick the hold time before each set: 30 to 180 seconds, a custom time or "Max" as a stopwatch. For the side plank and stretches done per side the time applies to each side, with a short switch in between (no "Max"). It is pre-filled with the time you started last, otherwise the value from the plan. After "▶ Start" you get 5 seconds to get into position, then the hold timer runs. "Done →" ends early and logs the time held, "■ Stop" cancels without logging. "Log without timer" saves the chosen time directly, e.g. to correct a set.',
+      'help.hold.b': 'For the plank, side plank, wall sit and stretches you pick the hold time before each set: 30 to 180 seconds, a custom time or "Max" as a stopwatch. For the side plank and stretches done per side the time applies to each side, with a short switch in between (no "Max"). It is pre-filled with the time you started last, otherwise the value from the plan. After "▶ Start" you get 5 seconds to get into position, then the hold timer runs. "Done →" ends early and logs the time held, "■ Stop" cancels without logging. "Log without timer" saves the chosen time directly, e.g. to correct a set.',
     },
   };
 

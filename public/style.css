@@ -383,12 +383,17 @@ h3 {
 .set-btn.record::after { content: '★'; position: absolute; top: 2px; right: 5px; font-size: 0.7rem; line-height: 1; color: var(--neon); text-shadow: 0 0 6px var(--neon); }
 /* v2.14: neue Bestleistungen im Abschluss-Banner, Bestleistung unter dem Chart */
 .done-records { margin: 18px 0 0; letter-spacing: 0; text-shadow: none; }
+/* Release-Audit v2.14 b1: keine Scroll-Verankerung im Banner — erschien das Dehn-Angebot nachträglich über „Zurück zum
+   Dashboard“, hielt der Browser diesen Knopf fest und schob den Kopf des Banners aus dem Bild */
+.done-banner { overflow-anchor: none; }
 .done-records > b { display: block; font-family: var(--font-h); font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
 #done-records-list { font-family: var(--font-b); font-size: 0.78rem; line-height: 1.6; color: var(--muted); max-width: 26em; margin: 0 auto; }
 /* Name links, Wert rechts: ein langer Name bricht um, der Wert bleibt in seiner Spalte (zentriert sprang er in eine eigene Zeile) */
 #done-records-list > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; text-align: left; }
 #done-records-list .rec-name { min-width: 0; overflow-wrap: anywhere; }
-#done-records-list b { flex: none; color: var(--neon); font-weight: 400; white-space: nowrap; }
+/* Release-Audit v2.14 b2: der Wert behält seine Spalte, wird aber nie breiter als die halbe Zeile (ein absurder Wert aus einem
+   veränderten Draft drückte den Namen auf 0 px Breite, ein Buchstabe je Zeile) */
+#done-records-list b { flex: 0 1 auto; max-width: 50%; overflow: hidden; text-overflow: ellipsis; color: var(--neon); font-weight: 400; white-space: nowrap; }
 #done-records-list .rec-more { justify-content: center; }
 .progress-best { font-family: var(--font-b); font-size: 0.7rem; color: var(--muted); min-height: 1.5em; line-height: 1.5; margin-bottom: 12px; }
 .progress-best b { color: var(--neon); font-weight: 400; }
@@ -624,7 +629,8 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   stroke-linecap: round; stroke-linejoin: round; }
 .howto-btn .dot { stroke-width: 2.6; }
 .howto-btn.off { color: var(--muted); }
-/* Release-Audit v2.12 b1: feste Höhe (6 Zeilen, längste Beschreibung = Übung 38) — im Wechsel steht schon die nächste Übung mit
+/* Release-Audit v2.12 b1: feste Höhe (6 Zeilen; längste Beschreibungen: Übung 38 und seit v2.14 55–58; in normaler Schrift passen sie
+   ab 360 px in DE und EN hinein, bei 320 px EN ganz und DE bis auf eine Zeile — E2E „Audit v2.14 b4“) — im Wechsel steht schon die nächste Übung mit
    anderer Textlänge; mit wachsender Höhe rutschten „Fertig →“ und „■ Stopp“ um 20–30 px, ein später Tipp traf „■ Stopp“.
    Längerer Text (320 px, große Schrift) scrollt im Kasten. */
 #timer-howto p { margin: auto 0; }   /* kurzer Text mittig im Kasten; Überlänge läuft nach unten (scrollt), nichts wird oben abgeschnitten */

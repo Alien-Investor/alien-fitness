@@ -548,7 +548,7 @@
       "muscle_group": "Beine",
       "equipment": "Körpergewicht",
       "type": "stretch",
-      "description": "Auf den Boden setzen, ein Bein gestreckt nach vorne. Ein Handtuch um den Fußballen legen und beide Enden festhalten. Mit geradem Rücken und gestrecktem Knie die Fußspitze zu dir ziehen, bis in der Wade ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
+      "description": "Auf den Boden setzen, ein Bein gestreckt nach vorne. Ein Handtuch um den Fußballen legen und beide Enden halten. Mit geradem Rücken und gestrecktem Knie die Fußspitze zu dir ziehen, bis in der Wade ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
       "hold": 1,
       "sided": 1
     },
@@ -558,7 +558,7 @@
       "muscle_group": "Beine",
       "equipment": "Bank",
       "type": "stretch",
-      "description": "Auf die Bank setzen, beide Füße am Boden. Einen Knöchel auf das andere Knie legen, das Knie des oberen Beins zeigt nach außen. Mit geradem Rücken aus der Hüfte nach vorne neigen, bis im Gesäß des oberen Beins ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
+      "description": "Auf die Bank setzen, beide Füße am Boden. Einen Knöchel auf das andere Knie legen, das Knie des oberen Beins zeigt nach außen. Mit geradem Rücken aus der Hüfte vorneigen, bis im Gesäß ein Ziehen spürbar ist. Halten, dann Seite wechseln.",
       "hold": 1,
       "sided": 1
     },
@@ -568,7 +568,7 @@
       "muscle_group": "Beine",
       "equipment": "Körpergewicht",
       "type": "stretch",
-      "description": "Aufrecht auf den Boden setzen, die Fußsohlen aneinanderlegen und die Knie nach außen fallen lassen. Die Füße mit den Händen halten und mit geradem Rücken leicht nach vorne neigen, bis an der Innenseite der Oberschenkel ein Ziehen spürbar ist. Halten.",
+      "description": "Aufrecht auf den Boden setzen, die Fußsohlen aneinanderlegen und die Knie nach außen fallen lassen. Die Füße mit den Händen halten und mit geradem Rücken leicht vorneigen, bis an der Innenseite der Oberschenkel ein Ziehen spürbar ist. Halten.",
       "hold": 1,
       "sided": 0
     },
