@@ -22,16 +22,18 @@ has been retired.
 - Warm-up and stretching: a warm-up block above every workout and a stretching offer when you finish (neither is saved), or run them as their own plans; Thorsten announces the next exercise (by name in German) and when to switch sides, and the timer shows a picture of the next exercise and, at a tap on "How-to", how it is done
 - Live session logging with automatic rest timer, corrections supported
 - "Last time" on the exercise cards and in every set dialog, sets come pre-filled: progressive overload at a glance
+- Personal best per exercise, calculated from your logged sets (heaviest weight, at equal weight the most reps; for holds the longest time): shown on the exercise card and below the progress chart; a set that beats it gets a ★ and the finish screen lists it. Intervals, holds in HIT plans, warm-up and stretching are not counted
+- Progression hint in strength plans: if every planned set reached the top of the rep range at the same weight last time, the card and the set dialog suggest that you can try a little more weight (or a harder variation for bodyweight exercises)
 - "Up next" on the dashboard marks the strength plan that follows in your usual order, once you have trained two different strength plans
 - HIT intervals: timed sets ("20 sec") let you pick the work time (20–180 s or custom), then a 5 s get-ready countdown, work timer, rest and auto-chained next round
-- Hold exercises (plank, side plank, stretches): pick the hold time per set (30–180 s or custom; "Max" as a stopwatch for holds without sides), 5 s get-ready countdown; holds done per side (side plank, most stretches) switch sides automatically
+- Hold exercises (plank, side plank, wall sit, stretches): pick the hold time per set (30–180 s or custom; "Max" as a stopwatch for holds without sides), 5 s get-ready countdown; holds done per side (side plank, most stretches) switch sides automatically
 - Announcer voice: Thorsten calls out "Get ready", "Go", "Rest" and the last round, short tones count down the last three seconds before each automatic start (German, or simple English words in English mode); bundled audio files, turn it off with one tap
 - Technique tips for every exercise and safety warnings for some, from Kerstin (German and English)
 - Interrupted workouts survive an app kill and can be resumed, saved or discarded
 - Session details with every set, a free-text note and delete
 - Progress charts per exercise (max weight / reps or seconds over time)
 - Sets per body area: the progress view counts your completed sets per muscle group over the last 7 or 28 days (strength and HIT); areas without a set stay visible, so gaps show up
-- Exercise library with 50 exercises, each with an image, muscle group and equipment, filterable by muscle group, HIT, warm-up or stretching
+- Exercise library with 58 exercises, each with an image, muscle group and equipment, filterable by muscle group, HIT, warm-up or stretching
 - JSON backup: export saves a file to "Documents" and opens the share sheet (Android 11+; older versions: share sheet only); import with merge (duplicate detection) or replace
 - German and English interface, switchable in-app
 - Dark neon UI, mobile-first; screen stays awake during a workout, timer ends with vibration and an announcement (or a beep with the voice off)
