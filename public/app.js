@@ -750,13 +750,10 @@ async function saveDraftAsSessionOnce(draft) {
 // Release-Audit v2.13 b3 (älter als v2.13): Die drei Knöpfe prüfen tooSoonAfterClose wie die Plan-Karten. Der 2. Tipp eines Doppeltipps
 // auf den Rand der Hilfe traf „So speichern“ (unterbrochene Einheit ungewollt als fertig gespeichert), der auf „Abbrechen“ der
 // Rückfrage „Verwerfen?“ traf „Fortsetzen“ oder öffnete die Rückfrage erneut.
-// Runde 2 (R2a-6): erst wenn die Stammdaten geladen sind — ein sehr früher Tipp ließ sonst Namen, „Letztes Mal“ und ★ für die ganze Einheit aus
-document.getElementById('resume-go').addEventListener('click', async e => {
-  if (tooSoonAfterClose(e)) return;
-  try { await LocalData.ready; } catch (x) { console.error(x); }
-  if (activeSession) return;   // inzwischen anders gestartet
-  const d = readDraft(); if (d) resumeWorkout(d);
-});
+// Bewusst SYNCHRON (Release-Audit v2.14, Runde 3 R3-1): Ein Warten auf LocalData.ready ließ die Fortsetzen-Karte so lange bedienbar —
+// „Fortsetzen“ und danach „So speichern“ legten bei langsamem Start dieselbe Einheit doppelt an. Der Trainingsschirm muss mit dem
+// Tipp stehen. (Vorgemerkt bleibt R2a-6: ein Tipp vor dem Laden der Stammdaten lässt Namen und „Letztes Mal“ dieser Einheit aus.)
+document.getElementById('resume-go').addEventListener('click', e => { if (tooSoonAfterClose(e)) return; const d = readDraft(); if (d) resumeWorkout(d); });
 document.getElementById('resume-save').addEventListener('click', e => { if (tooSoonAfterClose(e)) return; const d = readDraft(); if (d) saveDraftAsSession(d); });
 document.getElementById('resume-drop').addEventListener('click', async e => {
   if (tooSoonAfterClose(e)) return;
@@ -2017,7 +2014,8 @@ document.getElementById('progress-exercise-select').addEventListener('change', a
   currentProgressExId = id;
   loadProgressBest(id);
   await renderProgressChart(id, progressMode);
-  document.getElementById('chart-type-row').style.display = 'flex';
+  // Runde 3 (R3-4): nur, wenn inzwischen nicht „– Übung wählen –“ oder eine andere Übung gewählt wurde
+  if (String(currentProgressExId) === String(id)) document.getElementById('chart-type-row').style.display = 'flex';
 });
 
 // Knöpfe unter dem Chart zeigen, was der Chart gerade zeigt (nicht zwingend progressMode, s.u.)

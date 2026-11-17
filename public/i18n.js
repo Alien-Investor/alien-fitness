@@ -86,8 +86,8 @@ window.I18N = (function () {
       'set.lastTime': 'Letztes Mal ({date}):', 'set.noLast': 'Erstes Mal mit dieser Übung',
       // v2.14: Bestleistung und Steigerungs-Hinweis
       'ex.best': 'Bestleistung ({date}):', 'rec.new': '★ Neue Bestleistung', 'rec.more': '+ {n} weitere', 'rec.sr': 'neue Bestleistung',
-      'hint.weight': '▲ Letztes Mal in allen Sätzen {top}\u00a0Wdh geschafft: Du kannst heute etwas mehr Gewicht versuchen.',
-      'hint.harder': '▲ Letztes Mal in allen Sätzen {top}\u00a0Wdh geschafft: Du kannst eine schwerere Variante versuchen.',
+      'hint.weight': '▲ Letztes Mal in allen geplanten Sätzen {top}\u00a0Wdh geschafft: Du kannst heute etwas mehr Gewicht versuchen.',
+      'hint.harder': '▲ Letztes Mal in allen geplanten Sätzen {top}\u00a0Wdh geschafft: Du kannst eine schwerere Variante versuchen.',
       'timer.work': 'ARBEIT', 'timer.done': 'Fertig →', 'timer.stop': '■ Stopp',
       'dyn.sec': 's', 'dyn.maxRepsSec': 'Max. Reps / Sekunden', 'dyn.duration': 'Dauer',
       'workout.abortConfirm': 'Training abbrechen? {n} geloggte Sätze gehen verloren.',
@@ -224,8 +224,8 @@ window.I18N = (function () {
       'set.lastTime': 'Last time ({date}):', 'set.noLast': 'First time for this exercise',
       // v2.14: personal best and progression hint
       'ex.best': 'Personal best ({date}):', 'rec.new': '★ New personal best', 'rec.more': '+ {n} more', 'rec.sr': 'new personal best',
-      'hint.weight': '▲ Last time you hit {top}\u00a0reps in every set: you could go a little heavier today.',
-      'hint.harder': '▲ Last time you hit {top}\u00a0reps in every set: you could try a harder variation.',
+      'hint.weight': '▲ Last time you hit {top}\u00a0reps in every planned set: you could go a little heavier today.',
+      'hint.harder': '▲ Last time you hit {top}\u00a0reps in every planned set: you could try a harder variation.',
       'timer.work': 'WORK', 'timer.done': 'Done →', 'timer.stop': '■ Stop',
       'dyn.sec': 's', 'dyn.maxRepsSec': 'Max reps / seconds', 'dyn.duration': 'Duration',
       'workout.abortConfirm': 'Cancel workout? {n} logged sets will be lost.',
