@@ -750,7 +750,13 @@ async function saveDraftAsSessionOnce(draft) {
 // Release-Audit v2.13 b3 (älter als v2.13): Die drei Knöpfe prüfen tooSoonAfterClose wie die Plan-Karten. Der 2. Tipp eines Doppeltipps
 // auf den Rand der Hilfe traf „So speichern“ (unterbrochene Einheit ungewollt als fertig gespeichert), der auf „Abbrechen“ der
 // Rückfrage „Verwerfen?“ traf „Fortsetzen“ oder öffnete die Rückfrage erneut.
-document.getElementById('resume-go').addEventListener('click', e => { if (tooSoonAfterClose(e)) return; const d = readDraft(); if (d) resumeWorkout(d); });
+// Runde 2 (R2a-6): erst wenn die Stammdaten geladen sind — ein sehr früher Tipp ließ sonst Namen, „Letztes Mal“ und ★ für die ganze Einheit aus
+document.getElementById('resume-go').addEventListener('click', async e => {
+  if (tooSoonAfterClose(e)) return;
+  try { await LocalData.ready; } catch (x) { console.error(x); }
+  if (activeSession) return;   // inzwischen anders gestartet
+  const d = readDraft(); if (d) resumeWorkout(d);
+});
 document.getElementById('resume-save').addEventListener('click', e => { if (tooSoonAfterClose(e)) return; const d = readDraft(); if (d) saveDraftAsSession(d); });
 document.getElementById('resume-drop').addEventListener('click', async e => {
   if (tooSoonAfterClose(e)) return;
@@ -988,8 +994,12 @@ function progressHint(ex, last) {
   const top = repsTop(ex.reps);
   const planned = Math.min(30, Math.max(0, parseInt(ex.sets) || 0));
   if (!top || planned < 1) return null;
-  const done = last.sets.filter(x => x && x.completed && !(numv(x.duration_seconds) >= 1));
-  if (done.length < planned || !done.every(x => numv(x.reps) >= top)) return null;
+  const all = last.sets.filter(x => x && x.completed && !(numv(x.duration_seconds) >= 1));
+  if (all.length < planned) return null;
+  // Runde 2 (R2a-5): geprüft werden die GEPLANTEN Sätze — ein Zusatzsatz (Freies Training, mehr Sätze als heute geplant) mit anderem
+  // Gewicht oder weniger Wiederholungen ändert nichts
+  const done = all.slice(0, planned);
+  if (!done.every(x => numv(x.reps) >= top)) return null;
   // Release-Audit v2.14 a-7: nur bei gleichem Gewicht in allen Sätzen — wer das Gewicht von Satz zu Satz senkt, um die
   // Wiederholungen zu schaffen (12×20, 12×15, 12×10), bekommt kein „mehr Gewicht“.
   const kg = x => { const w = numv(x.weight_kg); return Number.isFinite(w) && w > 0 ? w : 0; };
@@ -1564,7 +1574,15 @@ function refreshRoutineCard() {
   if (c && c._refresh && activeSession && !activeSession.finished) c._refresh();
 }
 // Abschluss-Banner: „Jetzt noch dehnen?“ (nicht nach einem Aufwärm-/Dehn-Plan)
-async function showStretchOffer(s) {
+// Kopf des Abschluss-Banners ins Bild holen, wenn er über dem Fensterrand liegt (Release-Audit v2.14 b1, Runde 2 R2b-2)
+function bannerIntoView() {
+  const top = document.getElementById('workout-done-banner').getBoundingClientRect().top;
+  if (top < 0) window.scrollBy(0, top - 12);
+}
+// atFinish: Aufruf direkt nach dem Abschluss (nicht beim Sprachwechsel) — dann nach dem Einblenden der Karte noch einmal messen.
+// Erst MIT der Karte ist das Banner oft höher als das Fenster, und die Seite klebt danach am Ende: „✓ TRAINING ABGESCHLOSSEN“
+// und die Bestleistungen lagen im Normalfall (360×640, letzter Satz über „Satz speichern“) weiter über dem Bildrand.
+async function showStretchOffer(s, atFinish) {
   const box = document.getElementById('done-stretch');
   box.classList.add('hidden');
   if (ROUTINE_TYPES.includes(s.planType)) return;
@@ -1572,6 +1590,7 @@ async function showStretchOffer(s) {
   if (activeSession !== s || !rows.length) return;
   document.getElementById('done-stretch-meta').textContent = I18N.t('routine.meta', { n: rows.length, min: routineMinutes(rows) });
   box.classList.remove('hidden');
+  if (atFinish) bannerIntoView();
 }
 document.getElementById('btn-done-stretch').addEventListener('click', async e => {
   if (e && e.isTrusted && (evtTime(e) - bannerShownAt < DLG_ARM_MS || tooSoonAfterClose(e))) return;   // Banner erscheint unter dem Finger („Beenden“); c1
@@ -1653,10 +1672,9 @@ async function finishWorkoutOnce() {
   banner.style.display = 'block';
   // Release-Audit v2.14 b1: Die Übungsliste ist weg, die Seite kürzer, der Scrollstand klemmt am neuen Ende — mit dem Kasten
   // der Bestleistungen kann das Banner höher als das Fenster sein, dann lag „✓ TRAINING ABGESCHLOSSEN“ über dem Bildrand.
-  const bannerTop = banner.getBoundingClientRect().top;
-  if (bannerTop < 0) window.scrollBy(0, bannerTop - 12);
+  bannerIntoView();
   bannerShownAt = performance.now();
-  showStretchOffer(s);
+  showStretchOffer(s, true);
   // Mit Stimme hat endTimer den Piepton für „Geschafft“ zurückgehalten; fehlt die Datei, piept es hier (Audit b3/c1)
   if (!Voice.say('done') && Voice.on()) playBeep();
 }
@@ -1985,7 +2003,17 @@ document.getElementById('balance-btn-28').addEventListener('click', () => { bala
 
 document.getElementById('progress-exercise-select').addEventListener('change', async function() {
   const id = this.value;
-  if (!id) return;
+  if (!id) {
+    // Runde 2 (R2a-3): „– Übung wählen –“ gewählt — nichts Altes stehen lassen (sonst setzte loadProgressView die alte Übung wieder ein)
+    currentProgressExId = null; progressBest = null; progressBestSeq++; progressChartSeq++;
+    drawProgressBest();
+    if (progressChart) { progressChart.destroy(); progressChart = null; }
+    document.getElementById('progress-chart').style.display = 'none';
+    document.getElementById('chart-type-row').style.display = 'none';
+    const wrap = document.getElementById('chart-wrap'), empty = wrap.querySelector('.chart-empty');
+    if (empty) { empty.textContent = I18N.t('progress.emptyHint'); empty.style.display = ''; }
+    return;
+  }
   currentProgressExId = id;
   loadProgressBest(id);
   await renderProgressChart(id, progressMode);
@@ -2020,8 +2048,9 @@ let progressBestSeq = 0;
 let progressBest = null;   // { exId, best } der gewählten Übung
 async function loadProgressBest(exId) {
   const seq = ++progressBestSeq;
-  progressBest = null;
-  drawProgressBest();
+  // Runde 2 (R2a-2/R2b-3): nur leeren, wenn die Übung wechselt — beim Wiederöffnen der Ansicht und beim Sprachwechsel bleibt die
+  // Zeile stehen, bis der neue Wert da ist (sonst war sie für die Dauer des Lesens leer und bei großer Schrift eine Zeile kürzer)
+  if (!progressBest || progressBest.exId !== String(exId)) { progressBest = null; drawProgressBest(); }
   let best = null;
   try { best = await LocalData.getBest(exId); } catch (e) { console.error(e); }
   if (seq !== progressBestSeq) return;
@@ -2139,7 +2168,9 @@ function addEditorRow(pe) {
     return i;
   };
   const sets = mk('er-sets', pe ? pe.sets : 3, 'number', { min: 1, max: 20 });
-  const reps = mk('er-reps', pe ? pe.reps : '8-12', 'text', { maxLength: 40 });   // wie beim Import (Release-Audit v2.14 c5)
+  // höchstens 40 Zeichen wie beim Import (Release-Audit v2.14 c5); ein längerer Altwert bleibt bearbeitbar (Runde 2, R2b-4: bei
+  // maxLength unter der vorhandenen Länge nahm das Feld keine Eingabe mehr an)
+  const reps = mk('er-reps', pe ? pe.reps : '8-12', 'text', { maxLength: Math.max(40, String(pe && pe.reps != null ? pe.reps : '').length) });
   const rest = mk('er-rest', pe ? pe.rest_seconds : 90, 'number', { min: 0, max: 600, step: 15 });
   const del = document.createElement('button');
   del.className = 'er-del'; del.textContent = '✕';

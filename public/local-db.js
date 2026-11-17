@@ -284,11 +284,20 @@ window.LocalData = (function () {
     for (const id of ids) out[id] = historyFrom(Number(id), allSets, ctx);
     return out;
   }
-  // Startzeit je Einheit und die Einheiten aus HIT-Plänen (Halteübungen dort zählen nicht zur Bestleistung, Release-Audit v2.14 a-1)
+  // Startzeit je Einheit und die Einheiten aus HIT-Plänen (Halteübungen dort zählen nicht zur Bestleistung, Release-Audit v2.14 a-1).
+  // Runde 2 (R2a-1): Eine Einheit aus einem eigenen Plan, den es nicht mehr gibt, zählt für Halteübungen ebenfalls nicht — sonst
+  // wurde der Haltewert aus einem gelöschten HIT-Plan nachträglich zur Bestleistung. Bekannte Grenze: Die Einheit trägt den Plan-Typ
+  // nicht selbst; wer einen eigenen Plan im Editor von HIT auf Kraft umstellt (oder umgekehrt), ändert damit die Wertung seiner
+  // alten Halte-Sätze.
   function sessCtx(allSessions) {
+    const hitLike = s => {
+      if (s.plan_id == null) return false;
+      const t = planTypeById(s.plan_id);
+      return t === 'hit' || (t === null && Number(s.plan_id) >= CUSTOM_OFFSET);
+    };
     return {
       started: new Map(allSessions.map(s => [s.id, s.started_at || ''])),
-      hit: new Set(allSessions.filter(s => s.plan_id != null && planTypeById(s.plan_id) === 'hit').map(s => s.id)),
+      hit: new Set(allSessions.filter(hitLike).map(s => s.id)),
     };
   }
   // „Letztes Mal“ plus Bestleistung (v2.14) aus demselben Lesezugriff: { date, sets, best } | null

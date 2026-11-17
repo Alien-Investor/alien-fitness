@@ -383,8 +383,8 @@ h3 {
 .set-btn.record::after { content: '★'; position: absolute; top: 2px; right: 5px; font-size: 0.7rem; line-height: 1; color: var(--neon); text-shadow: 0 0 6px var(--neon); }
 /* v2.14: neue Bestleistungen im Abschluss-Banner, Bestleistung unter dem Chart */
 .done-records { margin: 18px 0 0; letter-spacing: 0; text-shadow: none; }
-/* Release-Audit v2.14 b1: keine Scroll-Verankerung im Banner — erschien das Dehn-Angebot nachträglich über „Zurück zum
-   Dashboard“, hielt der Browser diesen Knopf fest und schob den Kopf des Banners aus dem Bild */
+/* Release-Audit v2.14 b1: keine Scroll-Verankerung im Banner. Das allein hält den Kopf nicht im Bild (Runde 2, R2b-2): die Seite
+   klebt am Ende, wenn das Dehn-Angebot nachträglich erscheint — app.js misst deshalb danach noch einmal (bannerIntoView). */
 .done-banner { overflow-anchor: none; }
 .done-records > b { display: block; font-family: var(--font-h); font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
 #done-records-list { font-family: var(--font-b); font-size: 0.78rem; line-height: 1.6; color: var(--muted); max-width: 26em; margin: 0 auto; }
@@ -393,7 +393,9 @@ h3 {
 #done-records-list .rec-name { min-width: 0; overflow-wrap: anywhere; }
 /* Release-Audit v2.14 b2: der Wert behält seine Spalte, wird aber nie breiter als die halbe Zeile (ein absurder Wert aus einem
    veränderten Draft drückte den Namen auf 0 px Breite, ein Buchstabe je Zeile) */
-#done-records-list b { flex: 0 1 auto; max-width: 50%; overflow: hidden; text-overflow: ellipsis; color: var(--neon); font-weight: 400; white-space: nowrap; }
+/* Runde 2 (R2b-1): der Wert schrumpft NICHT mit (flex: none) — mit „0 1 auto“ teilten sich Name und Wert den Platzmangel, und aus
+   „12×10kg“ wurde im Normalfall „12×1…“. Gekürzt wird nur, was breiter als die halbe Zeile ist. */
+#done-records-list b { flex: none; max-width: 50%; overflow: hidden; text-overflow: ellipsis; color: var(--neon); font-weight: 400; white-space: nowrap; }
 #done-records-list .rec-more { justify-content: center; }
 .progress-best { font-family: var(--font-b); font-size: 0.7rem; color: var(--muted); min-height: 1.5em; line-height: 1.5; margin-bottom: 12px; }
 .progress-best b { color: var(--neon); font-weight: 400; }
