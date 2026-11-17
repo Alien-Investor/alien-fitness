@@ -34,11 +34,19 @@ async function api(path, opts = {}) {
 const views = document.querySelectorAll('.view');
 const navBtns = document.querySelectorAll('nav button');
 
+// Release-Audit v2.13 R2b-3: Passt die Leiste nicht (große Systemschrift, seitlich wischbar), steht der aktive Knopf nach einem Wechsel
+// per Programm („Zurück zum Dashboard“, Start eines Trainings) sonst außerhalb des Bildes. Kein scrollIntoView (bewegt auch die Seite).
+function showNavBtn(btn) {
+  const nav = btn && btn.parentElement;
+  if (!nav || nav.scrollWidth <= nav.clientWidth) return;
+  nav.scrollLeft = btn.offsetLeft - (nav.clientWidth - btn.offsetWidth) / 2;
+}
 navBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const target = btn.dataset.view;
     navBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    showNavBtn(btn);
     views.forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + target).classList.add('active');
     if (target === 'dashboard') loadDashboard();
@@ -568,6 +576,7 @@ function fmtSet(s) {
 function showWorkoutScreen(title, adhoc) {
   navBtns.forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="workout"]').classList.add('active');
+  showNavBtn(document.querySelector('[data-view="workout"]'));
   views.forEach(v => v.classList.remove('active'));
   document.getElementById('view-workout').classList.add('active');
   document.getElementById('workout-select-screen').style.display = 'none';
@@ -1758,12 +1767,18 @@ function renderBalance() {
   for (const g of data.groups) {
     const n = g[key];
     // „Ganzkörper“ ist kein Bereich, der fehlen kann: die Zeile steht nur, wenn im GEWÄHLTEN Zeitraum etwas gezählt wurde (a-6)
-    if (g.group === 'Ganzkörper' && !n) continue;
+    // Zählt er nur in „28 Tage“, hält die Zeile in „7 Tage“ unsichtbar ihren Platz: sonst änderte die Karte beim Umschalten ihre Höhe
+    // und das Übungs-Menü darunter rutschte (Runde 2, R2b-5).
+    const spacer = g.group === 'Ganzkörper' && !n;
+    if (spacer && !g.d28) continue;
     const row = document.createElement('div');
-    row.className = 'balance-row' + (n ? '' : ' zero');
+    row.className = 'balance-row' + (n ? '' : ' zero') + (spacer ? ' spacer' : '');
     // Screenreader (b9): eine Zeile = eine Aussage („Brust: 3 Sätze“) statt loser Texte „Brust“, „3“
-    row.setAttribute('role', 'img');
-    row.setAttribute('aria-label', I18N.t(n > 1 ? 'balance.row' : n ? 'balance.rowOne' : 'balance.rowNone', { group: I18N.muscle(g.group), n }));
+    if (spacer) row.setAttribute('aria-hidden', 'true');   // gleiche Zeile, nur unsichtbar: exakt gleiche Höhe
+    else {
+      row.setAttribute('role', 'img');
+      row.setAttribute('aria-label', I18N.t(n > 1 ? 'balance.row' : n ? 'balance.rowOne' : 'balance.rowNone', { group: I18N.muscle(g.group), n }));
+    }
     const name = document.createElement('span');
     name.className = 'balance-name';
     name.textContent = I18N.muscle(g.group);

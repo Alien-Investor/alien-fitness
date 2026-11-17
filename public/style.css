@@ -258,7 +258,10 @@ h3 {
 .plan-item:hover { border-color: var(--neon-mid); background: var(--neon-dim); }
 /* Release-Audit v2.13 c5 (älter): Ein Planname ohne Leerzeichen (eigener Plan, Import, bis 80 Zeichen) schob die Typ-Marken aller
    Zeilen aus dem Bild (overflow-x:hidden versteckte sie). Der Textblock darf schrumpfen, der Name bricht notfalls im Wort um. */
+/* Runde 2 (R2b-1): Der Name bekommt den Platz zuerst, die Marken rechts nehmen den Rest und stapeln sich notfalls — sonst schrumpften
+   beide anteilig und ein langes Wort brach schon bei normaler Schrift im Wort um („Klimmzugprogressio|n“). */
 .plan-item > div:first-child { min-width: 0; }
+.plan-item > :last-child { flex: 1 0 min-content; text-align: right; }
 .plan-name { font-family: var(--font-h); font-size: 0.68rem; letter-spacing: 1.5px; margin-bottom: 4px; overflow-wrap: anywhere; }
 .plan-meta { font-size: 0.75rem; color: var(--muted); font-family: var(--font-r); }
 .badge {
@@ -348,7 +351,9 @@ h3 {
 }
 /* Release-Audit v2.13 b5 (Muster älter): lange Wörter im Übungsnamen („Rückenstrecker“, „Schulterdehnung“) wurden bei schmalem Schirm
    und großer Schrift am Kartenrand abgeschnitten. Der Textblock darf schrumpfen, der Name bricht notfalls im Wort um. */
-.ex-info { flex: 1; min-width: 0; }
+/* Runde 2 (R2b-2): Der Block reicht wie vorher bis in den Innenrand der Karte (16 px), sonst brach schon die nachlaufende Sperrung
+   Namen um, die vorher ganz zu sehen waren („Kurzhantel Schulterdrücke|n“ bei großer Schrift). */
+.ex-info { flex: 1; min-width: 0; margin-right: -12px; }
 .ex-name {
   font-family: var(--font-h);
   font-size: 0.75rem;
@@ -643,6 +648,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .balance-num { font-family: var(--font-b); font-size: 0.78rem; text-align: right; color: var(--neon); }
 .balance-row.zero .balance-name, .balance-row.zero .balance-num { color: var(--muted); }
 .balance-row.zero .balance-track { border-style: dashed; }
+.balance-row.spacer { visibility: hidden; }
 .balance-empty { font-family: var(--font-r); font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
 .balance-note { font-family: var(--font-r); font-size: 0.72rem; color: var(--muted); margin-top: 10px; line-height: 1.4; }
 .chart-combo { margin-bottom: 18px; }
@@ -847,6 +853,8 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   padding: 20px 16px;
 }
 #help-overlay.open { display: flex; }
+/* Runde 2 (R2b-4): auch Gesten auf Kopf und Rand der Hilfe schoben die Seite dahinter weiter */
+#help-overlay { overflow-y: auto; overscroll-behavior: contain; }
 
 #help-modal {
   background: var(--card);

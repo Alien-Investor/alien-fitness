@@ -541,7 +541,6 @@ window.LocalData = (function () {
     const rawSessions = (Array.isArray(obj.sessions) ? obj.sessions : []).filter(isRec);
     const rawSets = (Array.isArray(obj.sets) ? obj.sets : []).filter(isRec);
     const rawPlans = (Array.isArray(obj.custom_plans) ? obj.custom_plans : []).filter(isRec); // fehlt in v1-Backups → leer
-    const nSessions = Array.isArray(obj.sessions) ? obj.sessions.length : 0;
     // VOR dem Öffnen der Schreib-Transaktion lesen: ein await auf eine fremde
     // Transaktion würde die readwrite-Transaktion auto-committen (TransactionInactiveError)
     const existingStarts = new Set(merge ? (await allFrom('sessions')).map(s => dateKey(s.started_at)) : []);
@@ -551,11 +550,11 @@ window.LocalData = (function () {
     // okDate) — sonst bekäme ein Alt-Datum bei jedem Import eine neue Importzeit und würde verdoppelt (Audit run-2 R2-3).
     const plans = rawPlans.map(p => ({ origId: finiteOrNull(p.id), rec: cleanPlan(p) }));
     const sessions = rawSessions.map(s => ({ id: s.id, rec: cleanSession(s),
-      dup: merge && s.started_at != null && existingStarts.has(dateKey(s.started_at)) }));
+      dup: merge && prim(s.started_at) && existingStarts.has(dateKey(s.started_at)) }));
     const sets = rawSets.map(s => ({ session_id: s.session_id, rec: cleanSet(s) }));
 
     const { os: [sessStore, setStore, planStore], done, abort } = wtx(['sessions', 'sets', 'custom_plans']);
-    let imported = 0, importedSets = 0;
+    let imported = 0, importedSets = 0, skipped = 0;   // skipped: nur Dubletten (Release-Audit v2.13 R2a-1), ungültige Einträge zählen nicht
     try {
       if (!merge) {
         await reqP(sessStore.clear());
@@ -584,7 +583,7 @@ window.LocalData = (function () {
         }
         // Merge: Einheit mit identischem Startzeitpunkt existiert schon (gleiches Backup
         // zweimal) → überspringen; ihre Sätze werden unten ebenfalls verworfen
-        if (s.dup) continue;
+        if (s.dup) { skipped++; continue; }
         const newId = await reqP(sessStore.add(rec));
         if (s.id != null) idMap.set(s.id, newId);
         imported++;
@@ -604,8 +603,7 @@ window.LocalData = (function () {
 
     await done;   // Commit abwarten (C1): sonst meldet der Import Zahlen, die nie gespeichert wurden
     await refreshCustomCache();
-    return { sessions: imported, sets: importedSets, plans: plans.length,
-             skipped: nSessions - imported };
+    return { sessions: imported, sets: importedSets, plans: plans.length, skipped };
   }
 
   return {
