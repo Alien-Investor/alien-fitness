@@ -731,9 +731,13 @@ async function saveDraftAsSessionOnce(draft) {
   loadDashboard();
 }
 
-document.getElementById('resume-go').addEventListener('click', () => { const d = readDraft(); if (d) resumeWorkout(d); });
-document.getElementById('resume-save').addEventListener('click', () => { const d = readDraft(); if (d) saveDraftAsSession(d); });
-document.getElementById('resume-drop').addEventListener('click', async () => {
+// Release-Audit v2.13 b3 (älter als v2.13): Die drei Knöpfe prüfen tooSoonAfterClose wie die Plan-Karten. Der 2. Tipp eines Doppeltipps
+// auf den Rand der Hilfe traf „So speichern“ (unterbrochene Einheit ungewollt als fertig gespeichert), der auf „Abbrechen“ der
+// Rückfrage „Verwerfen?“ traf „Fortsetzen“ oder öffnete die Rückfrage erneut.
+document.getElementById('resume-go').addEventListener('click', e => { if (tooSoonAfterClose(e)) return; const d = readDraft(); if (d) resumeWorkout(d); });
+document.getElementById('resume-save').addEventListener('click', e => { if (tooSoonAfterClose(e)) return; const d = readDraft(); if (d) saveDraftAsSession(d); });
+document.getElementById('resume-drop').addEventListener('click', async e => {
+  if (tooSoonAfterClose(e)) return;
   const d = readDraft();
   if (d && d.sets.length && !(await ask(I18N.t('resume.dropConfirm', { n: d.sets.length }), { ok: 'dlg.discard', danger: true }))) return;
   // Zustand nach dem await neu prüfen: ist der Draft inzwischen ein anderer (Training fortgesetzt
@@ -1718,30 +1722,48 @@ async function loadProgressView() {
     sel.appendChild(opt);
   });
   syncCombo(document.getElementById('progress-combo'));   // Knopf zeigt die neue Auswahl
-  await renderBalance();
+  await loadBalance();
 }
 
 // ── Bilanz je Körperbereich (v2.13) ───────────────────────────────────────────
 // Sätze je Körperbereich in den letzten 7 bzw. 28 Tagen (LocalData.getBalance). Balken in HTML/CSS, alles per textContent.
 // Bereiche ohne Satz bleiben stehen (gedimmt, „–“): genau diese Lücke soll man sehen. Reine Zählung, keine Empfehlung.
+// Release-Audit v2.13 c2/c3/a-5: Gelesen wird EINMAL beim Öffnen der Ansicht (loadBalance), der Umschalter zeichnet nur neu. Vorher lief
+// jeder Tipp über alle Sätze (100 000 Sätze: 0,7 s je Tipp), und nach einem Lesefehler stand „28 Tage“ über den Zahlen für 7 Tage.
+// balanceSeq: eine ältere Antwort überschreibt keine neuere (zwei Aufrufe von loadProgressView kurz hintereinander).
 let balanceDays = 7;
-async function renderBalance() {
+let balanceData = null;
+let balanceSeq = 0;
+async function loadBalance() {
+  const seq = ++balanceSeq;
+  let data = null;
+  try { data = await api('balance'); } catch (e) { console.error(e); }
+  if (seq !== balanceSeq) return;
+  balanceData = data;
+  renderBalance();
+}
+function renderBalance() {
   const box = document.getElementById('balance-rows');
   const b7 = document.getElementById('balance-btn-7'), b28 = document.getElementById('balance-btn-28');
   for (const [btn, on] of [[b7, balanceDays === 7], [b28, balanceDays === 28]]) {
     btn.classList.toggle('active-btn', on); btn.classList.toggle('ghost', !on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
-  let data;
-  try { data = await api('balance'); } catch (e) { console.error(e); return; }
+  const data = balanceData;
+  box.textContent = '';
+  document.getElementById('balance-empty').classList.toggle('hidden', !data || data.has_sessions);
+  if (!data) return;   // Lesefehler: keine Zahlen statt alter Zahlen unter dem falschen Knopf
   const key = balanceDays === 7 ? 'd7' : 'd28';
   const max = Math.max(1, ...data.groups.map(g => g[key]));
-  box.textContent = '';
-  document.getElementById('balance-empty').classList.toggle('hidden', data.has_sessions);
   for (const g of data.groups) {
     const n = g[key];
+    // „Ganzkörper“ ist kein Bereich, der fehlen kann: die Zeile steht nur, wenn im GEWÄHLTEN Zeitraum etwas gezählt wurde (a-6)
+    if (g.group === 'Ganzkörper' && !n) continue;
     const row = document.createElement('div');
     row.className = 'balance-row' + (n ? '' : ' zero');
+    // Screenreader (b9): eine Zeile = eine Aussage („Brust: 3 Sätze“) statt loser Texte „Brust“, „3“
+    row.setAttribute('role', 'img');
+    row.setAttribute('aria-label', I18N.t(n > 1 ? 'balance.row' : n ? 'balance.rowOne' : 'balance.rowNone', { group: I18N.muscle(g.group), n }));
     const name = document.createElement('span');
     name.className = 'balance-name';
     name.textContent = I18N.muscle(g.group);

@@ -148,7 +148,8 @@ window.LocalData = (function () {
     });
     done.catch(() => {});
     const os = stores.map(n => t.objectStore(n));
-    return { os: stores.length === 1 ? os[0] : os, done };
+    // abort(): nimmt alles zurück, was in dieser Transaktion schon geschrieben oder geleert wurde (Import, Release-Audit v2.13 c1)
+    return { os: stores.length === 1 ? os[0] : os, done, abort: () => { try { t.abort(); } catch (e) { /* schon beendet */ } } };
   }
 
   // ── API-kompatible Methoden ─────────────────────────────────────────────────────
@@ -400,13 +401,18 @@ window.LocalData = (function () {
   // 2. Gibt es dazu keine Vorgeschichte (Plan zum ersten Mal trainiert): der Plan, dessen letzte Einheit am längsten zurückliegt,
   //    nie trainierte zuerst, bei Gleichstand in der Reihenfolge der Liste.
   // Bewusst nicht NUR Regel 2: ein Plan, den jemand nie oder nur einmal trainiert, wäre sonst auf Dauer „als Nächstes“ markiert.
-  // Ohne jede gespeicherte Einheit gibt es keinen Hinweis (ein neuer Nutzer soll frei wählen). sessions: neueste zuerst.
+  // Die Marke erscheint erst, wenn zwei VERSCHIEDENE Kraft-Pläne trainiert wurden (Release-Audit v2.13 a-3): wer nur HIT, frei oder
+  // immer denselben Plan trainiert, wechselt nicht, und die Marke säße dauerhaft auf einem Plan, den er nie nutzt.
+  // Einheiten mit einer Startzeit in der Zukunft (vorgehende Uhr, Import; sessTime lässt bis morgen zu) bleiben außen vor (a-2):
+  // sonst gälte so eine Einheit als „zuletzt trainiert“ und die Marke landete auf dem eben trainierten Plan. sessions: neueste zuerst.
   async function nextPlanId(sessions) {
     if (!sessions.length) return null;
     const plans = (await getPlans()).filter(p => (p.type || 'strength') === 'strength');
     const known = new Set(plans.map(p => p.id));
-    const seq = sessions.filter(s => known.has(s.plan_id) && sessTime(s) > -Infinity).map(s => s.plan_id);
-    const cur = seq.length ? seq[0] : null;
+    const latest = Date.now() + 300000;   // 5 Minuten Spielraum für eine eben gespeicherte Einheit
+    const seq = sessions.filter(s => known.has(s.plan_id) && sessTime(s) > -Infinity && sessTime(s) <= latest).map(s => s.plan_id);
+    if (new Set(seq).size < 2) return null;
+    const cur = seq[0];
     for (let i = 1; i < seq.length; i++) if (seq[i] === cur && seq[i - 1] !== cur) return seq[i - 1];
     // seq ist nach Zeit sortiert: je später ein Plan darin zum ersten Mal auftaucht, desto länger liegt er zurück
     let best = null, bestAge = -1;
@@ -442,9 +448,8 @@ window.LocalData = (function () {
       row.d28++;
       if (t >= t7) row.d7++;
     }
-    // „Ganzkörper“ ist kein Bereich, der fehlen kann: die Zeile erscheint nur, wenn dort etwas gezählt wurde
-    const groups = Array.from(rows.values()).filter(r => r.group !== 'Ganzkörper' || r.d28 > 0);
-    return { groups, has_sessions: allSessions.length > 0 };
+    // „Ganzkörper“ ist kein Bereich, der fehlen kann: renderBalance zeigt die Zeile nur, wenn im gewählten Zeitraum etwas gezählt wurde
+    return { groups: Array.from(rows.values()), has_sessions: allSessions.length > 0 };
   }
 
   // ── Backup: Export / Import ─────────────────────────────────────────────────────
@@ -466,24 +471,29 @@ window.LocalData = (function () {
   //  - Stored XSS: sets/rest_seconds/reps werden Zahl bzw. gekürzter String, kein Markup.
   //  - App-Hänger: sets/rest_seconds hart begrenzt (kein 1e9-Render).
   //  - Geister-/Kollisions-Pläne: eigene IDs werden IMMER neu vergeben, nie übernommen.
+  // Release-Audit v2.13 c1/c4: Die Umwandler nehmen NUR Text und Zahl. Ein Objekt wie {"toString":"x"} ist gültiges JSON und warf in
+  // String()/Number()/parseInt()/Date.parse() eine Ausnahme — mitten in der Schreib-Transaktion, nach dem Leeren („Alles ersetzen“
+  // löschte so den Bestand). Zahlen werden abgeschnitten statt als Text gelesen (parseInt machte aus 1e300 eine 1, aus 5e-7 eine 5).
+  const prim = v => typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v));
+  const isRec = v => !!v && typeof v === 'object' && !Array.isArray(v);
   const clampInt = (v, lo, hi, def) => {
-    const n = parseInt(v, 10);
+    const n = typeof v === 'number' ? Math.trunc(v) : typeof v === 'string' ? parseInt(v, 10) : NaN;
     return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def;
   };
-  const finiteOrNull = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
-  const str = (v, max) => (v == null ? '' : String(v)).slice(0, max);
+  const finiteOrNull = v => { if (!prim(v) || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+  const str = (v, max) => (prim(v) ? String(v) : '').slice(0, max);
   // Zeitstempel aus dem Backup (Audit run-2 B1/R2-2): nur lesbare Daten zwischen 2000 und morgen, gespeichert als
   // ISO-Text. Eine Einheit vom „1. Jan. 9999“ war sonst für immer die neueste — „Letztes Mal“, Vorbelegung,
   // „Zuletzt“ und die Historie zeigten fremde Werte. Ungültige Werte werden durch die Importzeit ersetzt.
   // Dubletten (Merge) erkennt importAll über dateKey() des ROH-Werts, also vor dem Ersetzen (R2-3).
   const DAY_MS = 86400000;
   const okDate = v => {
-    const t = Date.parse(v);
+    const t = prim(v) ? Date.parse(v) : NaN;
     return Number.isFinite(t) && t >= Date.UTC(2000, 0, 1) && t <= Date.now() + DAY_MS ? new Date(t).toISOString() : null;
   };
   // Vergleichsschlüssel: gleiche Zeit in anderer Schreibweise ist dieselbe Einheit; Unlesbares über den Text
-  const dateKey = v => { const t = Date.parse(v); return Number.isFinite(t) ? 't' + t : 's' + str(v, 40); };
-  const clampNum = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null; };
+  const dateKey = v => { const t = prim(v) ? Date.parse(v) : NaN; return Number.isFinite(t) ? 't' + t : 's' + str(v, 40); };
+  const clampNum = (v, lo, hi) => { if (!prim(v) || v === '') return null; const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null; };
 
   function cleanPlan(p) {
     return {
@@ -520,71 +530,82 @@ window.LocalData = (function () {
       reps: s && s.reps != null ? clampNum(s.reps, 0, 10000) : null,
       weight_kg: clampNum(s && s.weight_kg, 0, 1000) || 0,
       duration_seconds: s && s.duration_seconds != null ? clampNum(s.duration_seconds, 0, 86400) : null,
-      completed: s && s.completed ? 1 : 0,
+      completed: s && (s.completed === 1 || s.completed === true || s.completed === '1') ? 1 : 0,
     };
   }
 
   async function importAll(obj, { merge = false } = {}) {
     if (!obj || obj.format !== 'alien-fitness-backup')
       throw new Error(window.I18N ? window.I18N.t('err.invalidBackup') : 'Invalid backup file.');
-    const rawSessions = Array.isArray(obj.sessions) ? obj.sessions : [];
-    const rawSets = Array.isArray(obj.sets) ? obj.sets : [];
-    const rawPlans = Array.isArray(obj.custom_plans) ? obj.custom_plans : []; // fehlt in v1-Backups → leer
+    // Nur Datensätze (Objekte): null, Zahlen, Texte und Listen in den Feldern wurden sonst zu leeren Einheiten bzw. Plänen „Import“ (c4)
+    const rawSessions = (Array.isArray(obj.sessions) ? obj.sessions : []).filter(isRec);
+    const rawSets = (Array.isArray(obj.sets) ? obj.sets : []).filter(isRec);
+    const rawPlans = (Array.isArray(obj.custom_plans) ? obj.custom_plans : []).filter(isRec); // fehlt in v1-Backups → leer
+    const nSessions = Array.isArray(obj.sessions) ? obj.sessions.length : 0;
     // VOR dem Öffnen der Schreib-Transaktion lesen: ein await auf eine fremde
     // Transaktion würde die readwrite-Transaktion auto-committen (TransactionInactiveError)
     const existingStarts = new Set(merge ? (await allFrom('sessions')).map(s => dateKey(s.started_at)) : []);
 
-    const { os: [sessStore, setStore, planStore], done } = wtx(['sessions', 'sets', 'custom_plans']);
-    if (!merge) {
-      await reqP(sessStore.clear());
-      await reqP(setStore.clear());
-      await reqP(planStore.clear());
-    }
+    // Release-Audit v2.13 c1: ALLES normalisieren, BEVOR die Schreib-Transaktion offen ist. Wirft hier etwas, ist noch nichts
+    // geleert und nichts geschrieben — die Datei wird als Ganzes abgelehnt. Schlüssel aus dem ROH-Wert (vor dem Ersetzen durch
+    // okDate) — sonst bekäme ein Alt-Datum bei jedem Import eine neue Importzeit und würde verdoppelt (Audit run-2 R2-3).
+    const plans = rawPlans.map(p => ({ origId: finiteOrNull(p.id), rec: cleanPlan(p) }));
+    const sessions = rawSessions.map(s => ({ id: s.id, rec: cleanSession(s),
+      dup: merge && s.started_at != null && existingStarts.has(dateKey(s.started_at)) }));
+    const sets = rawSets.map(s => ({ session_id: s.session_id, rec: cleanSet(s) }));
 
-    // IDs werden IMMER neu vergeben (add, nie put mit Fremd-ID). Referenzen werden auf
-    // die neuen IDs umgehängt: sets.session_id → neue Session-ID; sessions.plan_id →
-    // neue öffentliche Plan-ID (1000+). Gilt auch für „Alles ersetzen" — so kann eine
-    // Fremd-ID den IndexedDB-Schlüsselgenerator nicht vergiften und keine Kollision
-    // mit Seed-Plänen erzeugen.
-    const planIdMap = new Map();
-    for (const p of rawPlans) {
-      const origId = finiteOrNull(p && p.id);
-      const newId = await reqP(planStore.add(cleanPlan(p)));
-      if (origId != null) planIdMap.set(CUSTOM_OFFSET + origId, CUSTOM_OFFSET + newId);
-    }
-
-    const idMap = new Map();
-    let imported = 0;
-    for (const s of rawSessions) {
-      const rec = cleanSession(s);
-      if (rec.plan_id != null && rec.plan_id >= CUSTOM_OFFSET) {
-        // Verweis auf einen eigenen Plan: nur behalten, wenn er in DIESEM Backup steckt
-        // (sonst würde er fälschlich auf einen gleichnummerierten Plan des Nutzers zeigen)
-        rec.plan_id = planIdMap.has(rec.plan_id) ? planIdMap.get(rec.plan_id) : null;
+    const { os: [sessStore, setStore, planStore], done, abort } = wtx(['sessions', 'sets', 'custom_plans']);
+    let imported = 0, importedSets = 0;
+    try {
+      if (!merge) {
+        await reqP(sessStore.clear());
+        await reqP(setStore.clear());
+        await reqP(planStore.clear());
       }
-      // Merge: Einheit mit identischem Startzeitpunkt existiert schon (gleiches Backup
-      // zweimal) → überspringen; ihre Sätze werden unten ebenfalls verworfen
-      // Schlüssel aus dem ROH-Wert (vor dem Ersetzen durch okDate) — sonst bekäme ein Alt-Datum bei jedem Import
-      // eine neue Importzeit und würde verdoppelt (Audit run-2 R2-3)
-      if (merge && s && s.started_at != null && existingStarts.has(dateKey(s.started_at))) continue;
-      const newId = await reqP(sessStore.add(rec));
-      if (s && s.id != null) idMap.set(s.id, newId);
-      imported++;
-    }
 
-    let importedSets = 0;
-    for (const s of rawSets) {
-      if (!s || !idMap.has(s.session_id)) continue;   // Session übersprungen (Duplikat) oder verwaist
-      const c = cleanSet(s);
-      c.session_id = idMap.get(s.session_id);
-      await reqP(setStore.add(c));
-      importedSets++;
+      // IDs werden IMMER neu vergeben (add, nie put mit Fremd-ID). Referenzen werden auf
+      // die neuen IDs umgehängt: sets.session_id → neue Session-ID; sessions.plan_id →
+      // neue öffentliche Plan-ID (1000+). Gilt auch für „Alles ersetzen" — so kann eine
+      // Fremd-ID den IndexedDB-Schlüsselgenerator nicht vergiften und keine Kollision
+      // mit Seed-Plänen erzeugen.
+      const planIdMap = new Map();
+      for (const p of plans) {
+        const newId = await reqP(planStore.add(p.rec));
+        if (p.origId != null) planIdMap.set(CUSTOM_OFFSET + p.origId, CUSTOM_OFFSET + newId);
+      }
+
+      const idMap = new Map();
+      for (const s of sessions) {
+        const rec = s.rec;
+        if (rec.plan_id != null && rec.plan_id >= CUSTOM_OFFSET) {
+          // Verweis auf einen eigenen Plan: nur behalten, wenn er in DIESEM Backup steckt
+          // (sonst würde er fälschlich auf einen gleichnummerierten Plan des Nutzers zeigen)
+          rec.plan_id = planIdMap.has(rec.plan_id) ? planIdMap.get(rec.plan_id) : null;
+        }
+        // Merge: Einheit mit identischem Startzeitpunkt existiert schon (gleiches Backup
+        // zweimal) → überspringen; ihre Sätze werden unten ebenfalls verworfen
+        if (s.dup) continue;
+        const newId = await reqP(sessStore.add(rec));
+        if (s.id != null) idMap.set(s.id, newId);
+        imported++;
+      }
+
+      for (const s of sets) {
+        if (!idMap.has(s.session_id)) continue;   // Session übersprungen (Duplikat) oder verwaist
+        s.rec.session_id = idMap.get(s.session_id);
+        await reqP(setStore.add(s.rec));
+        importedSets++;
+      }
+    } catch (e) {
+      abort();   // Netz unter dem Netz (c1): ein Fehler beim Schreiben nimmt auch das Leeren zurück
+      await done.catch(() => {});
+      throw e;
     }
 
     await done;   // Commit abwarten (C1): sonst meldet der Import Zahlen, die nie gespeichert wurden
     await refreshCustomCache();
-    return { sessions: imported, sets: importedSets, plans: rawPlans.length,
-             skipped: rawSessions.length - imported };
+    return { sessions: imported, sets: importedSets, plans: plans.length,
+             skipped: nSessions - imported };
   }
 
   return {

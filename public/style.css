@@ -63,11 +63,16 @@ header {
 .logo span { color: var(--text); }
 
 /* ── Navigation ─────────────────────────────────────────────────────────────── */
+/* Release-Audit v2.13 b2 (älter): Bei großer Systemschrift (ab etwa ×1,3) ragten „Historie“ und „Übungen“ rechts hinaus und waren
+   nicht mehr erreichbar (overflow-x:hidden am Rahmen). Passt die Leiste nicht, lässt sie sich jetzt seitlich wischen. */
 nav {
   display: flex;
   border-bottom: 1px solid var(--border);
   background: var(--card);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+nav::-webkit-scrollbar { display: none; }
 nav button {
   flex: 1;
   background: none;
@@ -251,7 +256,10 @@ h3 {
   transition: border-color 0.15s, background 0.15s;
 }
 .plan-item:hover { border-color: var(--neon-mid); background: var(--neon-dim); }
-.plan-name { font-family: var(--font-h); font-size: 0.68rem; letter-spacing: 1.5px; margin-bottom: 4px; }
+/* Release-Audit v2.13 c5 (älter): Ein Planname ohne Leerzeichen (eigener Plan, Import, bis 80 Zeichen) schob die Typ-Marken aller
+   Zeilen aus dem Bild (overflow-x:hidden versteckte sie). Der Textblock darf schrumpfen, der Name bricht notfalls im Wort um. */
+.plan-item > div:first-child { min-width: 0; }
+.plan-name { font-family: var(--font-h); font-size: 0.68rem; letter-spacing: 1.5px; margin-bottom: 4px; overflow-wrap: anywhere; }
 .plan-meta { font-size: 0.75rem; color: var(--muted); font-family: var(--font-r); }
 .badge {
   font-size: 0.6rem;
@@ -338,13 +346,16 @@ h3 {
   justify-content: center;
   font-size: 2rem;
 }
-.ex-info { flex: 1; }
+/* Release-Audit v2.13 b5 (Muster älter): lange Wörter im Übungsnamen („Rückenstrecker“, „Schulterdehnung“) wurden bei schmalem Schirm
+   und großer Schrift am Kartenrand abgeschnitten. Der Textblock darf schrumpfen, der Name bricht notfalls im Wort um. */
+.ex-info { flex: 1; min-width: 0; }
 .ex-name {
   font-family: var(--font-h);
   font-size: 0.75rem;
   letter-spacing: 1.5px;
   margin-bottom: 6px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .ex-meta { font-size: 0.78rem; color: var(--muted); font-family: var(--font-r); }
 .ex-desc {
@@ -623,8 +634,10 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 /* ── Bilanz je Körperbereich (v2.13): Sätze der letzten 7/28 Tage als Balken, Bereiche ohne Satz gedimmt ── */
 #balance-card { margin-bottom: 18px; }
 .balance-switch { display: flex; gap: 8px; margin-bottom: 14px; }
-.balance-row { display: grid; grid-template-columns: 6.5em 1fr 2.2em; align-items: center; gap: 10px; padding: 5px 0; }
-.balance-name { font-family: var(--font-b); font-size: 0.72rem; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Release-Audit v2.13 b1: Die Namensspalte war 6.5em der Fließtextschrift (104 px) breit, gut die Hälfte mehr als der längste Name —
+   bei 320 px und großer Systemschrift blieben dem Balken 17 px. Jetzt in der Schrift der Zeile gerechnet (wächst mit ihr mit). */
+.balance-row { display: grid; grid-template-columns: 6.4em 1fr 3.1em; align-items: center; gap: 10px; padding: 5px 0; font-size: 0.72rem; }
+.balance-name { font-family: var(--font-b); font-size: 1em; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .balance-track { height: 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
 .balance-fill { display: block; height: 100%; background: var(--neon); box-shadow: 0 0 8px rgba(0,255,204,0.5); }
 .balance-num { font-family: var(--font-b); font-size: 0.78rem; text-align: right; color: var(--neon); }
@@ -880,6 +893,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 
 #help-content {
   overflow-y: auto;
+  overscroll-behavior: contain;   /* Release-Audit v2.13 b3: Wischen am Textende schob sonst die Seite dahinter weiter */
   padding: 6px 0 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
